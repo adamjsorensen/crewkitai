@@ -100,82 +100,67 @@ const AICoachInterface = () => {
         )
       );
 
-      // Call the edge function without the signal property
-      const response = await supabase.functions.invoke("ai-coach", {
+      // Call the edge function
+      const { data, error } = await supabase.functions.invoke("ai-coach", {
         body: {
           messages: messagesToSend,
           userProfile: profile
         }
       });
 
-      if (response.error) throw new Error(response.error.message);
+      if (error) throw new Error(error.message);
 
       // Check if the response was aborted
       if (abortControllerRef.current?.signal.aborted) {
         return;
       }
 
-      if (!response.data) {
-        throw new Error("No data returned from the AI coach");
-      }
+      // Simple approach: directly get the response as a ReadableStream
+      if (data) {
+        let accumulatedContent = '';
+        const reader = new TextDecoder();
 
-      // Process the text response
-      let fullText = '';
-      const reader = new TextDecoder();
-      
-      // If the response is a ReadableStream, use the stream API
-      if (response.data instanceof ReadableStream) {
-        const streamReader = response.data.getReader();
-        
-        while (true) {
-          const { done, value } = await streamReader.read();
-          if (done) break;
+        // Process the stream
+        const processStream = async () => {
+          const reader = (data as ReadableStream<Uint8Array>).getReader();
           
-          const text = reader.decode(value, { stream: true });
-          fullText += text;
-          
-          // Update the assistant message with new content
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === assistantMessageId
-                ? { ...msg, content: fullText }
-                : msg
-            )
-          );
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = new TextDecoder().decode(value);
+            accumulatedContent += chunk;
+            
+            // Update the message content with each chunk
+            setMessages(prev => 
+              prev.map(msg => 
+                msg.id === assistantMessageId
+                  ? { ...msg, content: accumulatedContent }
+                  : msg
+              )
+            );
+          }
+        };
+
+        try {
+          await processStream();
+        } catch (streamError) {
+          console.error("Error processing stream:", streamError);
+          // If there's an error in stream processing, we still have the accumulated content
+          if (accumulatedContent) {
+            setMessages(prev => 
+              prev.map(msg => 
+                msg.id === assistantMessageId
+                  ? { ...msg, content: accumulatedContent + "\n\n[Stream interrupted]" }
+                  : msg
+              )
+            );
+          } else {
+            throw streamError; // Re-throw if we have no content
+          }
         }
-      } 
-      // Handle cases where the response might be a text or string
-      else if (typeof response.data === 'string') {
-        fullText = response.data;
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantMessageId
-              ? { ...msg, content: fullText }
-              : msg
-          )
-        );
-      }
-      // Handle cases where the response might have a specific format
-      else if (response.data && typeof response.data === 'object') {
-        console.log('Response data object:', response.data);
-        // Try to extract text content from various possible formats
-        if ('text' in response.data) {
-          fullText = response.data.text;
-        } else if ('content' in response.data) {
-          fullText = response.data.content;
-        } else if ('message' in response.data) {
-          fullText = response.data.message;
-        } else {
-          fullText = JSON.stringify(response.data);
-        }
-        
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantMessageId
-              ? { ...msg, content: fullText }
-              : msg
-          )
-        );
+      } else {
+        throw new Error("No data received from AI Coach");
       }
     } catch (error) {
       console.error("Error calling AI Coach:", error);

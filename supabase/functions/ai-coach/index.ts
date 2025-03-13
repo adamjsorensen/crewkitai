@@ -110,11 +110,11 @@ serve(async (req) => {
       }
     });
 
-    // Pipe the OpenAI response through our transformer
+    // Return the transformed stream directly
     return new Response(readableStream.pipeThrough(transformer), {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'text/plain',
+        'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
       }
