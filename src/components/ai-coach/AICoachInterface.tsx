@@ -100,33 +100,79 @@ const AICoachInterface = () => {
         )
       );
 
-      // Call the edge function with streaming
-      // Remove the signal property as it's not supported in the FunctionInvokeOptions type
+      // Call the edge function without the signal property
       const response = await supabase.functions.invoke("ai-coach", {
         body: {
           messages: messagesToSend,
           userProfile: profile
         }
-        // The signal property has been removed to fix the TypeScript error
       });
 
       if (response.error) throw new Error(response.error.message);
 
-      // Process the stream
-      const reader = response.data.getReader();
-      const decoder = new TextDecoder();
+      // Check if the response was aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        return;
+      }
+
+      if (!response.data) {
+        throw new Error("No data returned from the AI coach");
+      }
+
+      // Process the text response
+      let fullText = '';
+      const reader = new TextDecoder();
       
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      // If the response is a ReadableStream, use the stream API
+      if (response.data instanceof ReadableStream) {
+        const streamReader = response.data.getReader();
         
-        const text = decoder.decode(value, { stream: true });
-        
-        // Update the assistant message with new content
+        while (true) {
+          const { done, value } = await streamReader.read();
+          if (done) break;
+          
+          const text = reader.decode(value, { stream: true });
+          fullText += text;
+          
+          // Update the assistant message with new content
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === assistantMessageId
+                ? { ...msg, content: fullText }
+                : msg
+            )
+          );
+        }
+      } 
+      // Handle cases where the response might be a text or string
+      else if (typeof response.data === 'string') {
+        fullText = response.data;
         setMessages(prev => 
           prev.map(msg => 
             msg.id === assistantMessageId
-              ? { ...msg, content: msg.content + text }
+              ? { ...msg, content: fullText }
+              : msg
+          )
+        );
+      }
+      // Handle cases where the response might have a specific format
+      else if (response.data && typeof response.data === 'object') {
+        console.log('Response data object:', response.data);
+        // Try to extract text content from various possible formats
+        if ('text' in response.data) {
+          fullText = response.data.text;
+        } else if ('content' in response.data) {
+          fullText = response.data.content;
+        } else if ('message' in response.data) {
+          fullText = response.data.message;
+        } else {
+          fullText = JSON.stringify(response.data);
+        }
+        
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === assistantMessageId
+              ? { ...msg, content: fullText }
               : msg
           )
         );
