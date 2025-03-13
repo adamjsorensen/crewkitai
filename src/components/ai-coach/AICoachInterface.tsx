@@ -100,7 +100,7 @@ const AICoachInterface = () => {
         )
       );
 
-      // Get the function URL from Supabase - FIXED: removed the responseType property
+      // First, invoke the function to validate everything is working
       const { data } = await supabase.functions.invoke("ai-coach", {
         body: {
           messages: messagesToSend,
@@ -114,17 +114,20 @@ const AICoachInterface = () => {
         return;
       }
 
-      // Now we need to use fetch directly to get the streaming response
-      // Construct the Supabase Edge Function URL
-      const functionUrl = `${supabase.functions.url}/ai-coach`;
+      // Get auth token for the direct fetch call
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      
+      // Use the SUPABASE_URL from environment or fall back to the URL in client.ts
+      const SUPABASE_URL = "https://cicnpivviiqycyudgxxg.supabase.co";
+      const functionUrl = `${SUPABASE_URL}/functions/v1/ai-coach`;
       
       // Call the Edge Function with fetch to support streaming
       const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.auth.getSession().then(({ data }) => data.session?.access_token)}`,
-          'apiKey': supabase.supabaseKey
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           messages: messagesToSend,
