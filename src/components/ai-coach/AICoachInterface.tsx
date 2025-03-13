@@ -100,14 +100,13 @@ const AICoachInterface = () => {
         )
       );
 
-      // Get the function URL from Supabase
-      const { data: functionData } = await supabase.functions.invoke("ai-coach", {
+      // Get the function URL from Supabase - FIXED: removed the responseType property
+      const { data } = await supabase.functions.invoke("ai-coach", {
         body: {
           messages: messagesToSend,
           userProfile: profile
         },
-        method: 'POST',
-        responseType: 'stream'
+        method: 'POST'
       });
 
       // Check if the response was aborted
@@ -115,12 +114,33 @@ const AICoachInterface = () => {
         return;
       }
 
-      // The response is a ReadableStream from Supabase
-      if (functionData) {
+      // Now we need to use fetch directly to get the streaming response
+      // Construct the Supabase Edge Function URL
+      const functionUrl = `${supabase.functions.url}/ai-coach`;
+      
+      // Call the Edge Function with fetch to support streaming
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.auth.getSession().then(({ data }) => data.session?.access_token)}`,
+          'apiKey': supabase.supabaseKey
+        },
+        body: JSON.stringify({
+          messages: messagesToSend,
+          userProfile: profile
+        }),
+        signal: abortControllerRef.current?.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status} ${response.statusText}`);
+      }
+
+      // Process the streaming response
+      const reader = response.body?.getReader();
+      if (reader) {
         let accumulatedContent = '';
-        
-        // Create a reader to read the stream
-        const reader = (functionData as ReadableStream<Uint8Array>).getReader();
         
         try {
           while (true) {
@@ -179,7 +199,7 @@ const AICoachInterface = () => {
           }
         }
       } else {
-        throw new Error("No data received from AI Coach");
+        throw new Error("No response body received");
       }
     } catch (error) {
       console.error("Error calling AI Coach:", error);
