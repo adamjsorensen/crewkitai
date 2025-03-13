@@ -2,7 +2,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { PaintBucket, LayoutDashboard, MessageSquare, FileText, BarChart4, Settings, LogOut } from "lucide-react";
+import { PaintBucket, LayoutDashboard, FileText, BarChart4, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -18,7 +18,6 @@ const Sidebar = () => {
 
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { name: "AI Coach", icon: MessageSquare, path: "/dashboard/ai-coach" },
     { name: "Content", icon: FileText, path: "/dashboard/content" },
     { name: "Financial", icon: BarChart4, path: "/dashboard/financial" },
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
