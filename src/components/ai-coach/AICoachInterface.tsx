@@ -101,12 +101,13 @@ const AICoachInterface = () => {
       );
 
       // Call the edge function with streaming
+      // Remove the signal property as it's not supported in the FunctionInvokeOptions type
       const response = await supabase.functions.invoke("ai-coach", {
         body: {
           messages: messagesToSend,
           userProfile: profile
-        },
-        signal: abortControllerRef.current.signal
+        }
+        // The signal property has been removed to fix the TypeScript error
       });
 
       if (response.error) throw new Error(response.error.message);
