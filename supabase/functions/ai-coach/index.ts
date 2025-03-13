@@ -50,7 +50,7 @@ serve(async (req) => {
       systemMessage.content += '.';
     }
 
-    // Create fetch request to OpenAI streaming API
+    // Create fetch request to OpenAI API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -75,43 +75,8 @@ serve(async (req) => {
       throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
     }
 
-    // Set up streaming response
-    const readableStream = response.body;
-    if (!readableStream) {
-      throw new Error('No readable stream available from OpenAI');
-    }
-
-    // Create a TransformStream to process chunks
-    const transformer = new TransformStream({
-      async transform(chunk, controller) {
-        const text = new TextDecoder().decode(chunk);
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        
-        for (const line of lines) {
-          // Skip the "data: [DONE]" message
-          if (line.includes('[DONE]')) continue;
-          
-          // Remove the "data: " prefix
-          const jsonString = line.replace(/^data: /, '');
-          
-          try {
-            // Parse the JSON
-            const json = JSON.parse(jsonString);
-            // Extract the content delta if it exists
-            const content = json.choices?.[0]?.delta?.content || '';
-            if (content) {
-              // Send only the content part to the client
-              controller.enqueue(new TextEncoder().encode(content));
-            }
-          } catch (error) {
-            console.error('Error parsing JSON:', error, 'Line:', line);
-          }
-        }
-      }
-    });
-
-    // Return the transformed stream directly
-    return new Response(readableStream.pipeThrough(transformer), {
+    // Return the streaming response
+    return new Response(response.body, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/event-stream',

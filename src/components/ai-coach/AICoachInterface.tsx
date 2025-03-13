@@ -100,53 +100,72 @@ const AICoachInterface = () => {
         )
       );
 
-      // Call the edge function
-      const { data, error } = await supabase.functions.invoke("ai-coach", {
+      // Get the function URL from Supabase
+      const { data: functionData } = await supabase.functions.invoke("ai-coach", {
         body: {
           messages: messagesToSend,
           userProfile: profile
-        }
+        },
+        method: 'POST',
+        responseType: 'stream'
       });
-
-      if (error) throw new Error(error.message);
 
       // Check if the response was aborted
       if (abortControllerRef.current?.signal.aborted) {
         return;
       }
 
-      // Simple approach: directly get the response as a ReadableStream
-      if (data) {
+      // The response is a ReadableStream from Supabase
+      if (functionData) {
         let accumulatedContent = '';
-        const reader = new TextDecoder();
-
-        // Process the stream
-        const processStream = async () => {
-          const reader = (data as ReadableStream<Uint8Array>).getReader();
-          
+        
+        // Create a reader to read the stream
+        const reader = (functionData as ReadableStream<Uint8Array>).getReader();
+        
+        try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             
-            const chunk = new TextDecoder().decode(value);
-            accumulatedContent += chunk;
+            // Convert the chunk to text
+            const chunkText = new TextDecoder().decode(value);
             
-            // Update the message content with each chunk
-            setMessages(prev => 
-              prev.map(msg => 
-                msg.id === assistantMessageId
-                  ? { ...msg, content: accumulatedContent }
-                  : msg
-              )
-            );
+            // Process the SSE data chunks
+            const lines = chunkText.split("\n").filter(line => line.trim() !== "");
+            
+            for (const line of lines) {
+              // Skip "data: [DONE]" messages
+              if (line.includes("[DONE]")) continue;
+              
+              // Remove "data: " prefix from each line
+              const jsonLine = line.replace(/^data: /, "").trim();
+              
+              try {
+                if (jsonLine) {
+                  // Parse the JSON data from OpenAI
+                  const json = JSON.parse(jsonLine);
+                  const content = json.choices?.[0]?.delta?.content || '';
+                  
+                  if (content) {
+                    accumulatedContent += content;
+                    
+                    // Update the message content as we receive chunks
+                    setMessages(prev => 
+                      prev.map(msg => 
+                        msg.id === assistantMessageId
+                          ? { ...msg, content: accumulatedContent }
+                          : msg
+                      )
+                    );
+                  }
+                }
+              } catch (parseError) {
+                console.error("Error parsing SSE JSON:", parseError, "Line:", jsonLine);
+              }
+            }
           }
-        };
-
-        try {
-          await processStream();
         } catch (streamError) {
           console.error("Error processing stream:", streamError);
-          // If there's an error in stream processing, we still have the accumulated content
           if (accumulatedContent) {
             setMessages(prev => 
               prev.map(msg => 
@@ -156,7 +175,7 @@ const AICoachInterface = () => {
               )
             );
           } else {
-            throw streamError; // Re-throw if we have no content
+            throw streamError;
           }
         }
       } else {
