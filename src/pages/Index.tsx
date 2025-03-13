@@ -35,10 +35,10 @@ const Index = () => {
     <div className="min-h-screen bg-white">
       <Navbar />
       <main>
-        <Hero isLoggedIn={!!user} />
+        <Hero />
         <Features />
         <Testimonials />
-        <Cta isLoggedIn={!!user} />
+        <Cta />
       </main>
       <Footer />
     </div>
