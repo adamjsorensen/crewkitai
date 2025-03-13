@@ -6,8 +6,11 @@ import Features from "@/components/Features";
 import Testimonials from "@/components/Testimonials";
 import Cta from "@/components/Cta";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { user } = useAuth();
+
   useEffect(() => {
     // Smooth scroll behavior for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -32,10 +35,10 @@ const Index = () => {
     <div className="min-h-screen bg-white">
       <Navbar />
       <main>
-        <Hero />
+        <Hero isLoggedIn={!!user} />
         <Features />
         <Testimonials />
-        <Cta />
+        <Cta isLoggedIn={!!user} />
       </main>
       <Footer />
     </div>
