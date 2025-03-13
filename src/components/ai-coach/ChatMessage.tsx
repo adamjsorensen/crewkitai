@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import { Bot, User, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,51 +15,6 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
-  const [displayedContent, setDisplayedContent] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const streamTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Streaming effect for assistant messages
-  useEffect(() => {
-    if (message.role === "assistant" && !message.pending) {
-      if (message.content !== displayedContent) {
-        setIsStreaming(true);
-        let index = 0;
-        const content = message.content;
-        
-        // Clear any existing interval
-        if (streamTimerRef.current) {
-          clearInterval(streamTimerRef.current);
-        }
-        
-        // Set up new interval for streaming effect
-        streamTimerRef.current = setInterval(() => {
-          setDisplayedContent(content.substring(0, index));
-          index++;
-          
-          // Once we've displayed all content, clear interval
-          if (index > content.length) {
-            if (streamTimerRef.current) {
-              clearInterval(streamTimerRef.current);
-              streamTimerRef.current = null;
-            }
-            setIsStreaming(false);
-          }
-        }, 15); // Adjust timing for more or less human-like typing
-      }
-    } else {
-      setDisplayedContent(message.content);
-    }
-    
-    // Cleanup interval on unmount
-    return () => {
-      if (streamTimerRef.current) {
-        clearInterval(streamTimerRef.current);
-      }
-    };
-  }, [message, displayedContent]);
-
   return (
     <div
       className={cn(
@@ -81,10 +36,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             : "bg-muted"
         )}
       >
-        <div 
-          ref={contentRef}
-          className="whitespace-pre-wrap"
-        >
+        <div className="whitespace-pre-wrap">
           {message.pending ? (
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -92,8 +44,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             </div>
           ) : (
             <>
-              {displayedContent}
-              {isStreaming && (
+              {message.content}
+              {message.role === "assistant" && message.content === "" && (
                 <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1">
                   &nbsp;
                 </span>

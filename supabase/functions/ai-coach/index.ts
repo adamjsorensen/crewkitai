@@ -20,6 +20,7 @@ serve(async (req) => {
       throw new Error('OpenAI API key is not set');
     }
 
+    // Parse the request body
     const { messages, userProfile } = await req.json();
     
     // Construct the system message with user profile context if available
@@ -49,6 +50,7 @@ serve(async (req) => {
       systemMessage.content += '.';
     }
 
+    // Create fetch request to OpenAI streaming API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -61,24 +63,62 @@ serve(async (req) => {
           systemMessage,
           ...messages
         ],
+        stream: true,
         temperature: 0.7,
-        max_tokens: 800,
       }),
     });
 
+    // Check for errors
     if (!response.ok) {
       const error = await response.json();
       console.error('OpenAI API error:', error);
       throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
     }
 
-    const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
+    // Set up streaming response
+    const readableStream = response.body;
+    if (!readableStream) {
+      throw new Error('No readable stream available from OpenAI');
+    }
 
-    return new Response(
-      JSON.stringify({ response: aiResponse }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    // Create a TransformStream to process chunks
+    const transformer = new TransformStream({
+      async transform(chunk, controller) {
+        const text = new TextDecoder().decode(chunk);
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        
+        for (const line of lines) {
+          // Skip the "data: [DONE]" message
+          if (line.includes('[DONE]')) continue;
+          
+          // Remove the "data: " prefix
+          const jsonString = line.replace(/^data: /, '');
+          
+          try {
+            // Parse the JSON
+            const json = JSON.parse(jsonString);
+            // Extract the content delta if it exists
+            const content = json.choices?.[0]?.delta?.content || '';
+            if (content) {
+              // Send only the content part to the client
+              controller.enqueue(new TextEncoder().encode(content));
+            }
+          } catch (error) {
+            console.error('Error parsing JSON:', error, 'Line:', line);
+          }
+        }
+      }
+    });
+
+    // Pipe the OpenAI response through our transformer
+    return new Response(readableStream.pipeThrough(transformer), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/plain',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      }
+    });
   } catch (error) {
     console.error('Error in AI Coach edge function:', error);
     

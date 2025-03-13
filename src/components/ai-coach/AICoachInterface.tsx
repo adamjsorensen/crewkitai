@@ -30,6 +30,7 @@ const AICoachInterface = () => {
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -37,6 +38,15 @@ const AICoachInterface = () => {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleSendMessage = async (messageText: string = inputValue) => {
     if (!messageText.trim()) return;
@@ -62,43 +72,81 @@ const AICoachInterface = () => {
     setInputValue("");
     setIsLoading(true);
 
+    // Create a new AbortController for this request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     try {
-      // Make request to our Edge Function
-      const { data, error } = await supabase.functions.invoke("ai-coach", {
-        body: {
-          messages: [...messages.filter(m => !m.pending).map(m => ({
-            role: m.role,
-            content: m.content
-          })), {
-            role: "user",
-            content: messageText
-          }],
-          userProfile: profile
+      // Prepare the messages to send to the API
+      const messagesToSend = [
+        ...messages.filter(m => !m.pending).map(m => ({
+          role: m.role,
+          content: m.content
+        })), 
+        {
+          role: "user" as const,
+          content: messageText
         }
-      });
+      ];
 
-      if (error) throw new Error(error.message);
-
-      // Update with the response
-      setMessages(prev =>
-        prev.map(msg =>
+      // Update the pending message to empty content, not pending
+      setMessages(prev => 
+        prev.map(msg => 
           msg.id === assistantMessageId
-            ? { ...msg, content: data.response, pending: false }
+            ? { ...msg, pending: false, content: "" }
             : msg
         )
       );
-    } catch (error) {
-      console.error("Error calling AI Coach:", error);
-      toast({
-        title: "Error",
-        description: "Failed to get a response from the AI coach. Please try again.",
-        variant: "destructive"
+
+      // Call the edge function with streaming
+      const response = await supabase.functions.invoke("ai-coach", {
+        body: {
+          messages: messagesToSend,
+          userProfile: profile
+        },
+        signal: abortControllerRef.current.signal
       });
 
-      // Remove the pending message on error
-      setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+      if (response.error) throw new Error(response.error.message);
+
+      // Process the stream
+      const reader = response.data.getReader();
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const text = decoder.decode(value, { stream: true });
+        
+        // Update the assistant message with new content
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === assistantMessageId
+              ? { ...msg, content: msg.content + text }
+              : msg
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error calling AI Coach:", error);
+      
+      // Only show error if it's not an AbortError (which happens when we cancel)
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        toast({
+          title: "Error",
+          description: "Failed to get a response from the AI coach. Please try again.",
+          variant: "destructive"
+        });
+        
+        // Remove the pending message on error
+        setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+      }
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
