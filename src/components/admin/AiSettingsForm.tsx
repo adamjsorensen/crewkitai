@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,7 +18,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
+import { 
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter
+} from "@/components/ui/card";
 
 // Define the form schema
 const formSchema = z.object({
@@ -179,48 +185,27 @@ const AiSettingsForm = () => {
   
   return (
     <Card className="p-6">
-      <h2 className="text-2xl font-semibold mb-6">AI Coach Settings</h2>
+      <CardHeader className="pb-3">
+        <h2 className="text-2xl font-semibold">AI Coach Settings</h2>
+      </CardHeader>
       
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="ai_coach_system_prompt"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>System Prompt</FormLabel>
-                <FormDescription>
-                  The system prompt defines how the AI coach behaves and responds
-                </FormDescription>
-                <FormControl>
-                  <Textarea 
-                    {...field} 
-                    rows={8}
-                    placeholder="Enter system prompt" 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="ai_coach_temperature"
+              name="ai_coach_system_prompt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Temperature</FormLabel>
+                  <FormLabel>System Prompt</FormLabel>
                   <FormDescription>
-                    Controls randomness (0.0 to 1.0). Lower values make responses more deterministic.
+                    The system prompt defines how the AI coach behaves and responds
                   </FormDescription>
                   <FormControl>
-                    <Input 
+                    <Textarea 
                       {...field} 
-                      type="number" 
-                      min="0" 
-                      max="1" 
-                      step="0.1"
+                      rows={8}
+                      placeholder="Enter system prompt" 
                     />
                   </FormControl>
                   <FormMessage />
@@ -228,66 +213,91 @@ const AiSettingsForm = () => {
               )}
             />
             
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="ai_coach_temperature"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Temperature</FormLabel>
+                    <FormDescription>
+                      Controls randomness (0.0 to 1.0). Lower values make responses more deterministic.
+                    </FormDescription>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        min="0" 
+                        max="1" 
+                        step="0.1"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="ai_coach_max_tokens"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Max Tokens</FormLabel>
+                    <FormDescription>
+                      Maximum tokens in the AI response (1 to 4000)
+                    </FormDescription>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        min="1" 
+                        max="4000"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <FormField
               control={form.control}
-              name="ai_coach_max_tokens"
+              name="ai_coach_models"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Max Tokens</FormLabel>
+                  <FormLabel>Models Configuration (JSON)</FormLabel>
                   <FormDescription>
-                    Maximum tokens in the AI response (1 to 4000)
+                    Configure the AI models as a JSON object
                   </FormDescription>
                   <FormControl>
-                    <Input 
+                    <Textarea 
                       {...field} 
-                      type="number" 
-                      min="1" 
-                      max="4000"
+                      rows={5}
+                      placeholder='{"default": "gpt-4o", "think": "o3-mini-2025-01-31"}'
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </div>
-          
-          <FormField
-            control={form.control}
-            name="ai_coach_models"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Models Configuration (JSON)</FormLabel>
-                <FormDescription>
-                  Configure the AI models as a JSON object (e.g., {"default": "gpt-4o", "think": "o3-mini-2025-01-31"})
-                </FormDescription>
-                <FormControl>
-                  <Textarea 
-                    {...field} 
-                    rows={5}
-                    placeholder='{"default": "gpt-4o", "think": "o3-mini-2025-01-31"}'
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <Button 
-            type="submit" 
-            className="w-full md:w-auto" 
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Settings"
-            )}
-          </Button>
-        </form>
-      </Form>
+            
+            <Button 
+              type="submit" 
+              className="w-full md:w-auto" 
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Settings"
+              )}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
     </Card>
   );
 };
