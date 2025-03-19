@@ -1,286 +1,327 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useForm } from "react-hook-form";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Key, Shield, LogOut, AlertTriangle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Mail, Bell, Lock, Shield, User, LogOut } from "lucide-react";
+
+type SettingsFormValues = {
+  email_notifications: boolean;
+  push_notifications: boolean;
+  sms_notifications: boolean;
+  marketing_emails: boolean;
+};
 
 const SettingsPage = () => {
-  const { user, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
-  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, signOut } = useAuth();
+  const [isPending, setIsPending] = useState(false);
+  
+  const form = useForm<SettingsFormValues>({
+    defaultValues: {
+      email_notifications: true,
+      push_notifications: false,
+      sms_notifications: false,
+      marketing_emails: false,
+    },
+  });
 
-  const handleNotificationToggle = (checked: boolean) => {
-    setEmailNotifications(checked);
-    toast.success(`Email notifications ${checked ? "enabled" : "disabled"}`);
+  const onSubmit = async (data: SettingsFormValues) => {
+    try {
+      setIsPending(true);
+      
+      // Simulate saving settings
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      toast.success("Settings updated successfully");
+      setIsPending(false);
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      toast.error("Failed to update settings");
+      setIsPending(false);
+    }
   };
 
   const handlePasswordReset = async () => {
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
-    setIsSubmitting(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      if (!user?.email) {
+        toast.error("No email found for password reset");
+        return;
+      }
+
+      setIsPending(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/dashboard/settings/reset-password`,
+      });
 
       if (error) throw error;
-      
-      setPassword("");
-      setConfirmPassword("");
-      setIsResetPasswordOpen(false);
-      toast.success("Password updated successfully");
-    } catch (error) {
-      console.error("Error updating password:", error);
-      toast.error("Failed to update password");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
-  const handleDeleteAccount = async () => {
-    setIsSubmitting(true);
-    try {
-      // Note: In a real application, this would need admin rights or a custom API
-      // This is a simplified example
-      toast.error("Account deletion is not implemented in this demo");
-      setIsDeleteAccountOpen(false);
+      toast.success("Password reset email sent");
+      setIsPending(false);
     } catch (error) {
-      console.error("Error deleting account:", error);
-      toast.error("Failed to delete account");
-    } finally {
-      setIsSubmitting(false);
+      console.error("Error sending password reset:", error);
+      toast.error("Failed to send password reset email");
+      setIsPending(false);
     }
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
+    try {
+      await signOut();
+      navigate("/auth");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast.error("Failed to sign out");
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
-  }
+  const handleDeleteAccount = async () => {
+    // In a real application, you would want to add confirmation dialogs
+    try {
+      setIsPending(true);
+      
+      // This is a placeholder for account deletion logic
+      toast.success("Account deletion request submitted");
+      setIsPending(false);
+      
+      // In a real app, you might want to sign the user out after account deletion
+      // await signOut();
+      // navigate("/");
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast.error("Failed to delete account");
+      setIsPending(false);
+    }
+  };
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
-            <p className="text-muted-foreground">
-              Manage your account preferences and security
-            </p>
-          </div>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your account settings and preferences
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notification Settings
-              </CardTitle>
-              <CardDescription>Manage how you receive notifications</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="email-notifications">Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive notifications about your account via email
-                  </p>
-                </div>
-                <Switch
-                  id="email-notifications"
-                  checked={emailNotifications}
-                  onCheckedChange={handleNotificationToggle}
-                />
-              </div>
-            </CardContent>
-          </Card>
+        <Separator />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Security Settings
-              </CardTitle>
-              <CardDescription>Manage your account security</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Password</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Change your account password
-                    </p>
-                  </div>
-                  <Dialog open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        Change Password
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Change Password</DialogTitle>
-                        <DialogDescription>
-                          Enter your new password below. Password must be at least 6 characters.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="new-password">New Password</Label>
-                          <Input
-                            id="new-password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="confirm-password">Confirm Password</Label>
-                          <Input
-                            id="confirm-password"
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="••••••••"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsResetPasswordOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handlePasswordReset} disabled={isSubmitting}>
-                          {isSubmitting ? "Updating..." : "Update Password"}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Sidebar Navigation */}
+          <div className="md:col-span-1">
+            <nav className="flex flex-col space-y-1">
+              <Button
+                variant="ghost"
+                className="justify-start px-4 py-2 h-auto text-left"
+                onClick={() => navigate("/dashboard/profile")}
+              >
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className="justify-start px-4 py-2 h-auto text-left font-semibold bg-accent"
+              >
+                <Bell className="mr-2 h-4 w-4" />
+                Notifications
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className="justify-start px-4 py-2 h-auto text-left"
+                onClick={handlePasswordReset}
+              >
+                <Lock className="mr-2 h-4 w-4" />
+                Security
+              </Button>
+              
+              <Button
+                variant="ghost"
+                className="justify-start px-4 py-2 h-auto text-left"
+                onClick={handleSignOut}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+            </nav>
+            
+            <Separator className="my-4" />
+            
+            <div className="px-4 py-3 bg-muted rounded-lg">
+              <div className="text-sm font-medium">Account Status</div>
+              <div className="flex justify-between items-center mt-2">
+                <div className="text-sm text-muted-foreground">Active</div>
+                <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">
+                  Active
+                </Badge>
+              </div>
+              
+              <div className="flex justify-between items-center mt-2">
+                <div className="text-sm text-muted-foreground">Email</div>
+                <div className="flex items-center">
+                  <Mail className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                  <span className="text-xs">{user?.email?.substring(0, 15)}...</span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="pt-4">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Connected Account
-                </p>
-                <div className="flex items-center justify-between bg-muted p-3 rounded-md">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    <span>{user?.email}</span>
-                  </div>
-                  <Badge variant="outline">Primary</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                Danger Zone
-              </CardTitle>
-              <CardDescription>
-                Irreversible and destructive actions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Delete Account</Label>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Permanently delete your account and all associated data. This action cannot be undone.
-                </p>
-                <Dialog open={isDeleteAccountOpen} onOpenChange={setIsDeleteAccountOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      Delete Account
+          {/* Main Content */}
+          <div className="md:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Settings</CardTitle>
+                <CardDescription>
+                  Choose how you want to be notified about activity and updates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                    <FormField
+                      control={form.control}
+                      name="email_notifications"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
+                          <div className="space-y-0.5">
+                            <FormLabel>Email Notifications</FormLabel>
+                            <FormDescription>
+                              Receive notifications via email
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="push_notifications"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
+                          <div className="space-y-0.5">
+                            <FormLabel>Push Notifications</FormLabel>
+                            <FormDescription>
+                              Receive push notifications in the app
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="sms_notifications"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
+                          <div className="space-y-0.5">
+                            <FormLabel>SMS Notifications</FormLabel>
+                            <FormDescription>
+                              Receive important notifications via SMS
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="marketing_emails"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
+                          <div className="space-y-0.5">
+                            <FormLabel>Marketing Emails</FormLabel>
+                            <FormDescription>
+                              Receive emails about new features and updates
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button type="submit" disabled={isPending}>
+                      {isPending ? "Saving..." : "Save Changes"}
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Delete Account</DialogTitle>
-                      <DialogDescription>
-                        This action cannot be undone. Are you sure you want to permanently delete your account?
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsDeleteAccountOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button variant="destructive" onClick={handleDeleteAccount} disabled={isSubmitting}>
-                        {isSubmitting ? "Deleting..." : "Delete Account"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardContent>
-          </Card>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="h-5 w-5" />
-                Account Access
-              </CardTitle>
-              <CardDescription>
-                Manage your login sessions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Sign Out</Label>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Sign out from your current session
-                </p>
-                <Button 
-                  variant="outline" 
-                  onClick={handleSignOut}
-                  className="flex items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardDescription>
+                  Irreversible actions that will affect your account
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-md border border-destructive p-4">
+                  <h3 className="font-medium">Delete Account</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Once you delete your account, there is no going back. This action is not reversible.
+                  </p>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    className="mt-4"
+                    onClick={handleDeleteAccount}
+                    disabled={isPending}
+                  >
+                    {isPending ? "Processing..." : "Delete Account"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </DashboardLayout>

@@ -1,254 +1,291 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useForm } from "react-hook-form";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Briefcase, Building2, User, Mail, PaintBucket } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Building2, MapPin, Globe, PaintBucket } from "lucide-react";
+
+type BusinessProfileFormValues = {
+  company_name: string;
+  business_address: string;
+  website: string;
+  company_description: string;
+};
 
 const BusinessProfilePage = () => {
-  const { user, profile, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    company_name: "",
-    full_name: "",
-    email: "",
-    phone: "",
-    business_address: "",
-    website: "",
-    company_description: "",
+  const { user } = useAuth();
+  const [isPending, setIsPending] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  
+  const form = useForm<BusinessProfileFormValues>({
+    defaultValues: {
+      company_name: "",
+      business_address: "",
+      website: "",
+      company_description: "",
+    },
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      navigate("/auth");
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+        
+        if (error) throw error;
+        
+        setProfile(data);
+        form.reset({
+          company_name: data.company_name || "",
+          business_address: data.business_address || "",
+          website: data.website || "",
+          company_description: data.company_description || "",
+        });
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        toast.error("Failed to load profile data");
+      }
+    };
+    
+    fetchProfile();
+  }, [user, form]);
+
+  const onSubmit = async (data: BusinessProfileFormValues) => {
+    if (!user?.id) {
+      toast.error("You must be logged in to update your profile");
       return;
     }
-
-    if (profile) {
-      setFormData(prevData => ({
-        ...prevData,
-        company_name: profile.company_name || "",
-        full_name: profile.full_name || "",
-        email: user?.email || "",
-        phone: profile.phone || "",
-        business_address: profile.business_address || "",
-        website: profile.website || "",
-        company_description: profile.company_description || "",
-      }));
-    }
-  }, [user, profile, isLoading, navigate]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prevData => ({
-      ...prevData,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     
-    if (!user) return;
-    
-    setIsSubmitting(true);
     try {
+      setIsPending(true);
+      
       const { error } = await supabase
         .from("profiles")
         .update({
-          company_name: formData.company_name,
-          full_name: formData.full_name,
-          phone: formData.phone,
-          business_address: formData.business_address,
-          website: formData.website,
-          company_description: formData.company_description,
-          updated_at: new Date().toISOString()
+          company_name: data.company_name,
+          business_address: data.business_address,
+          website: data.website,
+          company_description: data.company_description,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
-
+      
       if (error) throw error;
       
       toast.success("Business profile updated successfully");
+      setIsPending(false);
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error("Failed to update profile");
-    } finally {
-      setIsSubmitting(false);
+      toast.error("Failed to update business profile");
+      setIsPending(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
-  }
-
-  const companyInitials = formData.company_name
-    ? formData.company_name
-        .split(" ")
-        .map(word => word[0])
-        .join("")
-        .toUpperCase()
-        .substring(0, 2)
-    : "CO";
-
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Business Profile</h1>
-            <p className="text-muted-foreground">
-              Manage your business information and details
-            </p>
-          </div>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Business Profile</h1>
+          <p className="text-muted-foreground mt-2">
+            Update your painting business information
+          </p>
         </div>
 
+        <Separator />
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle>Business Overview</CardTitle>
-              <CardDescription>Your business at a glance</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center space-y-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src="" alt={formData.company_name} />
-                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
-                  {companyInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-center">
-                <h3 className="text-xl font-semibold">{formData.company_name}</h3>
-                <p className="text-sm text-muted-foreground">{formData.email}</p>
-              </div>
-              <div className="w-full space-y-2 pt-4">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Painting Company</span>
-                </div>
-                {formData.website && (
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{formData.website}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{formData.full_name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{formData.email}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Edit Business Profile</CardTitle>
-              <CardDescription>Update your business information</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="company_name">Company Name</Label>
-                  <Input
-                    id="company_name"
-                    name="company_name"
-                    value={formData.company_name}
-                    onChange={handleChange}
-                    placeholder="Your Company Name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">Owner/Manager Name</Label>
-                  <Input
-                    id="full_name"
-                    name="full_name"
-                    value={formData.full_name}
-                    onChange={handleChange}
-                    placeholder="Your Full Name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    disabled
-                    placeholder="your.email@example.com"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Email cannot be changed here. Please update from account settings.
+          {/* Sidebar */}
+          <div className="md:col-span-1">
+            <nav className="flex flex-col space-y-1">
+              <Button
+                variant="ghost"
+                className="justify-start px-4 py-2 h-auto text-left"
+                onClick={() => navigate("/dashboard/profile")}
+              >
+                Profile Overview
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start px-4 py-2 h-auto text-left font-semibold bg-accent"
+              >
+                Business Information
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start px-4 py-2 h-auto text-left"
+                onClick={() => navigate("/dashboard/profile/personal")}
+              >
+                Personal Information
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start px-4 py-2 h-auto text-left"
+                onClick={() => navigate("/dashboard/settings")}
+              >
+                Account Settings
+              </Button>
+            </nav>
+            
+            <Separator className="my-4" />
+            
+            <div className="rounded-lg bg-muted p-4">
+              <div className="flex items-center space-x-2">
+                <PaintBucket className="h-10 w-10 text-primary" />
+                <div>
+                  <h3 className="font-medium">
+                    {profile?.company_name || "Your Painting Business"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Complete your business profile to showcase your professional services
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="Your Phone Number"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="business_address">Business Address</Label>
-                  <Input
-                    id="business_address"
-                    name="business_address"
-                    value={formData.business_address}
-                    onChange={handleChange}
-                    placeholder="Your Business Address"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    name="website"
-                    value={formData.website}
-                    onChange={handleChange}
-                    placeholder="https://www.yourcompany.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="company_description">Company Description</Label>
-                  <Textarea
-                    id="company_description"
-                    name="company_description"
-                    value={formData.company_description}
-                    onChange={handleChange}
-                    placeholder="Tell us about your painting business..."
-                    rows={4}
-                  />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Save Changes"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          {/* Main Content */}
+          <div className="md:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Business Information</CardTitle>
+                <CardDescription>
+                  Update your painting company details displayed to clients
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                    <FormField
+                      control={form.control}
+                      name="company_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Name</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Your Painting Company"
+                                className="pl-10"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            The name of your painting business
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="business_address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Business Address</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="123 Painter St, Columbus, OH 43215"
+                                className="pl-10"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Your business location or service area
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Business Website</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="www.yourpaintingcompany.com"
+                                className="pl-10"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Your business website address (if available)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="company_description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Description</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Professional painting services with over 10 years of experience..."
+                              className="min-h-32"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Describe your painting business, services, and expertise
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button type="submit" disabled={isPending}>
+                      {isPending ? "Saving..." : "Save Business Profile"}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </DashboardLayout>
