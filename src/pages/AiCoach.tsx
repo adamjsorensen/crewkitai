@@ -90,7 +90,7 @@ const AiCoach = () => {
         <Separator className="mt-0 mb-2" />
         
         <Card className="p-0 overflow-hidden border-none shadow-md flex-1 bg-card/50">
-          <div className="flex flex-col h-[75vh]">
+          <div className="flex flex-col h-[78vh]">
             <div className="flex-1">
               <ChatInterface 
                 conversationId={selectedConversationId}
