@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -140,7 +139,6 @@ const ChatInterface = () => {
   };
 
   const handleRetry = () => {
-    // Fix for the findLast TypeScript error
     let lastUserMessage: Message | undefined;
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === 'user') {
@@ -195,6 +193,72 @@ const ChatInterface = () => {
     });
   };
 
+  const handleRegenerateMessage = async (messageId: string) => {
+    if (isLoading) return;
+    
+    const messageIndex = messages.findIndex(msg => msg.id === messageId);
+    if (messageIndex <= 0) return;
+    
+    let userMessageIndex = messageIndex - 1;
+    while (userMessageIndex >= 0 && messages[userMessageIndex].role !== 'user') {
+      userMessageIndex--;
+    }
+    
+    if (userMessageIndex < 0) return;
+    
+    const userMessage = messages[userMessageIndex];
+    
+    setMessages(prev => prev.filter((_, index) => index !== messageIndex));
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const conversationContext = messages
+        .slice(0, userMessageIndex)
+        .slice(-5)
+        .map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }));
+
+      const { data, error } = await supabase.functions.invoke('ai-coach', {
+        body: { 
+          message: userMessage.content, 
+          userId: user?.id,
+          context: conversationContext
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const aiResponse: Message = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, aiResponse]);
+      
+      toast({
+        title: "Response regenerated",
+        description: "Created a new response for you",
+      });
+    } catch (error) {
+      console.error('Error regenerating message:', error);
+      setError(error instanceof Error ? error.message : 'Failed to regenerate response');
+      toast({
+        title: "Error",
+        description: "Failed to regenerate the response. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[75vh] relative">
       <div className="absolute top-2 right-2 z-10 flex gap-1">
@@ -235,6 +299,7 @@ const ChatInterface = () => {
             <ChatMessage 
               key={message.id} 
               message={message} 
+              onRegenerate={handleRegenerateMessage}
             />
           ))}
           {isLoading && (
