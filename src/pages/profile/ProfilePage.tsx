@@ -28,7 +28,9 @@ import {
   ChevronRight, 
   PaintBucket, 
   Brush, 
-  FileEdit 
+  FileEdit,
+  Home,
+  Bell
 } from "lucide-react";
 
 const ProfilePage = () => {
