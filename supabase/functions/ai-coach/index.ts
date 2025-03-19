@@ -75,6 +75,22 @@ serve(async (req) => {
     const model = thinkMode ? 'o3-mini-2025-01-31' : 'gpt-4o';
     console.log(`Using model: ${model}`);
 
+    // Define request body based on the model
+    const requestBody = {
+      model: model,
+      messages: messages,
+      temperature: 0.7
+    };
+
+    // Add the appropriate token parameter based on the model
+    if (model === 'o3-mini-2025-01-31') {
+      // For o3-mini model, use max_completion_tokens
+      Object.assign(requestBody, { max_completion_tokens: 1000 });
+    } else {
+      // For other models, use max_tokens
+      Object.assign(requestBody, { max_tokens: 1000 });
+    }
+
     // Call OpenAI API
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -82,12 +98,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${openaiApiKey}`
       },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 1000
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!openAIResponse.ok) {
