@@ -156,28 +156,24 @@ serve(async (req) => {
     const model = thinkMode ? modelConfig.think : modelConfig.default;
     console.log(`Using model: ${model}`);
 
-    // Get temperature from settings
-    const temperature = parseFloat(settings.ai_coach_temperature) || 0.7;
-    console.log(`Using temperature: ${temperature}`);
-    
-    // Get max tokens from settings
-    const maxTokens = parseInt(settings.ai_coach_max_tokens) || 1000;
-    console.log(`Using max tokens: ${maxTokens}`);
-
     // Define request body based on the model
     const requestBody: any = {
       model: model,
-      messages: messages,
-      temperature: temperature
+      messages: messages
     };
 
-    // Add the appropriate token parameter based on the model
-    if (model === 'o3-mini-2025-01-31') {
-      // For o3-mini model, use max_completion_tokens
-      requestBody.max_completion_tokens = maxTokens;
+    // Add model-specific parameters
+    // Check if the model is o3-mini (Anthropic Claude model)
+    if (model.includes('o3-mini')) {
+      // For o3-mini model (Anthropic Claude), use max_completion_tokens but skip temperature
+      requestBody.max_completion_tokens = parseInt(settings.ai_coach_max_tokens) || 1000;
+      console.log(`Using max_completion_tokens: ${requestBody.max_completion_tokens}`);
     } else {
-      // For other models, use max_tokens
-      requestBody.max_tokens = maxTokens;
+      // For other models like GPT-4, use temperature and max_tokens
+      requestBody.temperature = parseFloat(settings.ai_coach_temperature) || 0.7;
+      requestBody.max_tokens = parseInt(settings.ai_coach_max_tokens) || 1000;
+      console.log(`Using temperature: ${requestBody.temperature}`);
+      console.log(`Using max tokens: ${requestBody.max_tokens}`);
     }
 
     // Call OpenAI API
