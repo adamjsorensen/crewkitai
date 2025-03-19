@@ -13,6 +13,10 @@ import FinancialDashboard from "./pages/financial/FinancialDashboard";
 import JobAnalysis from "./pages/financial/JobAnalysis";
 import FinancialReports from "./pages/financial/FinancialReports";
 import DataUpload from "./pages/financial/DataUpload";
+import ProfilePage from "./pages/profile/ProfilePage";
+import BusinessProfilePage from "./pages/profile/BusinessProfilePage";
+import PersonalProfilePage from "./pages/profile/PersonalProfilePage";
+import SettingsPage from "./pages/profile/SettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +35,10 @@ const App = () => (
             <Route path="/dashboard/financial/jobs" element={<JobAnalysis />} />
             <Route path="/dashboard/financial/reports" element={<FinancialReports />} />
             <Route path="/dashboard/financial/upload" element={<DataUpload />} />
+            <Route path="/dashboard/profile" element={<ProfilePage />} />
+            <Route path="/dashboard/profile/business" element={<BusinessProfilePage />} />
+            <Route path="/dashboard/profile/personal" element={<PersonalProfilePage />} />
+            <Route path="/dashboard/settings" element={<SettingsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

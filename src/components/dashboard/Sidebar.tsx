@@ -2,7 +2,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { PaintBucket, LayoutDashboard, FileText, BarChart4, Settings, LogOut } from "lucide-react";
+import { PaintBucket, LayoutDashboard, FileText, BarChart4, Settings, LogOut, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -20,6 +20,7 @@ const Sidebar = () => {
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Content", icon: FileText, path: "/dashboard/content" },
     { name: "Financial", icon: BarChart4, path: "/dashboard/financial" },
+    { name: "Profile", icon: User, path: "/dashboard/profile" },
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
 
