@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Brain, Paint, Users, TrendingUp, MessageSquare } from 'lucide-react';
+import { Brain, PaintBucket, Users, TrendingUp, MessageSquare } from 'lucide-react';
 
 interface WelcomeSectionProps {
   onCategorySelect: (category: string) => void;
@@ -34,7 +34,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
     {
       id: 'crew',
       title: 'Crew Management',
-      icon: <Paint className="h-5 w-5 text-orange-500" />,
+      icon: <PaintBucket className="h-5 w-5 text-orange-500" />,
       description: 'Team leadership, training, efficiency',
       examples: [
         "How can I improve my crew's efficiency?",
