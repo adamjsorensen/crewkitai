@@ -204,6 +204,8 @@ const ChatInterface = () => {
           disabled={messages.length <= 1 || isLoading || isCopying}
           onClick={copyConversation}
           className="h-8 px-2"
+          title="Copy conversation"
+          aria-label="Copy conversation to clipboard"
         >
           {isCopying ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -219,6 +221,8 @@ const ChatInterface = () => {
           disabled={messages.length <= 1 || isLoading}
           onClick={clearConversation}
           className="text-destructive hover:text-destructive h-8 px-2"
+          title="Clear conversation"
+          aria-label="Clear conversation and start new"
         >
           <Trash2 className="h-4 w-4" />
           <span className="sr-only">Clear conversation</span>
