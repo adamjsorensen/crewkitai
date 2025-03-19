@@ -12,26 +12,49 @@ export type Database = {
       ai_coach_conversations: {
         Row: {
           ai_response: string
+          conversation_id: string | null
           created_at: string
           id: string
+          is_root: boolean
+          pinned: boolean
+          summary: string | null
+          title: string | null
           user_id: string
           user_message: string
         }
         Insert: {
           ai_response: string
+          conversation_id?: string | null
           created_at?: string
           id?: string
+          is_root?: boolean
+          pinned?: boolean
+          summary?: string | null
+          title?: string | null
           user_id: string
           user_message: string
         }
         Update: {
           ai_response?: string
+          conversation_id?: string | null
           created_at?: string
           id?: string
+          is_root?: boolean
+          pinned?: boolean
+          summary?: string | null
+          title?: string | null
           user_id?: string
           user_message?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_coach_conversations_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_coach_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_categories: {
         Row: {

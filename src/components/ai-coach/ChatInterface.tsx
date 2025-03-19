@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,8 @@ import {
   Loader2,
   Trash2,
   Copy,
-  PaintBucket
+  PaintBucket,
+  PlusCircle
 } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import { Card } from '@/components/ui/card';
@@ -36,10 +38,19 @@ const EXAMPLE_QUESTIONS = [
   "What marketing strategies work during slow seasons?",
 ];
 
-const ChatInterface = () => {
+interface ChatInterfaceProps {
+  conversationId?: string | null;
+  onConversationCreated?: (id: string) => void;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
+  conversationId = null,
+  onConversationCreated
+}) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCopying, setIsCopying] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -47,29 +58,109 @@ const ChatInterface = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   
+  // Load conversation history if conversationId is provided
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: 'welcome',
-          role: 'assistant',
-          content: "Hello! I'm your AI Coach for the painting industry. How can I help you today? Ask me about pricing jobs, managing clients, leading crews, or marketing strategies.",
-          timestamp: new Date(),
-        },
-      ]);
+    if (!user || !conversationId) {
+      // Clear messages and show welcome message when starting a new conversation
+      if (!conversationId) {
+        setMessages([
+          {
+            id: 'welcome',
+            role: 'assistant',
+            content: "Hello! I'm your AI Coach for the painting industry. How can I help you today? Ask me about pricing jobs, managing clients, leading crews, or marketing strategies.",
+            timestamp: new Date(),
+          },
+        ]);
+      }
+      return;
     }
-  }, []);
+    
+    const fetchConversationHistory = async () => {
+      setIsLoadingHistory(true);
+      try {
+        // First, get the root message of the conversation
+        const { data: rootData, error: rootError } = await supabase
+          .from('ai_coach_conversations')
+          .select('*')
+          .eq('id', conversationId)
+          .single();
+          
+        if (rootError) throw rootError;
+        
+        // Then get all messages in the conversation thread
+        const { data: messagesData, error: messagesError } = await supabase
+          .from('ai_coach_conversations')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: true });
+          
+        if (messagesError) throw messagesError;
+        
+        // Combine root message with thread messages
+        const allMessages = [rootData, ...(messagesData || [])];
+        
+        // Convert to our message format
+        const chatMessages: Message[] = [];
+        
+        for (const msg of allMessages) {
+          // Add user message
+          chatMessages.push({
+            id: `user-${msg.id}`,
+            role: 'user',
+            content: msg.user_message,
+            timestamp: new Date(msg.created_at),
+          });
+          
+          // Add AI response
+          chatMessages.push({
+            id: `assistant-${msg.id}`,
+            role: 'assistant',
+            content: msg.ai_response,
+            timestamp: new Date(msg.created_at),
+          });
+        }
+        
+        // Sort by timestamp
+        chatMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        
+        setMessages(chatMessages);
+      } catch (error) {
+        console.error('Error fetching conversation history:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load conversation history",
+          variant: "destructive",
+        });
+        
+        // Fallback to welcome message
+        setMessages([
+          {
+            id: 'welcome',
+            role: 'assistant',
+            content: "Hello! I'm your AI Coach for the painting industry. How can I help you today? Ask me about pricing jobs, managing clients, leading crews, or marketing strategies.",
+            timestamp: new Date(),
+          },
+        ]);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+    
+    fetchConversationHistory();
+  }, [conversationId, user, toast]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!isLoading && !isLoadingHistory) {
+      scrollToBottom();
+    }
+  }, [messages, isLoading, isLoadingHistory]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleSendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !user) return;
     
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -85,6 +176,7 @@ const ChatInterface = () => {
     
     try {
       const conversationContext = messages
+        .filter(msg => msg.id !== 'welcome') // Filter out welcome message
         .slice(-5)
         .map(msg => ({
           role: msg.role === 'user' ? 'user' : 'assistant',
@@ -94,8 +186,9 @@ const ChatInterface = () => {
       const { data, error } = await supabase.functions.invoke('ai-coach', {
         body: { 
           message: input, 
-          userId: user?.id,
-          context: conversationContext
+          userId: user.id,
+          context: conversationContext,
+          conversationId: conversationId
         },
       });
 
@@ -111,6 +204,54 @@ const ChatInterface = () => {
       };
       
       setMessages(prev => [...prev, aiResponse]);
+      
+      // If this is a new conversation, we need to create a root message in the database
+      if (!conversationId) {
+        try {
+          // Generate a title from the first message
+          const title = input.length > 30 
+            ? input.substring(0, 30) + '...' 
+            : input;
+          
+          // Create a root conversation
+          const { data: rootData, error: rootError } = await supabase
+            .from('ai_coach_conversations')
+            .insert({
+              user_id: user.id,
+              user_message: input,
+              ai_response: data.response,
+              is_root: true,
+              title
+            })
+            .select('id')
+            .single();
+            
+          if (rootError) throw rootError;
+          
+          // Notify parent that conversation was created
+          if (onConversationCreated && rootData?.id) {
+            onConversationCreated(rootData.id);
+          }
+        } catch (insertError) {
+          console.error('Error creating conversation:', insertError);
+          // Continue even if storage fails
+        }
+      } else {
+        // This is an existing conversation, add message to thread
+        try {
+          await supabase
+            .from('ai_coach_conversations')
+            .insert({
+              user_id: user.id,
+              user_message: input,
+              ai_response: data.response,
+              conversation_id: conversationId
+            });
+        } catch (insertError) {
+          console.error('Error adding to conversation thread:', insertError);
+          // Continue even if storage fails
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       setError(error instanceof Error ? error.message : 'Failed to get a response');
@@ -166,6 +307,7 @@ const ChatInterface = () => {
     try {
       setIsCopying(true);
       const conversationText = messages
+        .filter(msg => msg.id !== 'welcome') // Filter out welcome message
         .map(msg => `${msg.role === 'user' ? 'You' : 'AI Coach'}: ${msg.content}`)
         .join('\n\n');
       
@@ -186,10 +328,24 @@ const ChatInterface = () => {
   };
 
   const clearConversation = () => {
-    setMessages([]);
+    // If we have a conversationId, just clear the interface and start a new conversation thread
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: "Hello! I'm your AI Coach for the painting industry. How can I help you today? Ask me about pricing jobs, managing clients, leading crews, or marketing strategies.",
+        timestamp: new Date(),
+      },
+    ]);
+    
+    // Notify parent that we want to start a new conversation
+    if (onConversationCreated) {
+      onConversationCreated('');
+    }
+    
     toast({
-      title: "Conversation cleared",
-      description: "Starting a new conversation",
+      title: "Started new conversation",
+      description: "You can now start a new conversation",
     });
   };
 
@@ -214,6 +370,7 @@ const ChatInterface = () => {
     
     try {
       const conversationContext = messages
+        .filter(msg => msg.id !== 'welcome') // Filter out welcome message
         .slice(0, userMessageIndex)
         .slice(-5)
         .map(msg => ({
@@ -225,7 +382,8 @@ const ChatInterface = () => {
         body: { 
           message: userMessage.content, 
           userId: user?.id,
-          context: conversationContext
+          context: conversationContext,
+          conversationId: conversationId
         },
       });
 
@@ -246,6 +404,26 @@ const ChatInterface = () => {
         title: "Response regenerated",
         description: "Created a new response for you",
       });
+      
+      // If this is part of a conversation thread, update the response in the database
+      if (conversationId) {
+        try {
+          // Find the database ID from the message ID
+          const dbIdMatch = messageId.match(/assistant-(.+)/);
+          if (dbIdMatch && dbIdMatch[1]) {
+            const dbId = dbIdMatch[1];
+            
+            // Update the AI response in the database
+            await supabase
+              .from('ai_coach_conversations')
+              .update({ ai_response: data.response })
+              .eq('id', dbId);
+          }
+        } catch (updateError) {
+          console.error('Error updating response in database:', updateError);
+          // Continue even if update fails
+        }
+      }
     } catch (error) {
       console.error('Error regenerating message:', error);
       setError(error instanceof Error ? error.message : 'Failed to regenerate response');
@@ -259,9 +437,34 @@ const ChatInterface = () => {
     }
   };
 
+  const startNewConversation = () => {
+    clearConversation();
+  };
+
+  if (isLoadingHistory) {
+    return (
+      <div className="flex flex-col h-[75vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading conversation...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[75vh] relative">
       <div className="absolute top-2 right-2 z-10 flex gap-1">
+        <Button
+          variant="default"
+          size="sm"
+          onClick={startNewConversation}
+          className="h-7 px-2 flex items-center gap-1"
+          title="Start new conversation"
+          aria-label="Start new conversation"
+        >
+          <PlusCircle className="h-4 w-4" />
+          <span className="hidden sm:inline">New chat</span>
+        </Button>
+        
         <Button
           variant="ghost"
           size="sm"
@@ -325,7 +528,7 @@ const ChatInterface = () => {
         </div>
       </ScrollArea>
       
-      {messages.length === 1 && (
+      {messages.length === 1 && messages[0].id === 'welcome' && (
         <div className="px-3 pb-3">
           <p className="text-sm text-muted-foreground mb-2">Try asking about:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -357,7 +560,7 @@ const ChatInterface = () => {
           />
           <AnimatedButton
             onClick={handleSendMessage} 
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim() || isLoading || !user}
             className="self-end"
           >
             {isLoading ? (

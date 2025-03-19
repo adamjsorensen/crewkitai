@@ -27,7 +27,7 @@ serve(async (req) => {
     );
 
     // Get the request body
-    const { message, userId, context = [] } = await req.json();
+    const { message, userId, context = [], conversationId = null } = await req.json();
     
     if (!message) {
       return new Response(
@@ -54,6 +54,7 @@ serve(async (req) => {
     // Log details for debugging
     console.log(`Processing request for user: ${userId || 'anonymous'}`);
     console.log(`Message: ${message.substring(0, 50)}...`);
+    console.log(`Conversation ID: ${conversationId || 'new conversation'}`);
 
     // Call OpenAI API
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -79,19 +80,9 @@ serve(async (req) => {
     const data = await openAIResponse.json();
     const aiResponse = data.choices[0].message.content;
 
-    // If user is authenticated, store the conversation in Supabase
-    if (userId) {
-      try {
-        await supabase.from('ai_coach_conversations').insert({
-          user_id: userId,
-          user_message: message,
-          ai_response: aiResponse,
-        });
-      } catch (error) {
-        console.error('Error storing conversation:', error);
-        // Continue even if storage fails
-      }
-    }
+    // The conversation metadata is stored in the database by the frontend
+    // We don't need to store it here as the frontend handles that now
+    // This improves error handling as storage failures won't affect the response
 
     return new Response(
       JSON.stringify({ 
