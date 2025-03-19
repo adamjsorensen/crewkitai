@@ -12,10 +12,15 @@ import {
   HistoryIcon, 
   Sparkles, 
   LightbulbIcon,
-  AlertCircle 
+  AlertCircle,
+  Loader2,
+  Trash2,
+  Copy
 } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import { Card } from '@/components/ui/card';
+import TypingIndicator from './TypingIndicator';
+import AnimatedButton from '@/components/ui-components/AnimatedButton';
 
 type Message = {
   id: string;
@@ -36,6 +41,7 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
@@ -157,9 +163,68 @@ const ChatInterface = () => {
     }
   };
 
+  const copyConversation = async () => {
+    try {
+      setIsCopying(true);
+      const conversationText = messages
+        .map(msg => `${msg.role === 'user' ? 'You' : 'AI Coach'}: ${msg.content}`)
+        .join('\n\n');
+      
+      await navigator.clipboard.writeText(conversationText);
+      toast({
+        title: "Copied!",
+        description: "Conversation copied to clipboard",
+      });
+    } catch (err) {
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
+  const clearConversation = () => {
+    setMessages([]);
+    toast({
+      title: "Conversation cleared",
+      description: "Starting a new conversation",
+    });
+  };
+
   return (
-    <div className="flex flex-col h-[70vh]">
-      <ScrollArea className="flex-1 p-4">
+    <div className="flex flex-col h-[70vh] relative">
+      <div className="absolute top-3 right-3 z-10 flex gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={messages.length <= 1 || isLoading || isCopying}
+          onClick={copyConversation}
+          className="h-8 px-2"
+        >
+          {isCopying ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+          <span className="sr-only">Copy conversation</span>
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={messages.length <= 1 || isLoading}
+          onClick={clearConversation}
+          className="text-destructive hover:text-destructive h-8 px-2"
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="sr-only">Clear conversation</span>
+        </Button>
+      </div>
+      
+      <ScrollArea className="flex-1 p-4 pt-10">
         <div className="space-y-4">
           {messages.map(message => (
             <ChatMessage 
@@ -168,13 +233,17 @@ const ChatInterface = () => {
             />
           ))}
           {isLoading && (
-            <div className="flex items-center space-x-2 p-2 text-muted-foreground">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              <span>AI Coach is thinking...</span>
+            <div className="flex items-start gap-3 animate-fade-in">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <PaintBucket className="h-4 w-4 text-white" />
+              </div>
+              <div className="rounded-xl p-3 bg-muted">
+                <TypingIndicator />
+              </div>
             </div>
           )}
           {error && (
-            <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md">
+            <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md animate-fade-in">
               <AlertCircle className="h-4 w-4" />
               <span>{error}</span>
               <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
@@ -194,7 +263,7 @@ const ChatInterface = () => {
               <Button 
                 key={index} 
                 variant="outline" 
-                className="justify-start text-left h-auto py-2 px-3 text-sm"
+                className="justify-start text-left h-auto py-2 px-3 text-sm hover:bg-muted/50 transition-colors"
                 onClick={() => handleExampleClick(question)}
               >
                 <LightbulbIcon className="h-4 w-4 mr-2 text-primary" />
@@ -213,17 +282,21 @@ const ChatInterface = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask your AI Coach anything about your painting business..."
-            className="resize-none min-h-[60px]"
+            className="resize-none min-h-[60px] focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             disabled={isLoading}
           />
-          <Button 
+          <AnimatedButton
             onClick={handleSendMessage} 
             disabled={!input.trim() || isLoading}
             className="self-end"
           >
-            <Send className="h-4 w-4" />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
             <span className="sr-only">Send message</span>
-          </Button>
+          </AnimatedButton>
         </div>
         <p className="text-xs text-muted-foreground mt-2 flex items-center">
           <Sparkles className="h-3 w-3 mr-1" />

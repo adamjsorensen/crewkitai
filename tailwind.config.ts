@@ -77,6 +77,37 @@ export default {
 				sans: ['Inter var', 'Inter', 'sans-serif'],
 				display: ['SF Pro Display', 'Inter', 'sans-serif'],
 			},
+			typography: {
+				DEFAULT: {
+					css: {
+						maxWidth: '100%',
+						color: 'inherit',
+						a: {
+							color: 'hsl(var(--primary))',
+							textDecoration: 'underline',
+							fontWeight: '500',
+						},
+						'h1,h2,h3,h4,h5,h6': {
+							color: 'inherit',
+							fontWeight: '600',
+						},
+						code: {
+							color: 'inherit',
+							borderRadius: '0.25rem',
+							padding: '0.15rem 0.3rem',
+						},
+						pre: {
+							color: 'inherit',
+							borderRadius: '0.25rem',
+							padding: '0.5rem',
+						},
+						strong: {
+							color: 'inherit',
+							fontWeight: '600',
+						},
+					},
+				},
+			},
 			keyframes: {
 				'accordion-down': {
 					from: { height: '0' },
@@ -133,5 +164,8 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		require("tailwindcss-animate"),
+		require('@tailwindcss/typography')
+	],
 } satisfies Config;
