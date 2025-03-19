@@ -10,7 +10,8 @@ import ChatInterface from '@/components/ai-coach/ChatInterface';
 import ConversationDialog from '@/components/ai-coach/ConversationDialog';
 import ConversationDrawer from '@/components/ai-coach/ConversationDrawer';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, HistoryIcon } from 'lucide-react';
+import { PlusCircle, HistoryIcon, Sparkles, PaintBucket } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 const AiCoach = () => {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ const AiCoach = () => {
   const {
     conversations,
     selectedConversationId,
-    isNewChat, // Use the new isNewChat state
+    isNewChat,
     isLoading,
     createNewConversation,
     selectConversation,
@@ -47,39 +48,53 @@ const AiCoach = () => {
 
   const handleNewConversation = () => {
     createNewConversation();
-    // Don't close dialog here, let user explicitly close it
   };
 
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6 h-full">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-extrabold">AI Coach</h1>
-            <p className="text-muted-foreground">Get expert advice for your painting business</p>
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
+              <PaintBucket className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">AI Coach</h1>
+              <p className="text-muted-foreground">Get expert advice for your painting business</p>
+            </div>
           </div>
           
           <div className="flex gap-2">
             <Button 
               variant="default" 
               size="sm" 
-              className="flex items-center gap-1"
+              className="flex items-center gap-1.5 bg-primary/90 hover:bg-primary"
               onClick={createNewConversation}
             >
               <PlusCircle className="h-4 w-4" />
               <span>New Chat</span>
             </Button>
             
-            <ConversationDrawer onClick={handleOpenDialog} />
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1.5"
+              onClick={handleOpenDialog}
+            >
+              <HistoryIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">History</span>
+            </Button>
           </div>
         </div>
         
-        <Card className="p-0 overflow-hidden border-none shadow-md flex-1">
+        <Separator className="mt-0 mb-2" />
+        
+        <Card className="p-0 overflow-hidden border-none shadow-md flex-1 bg-card/50">
           <div className="flex flex-col h-[75vh]">
             <div className="flex-1">
               <ChatInterface 
                 conversationId={selectedConversationId}
-                isNewChat={isNewChat} // Pass isNewChat state to ChatInterface
+                isNewChat={isNewChat}
                 onConversationCreated={(id) => {
                   if (id) {
                     selectConversation(id);

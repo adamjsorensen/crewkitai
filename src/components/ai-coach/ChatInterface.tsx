@@ -6,21 +6,34 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, RefreshCw, HistoryIcon, Sparkles, LightbulbIcon, AlertCircle, Loader2, Trash2, Copy, PaintBucket, PlusCircle, Image as ImageIcon, X, ZoomIn } from 'lucide-react';
+import { Send, RefreshCw, HistoryIcon, Sparkles, LightbulbIcon, AlertCircle, Loader2, Trash2, Copy, PaintBucket, PlusCircle, Image as ImageIcon, X, ZoomIn, ChevronDown, ArrowDown } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import { Card } from '@/components/ui/card';
 import TypingIndicator from './TypingIndicator';
 import AnimatedButton from '@/components/ui-components/AnimatedButton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  imageUrl?: string; // Add support for image URLs
+  imageUrl?: string;
 };
 
-const EXAMPLE_QUESTIONS = ["How do I price a 2,000 sq ft exterior job?", "What's the best way to handle a difficult client?", "How can I improve my crew's efficiency?", "What marketing strategies work during slow seasons?"];
+const EXAMPLE_QUESTIONS = [
+  "How do I price a 2,000 sq ft exterior job?", 
+  "What's the best way to handle a difficult client?", 
+  "How can I improve my crew's efficiency?", 
+  "What marketing strategies work during slow seasons?"
+];
 
 interface ChatInterfaceProps {
   conversationId?: string | null;
@@ -42,7 +55,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -137,6 +152,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       scrollToBottom();
     }
   }, [messages, isLoading, isLoadingHistory]);
+
+  // Handle scroll button visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!messagesContainerRef.current) return;
+      
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollButton(!isNearBottom);
+    };
+    
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({
@@ -485,116 +517,202 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>;
   }
 
-  return <div className="flex flex-col h-[75vh] relative">
-      <div className="absolute top-2 right-2 z-10 flex gap-1">
-        
-        
-        
-        
-        
-      </div>
+  return (
+    <div className="flex flex-col h-[75vh] relative">
+      <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent h-6 pointer-events-none" />
       
-      <ScrollArea className="flex-1 p-3 pt-8">
-        <div className="space-y-3">
-          {messages.map(message => <ChatMessage key={message.id} message={message} onRegenerate={handleRegenerateMessage} />)}
-          {isLoading && <div className="flex items-start gap-2 animate-fade-in">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+      <ScrollArea 
+        ref={messagesContainerRef} 
+        className="flex-1 px-4 pt-6"
+      >
+        <div className="space-y-1 pb-4 max-w-3xl mx-auto">
+          {messages.map(message => (
+            <ChatMessage 
+              key={message.id} 
+              message={message} 
+              onRegenerate={handleRegenerateMessage} 
+            />
+          ))}
+          
+          {isLoading && (
+            <div className="flex items-start gap-3 animate-fade-in my-6">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
                 <PaintBucket className="h-4 w-4 text-white" />
               </div>
-              <div className="rounded-xl p-2 bg-muted">
+              <div className="rounded-2xl p-4 bg-muted/70 shadow-sm">
                 <TypingIndicator />
               </div>
-            </div>}
-          {error && <div className="flex items-center space-x-2 p-2 text-destructive bg-destructive/10 rounded-md animate-fade-in">
+            </div>
+          )}
+          
+          {error && (
+            <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md animate-fade-in my-4 max-w-md mx-auto">
               <AlertCircle className="h-4 w-4" />
-              <span>{error}</span>
+              <span className="text-sm">{error}</span>
               <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
                 Retry
               </Button>
-            </div>}
+            </div>
+          )}
+          
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
       
-      {messages.length === 1 && messages[0].id === 'welcome' && <div className="px-3 pb-3">
-          <p className="text-sm text-muted-foreground mb-2">Try asking about:</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {EXAMPLE_QUESTIONS.map((question, index) => <Button key={index} variant="outline" className="justify-start text-left h-auto py-1.5 px-2 text-sm hover:bg-muted/50 transition-colors" onClick={() => handleExampleClick(question)}>
-                <LightbulbIcon className="h-4 w-4 mr-2 text-primary" />
-                {question}
-              </Button>)}
-          </div>
-        </div>}
+      {showScrollButton && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute bottom-28 right-8 rounded-full shadow-md bg-background z-10 border border-border/50"
+          onClick={scrollToBottom}
+        >
+          <ArrowDown className="h-4 w-4" />
+        </Button>
+      )}
       
-      <div className="border-t p-3 bg-background">
-        {imagePreviewUrl && (
-          <div className="relative mb-2 inline-block">
-            <div className="relative group">
-              <img 
-                src={imagePreviewUrl} 
-                alt="Upload preview" 
-                className="h-20 w-auto rounded-md object-cover border border-muted-foreground/20"
-              />
-              <Button 
-                variant="destructive" 
-                size="icon" 
-                className="absolute -top-2 -right-2 h-5 w-5 rounded-full" 
-                onClick={removeImage}
+      {messages.length === 1 && messages[0].id === 'welcome' && (
+        <div className="px-4 pb-4">
+          <p className="text-sm text-muted-foreground mb-3 ml-1">Try asking about:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {EXAMPLE_QUESTIONS.map((question, index) => (
+              <Card 
+                key={index} 
+                className="p-3 hover:bg-accent/50 transition-colors cursor-pointer border-border/30 hover:border-border/70" 
+                onClick={() => handleExampleClick(question)}
               >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        <div className="flex space-x-2">
-          <Textarea 
-            ref={inputRef} 
-            value={input} 
-            onChange={e => setInput(e.target.value)} 
-            onKeyDown={handleKeyDown} 
-            placeholder="Ask your AI Coach anything about your painting business..." 
-            className="resize-none min-h-[50px] focus:border-primary focus:ring-1 focus:ring-primary transition-colors" 
-            disabled={isLoading || isUploading} 
-          />
-          
-          <div className="flex flex-col space-y-2 self-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-md"
-              onClick={handleImageClick}
-              disabled={isLoading || isUploading}
-              title="Attach image"
-            >
-              <ImageIcon className="h-4 w-4" />
-            </Button>
-            
-            <AnimatedButton 
-              onClick={handleSendMessage} 
-              disabled={(!input.trim() && !imageFile) || isLoading || isUploading || !user}
-            >
-              {isLoading || isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              <span className="sr-only">Send message</span>
-            </AnimatedButton>
+                <div className="flex items-start">
+                  <LightbulbIcon className="h-4 w-4 mr-2 text-primary mt-0.5 flex-shrink-0" />
+                  <p className="text-sm">{question}</p>
+                </div>
+              </Card>
+            ))}
           </div>
         </div>
-        
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleImageChange}
-          accept="image/*"
-          className="hidden"
-        />
-        
-        <p className="text-xs text-muted-foreground mt-1.5 flex items-center">
-          <Sparkles className="h-3 w-3 mr-1" />
-          AI-powered advice tailored for painting professionals
-        </p>
+      )}
+      
+      <div className="border-t px-4 py-3 bg-background/95 backdrop-blur-sm">
+        <div className="max-w-3xl mx-auto">
+          {imagePreviewUrl && (
+            <div className="relative mb-2 inline-block">
+              <div className="relative group">
+                <img 
+                  src={imagePreviewUrl} 
+                  alt="Upload preview" 
+                  className="h-20 w-auto rounded-md object-cover border border-border/40"
+                />
+                <Button 
+                  variant="destructive" 
+                  size="icon" 
+                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full" 
+                  onClick={removeImage}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex space-x-2">
+            <div className="flex-1 relative">
+              <Textarea 
+                ref={inputRef} 
+                value={input} 
+                onChange={e => setInput(e.target.value)} 
+                onKeyDown={handleKeyDown} 
+                placeholder="Ask your AI Coach anything about your painting business..." 
+                className="resize-none min-h-[56px] pr-16 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors rounded-xl" 
+                disabled={isLoading || isUploading} 
+              />
+              
+              <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                        onClick={handleImageClick}
+                        disabled={isLoading || isUploading}
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p className="text-xs">Attach image</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <AnimatedButton 
+                          onClick={handleSendMessage} 
+                          disabled={(!input.trim() && !imageFile) || isLoading || isUploading || !user}
+                          className="h-8 w-8 rounded-md"
+                        >
+                          {isLoading || isUploading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                          <span className="sr-only">Send message</span>
+                        </AnimatedButton>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p className="text-xs">Send message</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+          </div>
+          
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageChange}
+            accept="image/*"
+            className="hidden"
+          />
+          
+          <div className="flex items-center justify-between mt-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground">
+                  <Badge variant="outline" className="px-1.5 h-5 text-xs font-normal bg-primary/5 hover:bg-primary/10 text-primary">
+                    GPT-4o
+                  </Badge>
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem className="text-xs cursor-pointer">
+                  <Badge variant="outline" className="mr-2 px-1.5 h-5 text-xs font-normal bg-primary/5">
+                    GPT-4o
+                  </Badge>
+                  Most advanced model
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-xs cursor-pointer text-muted-foreground">
+                  <Badge variant="outline" className="mr-2 px-1.5 h-5 text-xs font-normal">
+                    GPT-4o mini
+                  </Badge>
+                  Faster responses
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <p className="text-xs text-muted-foreground flex items-center">
+              <Sparkles className="h-3 w-3 mr-1" />
+              AI-powered advice for painting professionals
+            </p>
+          </div>
+        </div>
       </div>
-    </div>;
+    </div>
+  );
 };
 
 export default ChatInterface;
