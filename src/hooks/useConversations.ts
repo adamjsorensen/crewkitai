@@ -15,6 +15,7 @@ type Conversation = {
 export const useConversations = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [isNewChat, setIsNewChat] = useState(true); // Track if we're in a new chat state
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -47,10 +48,8 @@ export const useConversations = () => {
 
         setConversations(formattedConversations);
         
-        // Select the first conversation if one exists and none is selected
-        if (formattedConversations.length > 0 && !selectedConversationId) {
-          setSelectedConversationId(formattedConversations[0].id);
-        }
+        // Important: Don't auto-select the first conversation here anymore
+        // This was causing the issue with the New Chat button
       } catch (error) {
         console.error('Error fetching conversations:', error);
         toast({
@@ -64,16 +63,18 @@ export const useConversations = () => {
     };
 
     fetchConversations();
-  }, [user, selectedConversationId, toast]);
+  }, [user, toast]);
 
   // Create a new conversation
   const createNewConversation = () => {
     setSelectedConversationId(null);
+    setIsNewChat(true); // Set the new chat state to true
   };
 
   // Select a conversation
   const selectConversation = (id: string) => {
     setSelectedConversationId(id);
+    setIsNewChat(false); // We're viewing an existing conversation now
   };
 
   // Delete a conversation
@@ -92,9 +93,10 @@ export const useConversations = () => {
         prevConversations.filter(conv => conv.id !== id)
       );
 
-      // If the deleted conversation was selected, clear selection
+      // If the deleted conversation was selected, clear selection and set new chat state
       if (selectedConversationId === id) {
         setSelectedConversationId(null);
+        setIsNewChat(true);
       }
 
       toast({
@@ -148,6 +150,7 @@ export const useConversations = () => {
   return {
     conversations,
     selectedConversationId,
+    isNewChat, // Expose the new chat state
     isLoading,
     createNewConversation,
     selectConversation,
