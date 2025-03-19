@@ -9,7 +9,7 @@ import { useConversations } from '@/hooks/useConversations';
 import ChatInterface from '@/components/ai-coach/ChatInterface';
 import ConversationDialog from '@/components/ai-coach/ConversationDialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, HistoryIcon, PaintBucket } from 'lucide-react';
+import { PlusCircle, HistoryIcon, PaintBucket, Brain } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const AiCoach = () => {
@@ -49,17 +49,23 @@ const AiCoach = () => {
     createNewConversation();
   };
 
+  const showWelcomeHeader = isNewChat && !selectedConversationId;
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-4 h-full">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
-              <PaintBucket className="h-5 w-5 text-primary" />
+              {showWelcomeHeader ? <Brain className="h-5 w-5 text-primary" /> : <PaintBucket className="h-5 w-5 text-primary" />}
             </div>
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight">AI Coach</h1>
-              <p className="text-muted-foreground">Get expert advice for your painting business</p>
+              {showWelcomeHeader ? (
+                <p className="text-muted-foreground">Expert guidance tailored for painting professionals</p>
+              ) : (
+                <p className="text-muted-foreground">Get expert advice for your painting business</p>
+              )}
             </div>
           </div>
           

@@ -58,15 +58,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
 
   return (
     <ScrollArea className="h-full px-2">
-      <div className="space-y-6 py-6 mb-6">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-2 bg-primary/10 rounded-full mb-4">
-            <Brain className="h-7 w-7 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight mb-2">Welcome to your AI Coach</h2>
-          <p className="text-muted-foreground">Expert guidance tailored for painting professionals</p>
-        </div>
-
+      <div className="space-y-6 py-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {categories.map((category) => (
             <Card 
