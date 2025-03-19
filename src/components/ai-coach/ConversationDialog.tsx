@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/use-mobile';
-import { HistoryIcon, X, Search, PlusCircle, ExternalLink, Edit, Trash2, ArrowUpDown } from 'lucide-react';
+import { X, Search, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -63,22 +63,6 @@ const ConversationDialog: React.FC<ConversationDialogProps> = ({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        
-        <div className="flex items-center justify-between pb-1">
-          <h3 className="text-sm font-medium text-muted-foreground">Actions</h3>
-          <Button variant="ghost" size="sm" className="text-xs text-primary hover:text-primary/90">
-            Show All
-          </Button>
-        </div>
-        
-        <Button 
-          onClick={handleNewConversation} 
-          variant="ghost"
-          className="w-full justify-start rounded-md py-2 px-3 text-base font-medium hover:bg-primary/10 mb-2"
-        >
-          <PlusCircle className="h-4 w-4 mr-3 text-primary" />
-          Create New Chat
-        </Button>
       </div>
       
       <Separator className="mb-2" />
@@ -95,27 +79,14 @@ const ConversationDialog: React.FC<ConversationDialogProps> = ({
         />
       </div>
       
-      <div className="p-3 border-t flex justify-between items-center">
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="h-8">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
-            Sort
-          </Button>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="h-8">
-            <ExternalLink className="h-3.5 w-3.5 mr-1" />
-            Go
-          </Button>
-          <Button variant="outline" size="sm" className="h-8">
-            <Edit className="h-3.5 w-3.5 mr-1" />
-            Edit
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive">
-            <Trash2 className="h-3.5 w-3.5 mr-1" />
-            Delete
-          </Button>
-        </div>
+      <div className="p-3 border-t flex justify-center items-center">
+        <Button 
+          onClick={handleNewConversation} 
+          className="w-full justify-center rounded-md py-2 px-3 bg-primary/90 hover:bg-primary text-white"
+        >
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Create New Chat
+        </Button>
       </div>
     </>
   );
@@ -148,9 +119,6 @@ const ConversationDialog: React.FC<ConversationDialogProps> = ({
         <DialogHeader className="px-4 py-3 border-b">
           <div className="flex justify-between items-center">
             <DialogTitle className="text-lg font-semibold">Conversation History</DialogTitle>
-            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
-              <X className="h-5 w-5" />
-            </Button>
           </div>
         </DialogHeader>
         <div className="flex-1 overflow-hidden flex flex-col">
