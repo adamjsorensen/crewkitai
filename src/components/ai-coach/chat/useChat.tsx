@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -342,6 +341,10 @@ export const useChat = (
     if (inputRef.current) {
       inputRef.current.focus();
     }
+    
+    setTimeout(() => {
+      handleSendMessage();
+    }, 100);
   };
 
   const handleRetry = () => {

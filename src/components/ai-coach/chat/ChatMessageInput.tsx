@@ -19,6 +19,7 @@ interface ChatMessageInputProps {
   setIsThinkMode: (value: boolean) => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   user: any;
+  inputRef?: React.RefObject<HTMLTextAreaElement>;
 }
 
 const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
@@ -32,9 +33,11 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
   isThinkMode,
   setIsThinkMode,
   handleKeyDown,
-  user
+  user,
+  inputRef
 }) => {
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const defaultInputRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = inputRef || defaultInputRef;
 
   return (
     <>
@@ -73,7 +76,7 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
       <div className="flex space-x-2">
         <div className="flex-1 relative">
           <Textarea 
-            ref={inputRef} 
+            ref={textareaRef} 
             value={input} 
             onChange={e => setInput(e.target.value)} 
             onKeyDown={handleKeyDown} 

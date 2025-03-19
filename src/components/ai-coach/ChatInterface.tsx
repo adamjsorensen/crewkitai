@@ -44,6 +44,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     messagesEndRef,
     messagesContainerRef,
     fileInputRef,
+    inputRef,
     handleImageClick,
     handleImageChange,
     removeImage,
@@ -95,6 +96,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           setIsThinkMode={setIsThinkMode}
           handleKeyDown={handleKeyDown}
           user={user}
+          inputRef={inputRef}
         />
       </div>
       
