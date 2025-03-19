@@ -8,9 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useConversations } from '@/hooks/useConversations';
 import ChatInterface from '@/components/ai-coach/ChatInterface';
 import ConversationDialog from '@/components/ai-coach/ConversationDialog';
-import ConversationDrawer from '@/components/ai-coach/ConversationDrawer';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, HistoryIcon, Sparkles, PaintBucket } from 'lucide-react';
+import { PlusCircle, HistoryIcon, PaintBucket } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const AiCoach = () => {

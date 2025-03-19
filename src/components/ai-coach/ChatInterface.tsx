@@ -6,7 +6,6 @@ import { useChat } from './chat/useChat';
 import MessageList from './chat/MessageList';
 import ChatMessageInput from './chat/ChatMessageInput';
 import ImagePreview from './chat/ImagePreview';
-import ChatExampleQuestions from './chat/ChatExampleQuestions';
 
 type Message = {
   id: string;
@@ -15,13 +14,6 @@ type Message = {
   timestamp: Date;
   imageUrl?: string;
 };
-
-const EXAMPLE_QUESTIONS = [
-  "How do I price a 2,000 sq ft exterior job?", 
-  "What's the best way to handle a difficult client?", 
-  "How can I improve my crew's efficiency?", 
-  "What marketing strategies work during slow seasons?"
-];
 
 interface ChatInterfaceProps {
   conversationId?: string | null;
@@ -82,14 +74,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         scrollToBottom={scrollToBottom}
         messagesEndRef={messagesEndRef}
         messagesContainerRef={messagesContainerRef}
+        handleExampleClick={handleExampleClick}
       />
-      
-      {messages.length === 1 && messages[0].id === 'welcome' && (
-        <ChatExampleQuestions 
-          questions={EXAMPLE_QUESTIONS} 
-          onQuestionClick={handleExampleClick} 
-        />
-      )}
       
       <div className="border-t px-4 py-3 bg-background/95 backdrop-blur-sm">
         <ImagePreview 

@@ -6,6 +6,7 @@ import { AlertCircle, Loader2, ArrowDown } from 'lucide-react';
 import ChatMessage from '../ChatMessage';
 import TypingIndicator from '../TypingIndicator';
 import { PaintBucket } from 'lucide-react';
+import WelcomeSection from './WelcomeSection';
 
 type Message = {
   id: string;
@@ -25,6 +26,7 @@ interface MessageListProps {
   scrollToBottom: () => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   messagesContainerRef: React.RefObject<HTMLDivElement>;
+  handleExampleClick: (question: string) => void;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -36,8 +38,11 @@ const MessageList: React.FC<MessageListProps> = ({
   showScrollButton,
   scrollToBottom,
   messagesEndRef,
-  messagesContainerRef
+  messagesContainerRef,
+  handleExampleClick
 }) => {
+  const isWelcomeScreen = messages.length === 1 && messages[0].id === 'welcome';
+
   return (
     <div className="relative flex-1">
       <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent h-6 pointer-events-none" />
@@ -46,41 +51,45 @@ const MessageList: React.FC<MessageListProps> = ({
         ref={messagesContainerRef} 
         className="flex-1 px-4 pt-4"
       >
-        <div className="space-y-1 pb-4 max-w-3xl mx-auto">
-          {messages.map(message => (
-            <ChatMessage 
-              key={message.id} 
-              message={message} 
-              onRegenerate={handleRegenerateMessage} 
-            />
-          ))}
-          
-          {isLoading && (
-            <div className="flex items-start gap-3 animate-fade-in my-6">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
-                <PaintBucket className="h-4 w-4 text-white" />
+        {isWelcomeScreen ? (
+          <WelcomeSection onCategorySelect={handleExampleClick} />
+        ) : (
+          <div className="space-y-1 pb-4 max-w-3xl mx-auto">
+            {messages.map(message => (
+              <ChatMessage 
+                key={message.id} 
+                message={message} 
+                onRegenerate={handleRegenerateMessage} 
+              />
+            ))}
+            
+            {isLoading && (
+              <div className="flex items-start gap-3 animate-fade-in my-6">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
+                  <PaintBucket className="h-4 w-4 text-white" />
+                </div>
+                <div className="rounded-2xl p-4 bg-muted/70 shadow-sm">
+                  <TypingIndicator />
+                </div>
               </div>
-              <div className="rounded-2xl p-4 bg-muted/70 shadow-sm">
-                <TypingIndicator />
+            )}
+            
+            {error && (
+              <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md animate-fade-in my-4 max-w-md mx-auto">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm">{error}</span>
+                <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
+                  Retry
+                </Button>
               </div>
-            </div>
-          )}
-          
-          {error && (
-            <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md animate-fade-in my-4 max-w-md mx-auto">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
-              <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
-                Retry
-              </Button>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </ScrollArea>
       
-      {showScrollButton && (
+      {showScrollButton && !isWelcomeScreen && (
         <Button
           variant="outline"
           size="icon"
