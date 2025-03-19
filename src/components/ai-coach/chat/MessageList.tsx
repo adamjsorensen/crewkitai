@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Loader2, ArrowDown } from 'lucide-react';
@@ -44,12 +44,12 @@ const MessageList: React.FC<MessageListProps> = ({
   const isWelcomeScreen = messages.length === 1 && messages[0].id === 'welcome';
 
   return (
-    <div className="relative flex-1">
+    <div className="h-full overflow-hidden">
       <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent h-6 pointer-events-none" />
       
       <ScrollArea 
         ref={messagesContainerRef} 
-        className="flex-1 px-4 pt-4"
+        className="h-full px-4 pt-4 overflow-y-auto"
       >
         {isWelcomeScreen ? (
           <WelcomeSection onCategorySelect={handleExampleClick} />

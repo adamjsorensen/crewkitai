@@ -64,21 +64,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-[85vh] relative">
-      <MessageList 
-        messages={messages}
-        isLoading={isLoading}
-        error={error}
-        handleRetry={handleRetry}
-        handleRegenerateMessage={handleRegenerateMessage}
-        showScrollButton={showScrollButton}
-        scrollToBottom={scrollToBottom}
-        messagesEndRef={messagesEndRef}
-        messagesContainerRef={messagesContainerRef}
-        handleExampleClick={handleExampleClick}
-      />
+    <div className="flex flex-col h-full max-h-[85vh] relative overflow-hidden">
+      <div className="flex-1 overflow-hidden">
+        <MessageList 
+          messages={messages}
+          isLoading={isLoading}
+          error={error}
+          handleRetry={handleRetry}
+          handleRegenerateMessage={handleRegenerateMessage}
+          showScrollButton={showScrollButton}
+          scrollToBottom={scrollToBottom}
+          messagesEndRef={messagesEndRef}
+          messagesContainerRef={messagesContainerRef}
+          handleExampleClick={handleExampleClick}
+        />
+      </div>
       
-      <div className="border-t px-4 py-3 bg-background/95 backdrop-blur-sm">
+      <div className="sticky bottom-0 left-0 right-0 border-t px-4 py-3 bg-background/95 backdrop-blur-sm">
         <ImagePreview 
           imagePreviewUrl={imagePreviewUrl} 
           removeImage={removeImage} 

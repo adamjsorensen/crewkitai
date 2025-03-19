@@ -89,8 +89,8 @@ const AiCoach = () => {
         <Separator className="my-0" />
         
         <Card className="p-0 overflow-hidden border-none shadow-md flex-1 bg-card/50">
-          <div className="flex flex-col h-[85vh]">
-            <div className="flex-1">
+          <div className="flex flex-col h-full">
+            <div className="flex-1 overflow-hidden">
               <ChatInterface 
                 conversationId={selectedConversationId}
                 isNewChat={isNewChat}
