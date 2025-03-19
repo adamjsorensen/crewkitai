@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -132,7 +133,15 @@ const ChatInterface = () => {
   };
 
   const handleRetry = () => {
-    const lastUserMessage = messages.findLast(msg => msg.role === 'user');
+    // Fix for the findLast TypeScript error
+    let lastUserMessage: Message | undefined;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUserMessage = messages[i];
+        break;
+      }
+    }
+    
     if (lastUserMessage) {
       setInput(lastUserMessage.content);
       setMessages(prev => {
