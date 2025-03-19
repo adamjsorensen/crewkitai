@@ -18,6 +18,7 @@ import BusinessProfilePage from "./pages/profile/BusinessProfilePage";
 import PersonalProfilePage from "./pages/profile/PersonalProfilePage";
 import SettingsPage from "./pages/profile/SettingsPage";
 import AiCoach from "./pages/AiCoach";
+import AiSettingsPage from "./pages/admin/AiSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,10 @@ const App = () => (
             <Route path="/dashboard/profile/personal" element={<PersonalProfilePage />} />
             <Route path="/dashboard/settings" element={<SettingsPage />} />
             <Route path="/dashboard/ai-coach" element={<AiCoach />} />
+            
+            {/* Admin Routes */}
+            <Route path="/dashboard/admin/ai-settings" element={<AiSettingsPage />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

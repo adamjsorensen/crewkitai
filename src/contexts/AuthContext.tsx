@@ -9,6 +9,8 @@ type AuthContextType = {
   isLoading: boolean;
   signOut: () => Promise<void>;
   profile: any | null;
+  isAdmin: boolean;
+  checkIsAdmin: () => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,6 +20,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<any | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -27,6 +30,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (session?.user) {
         fetchProfile(session.user.id);
+        checkIsAdmin();
       } else {
         setIsLoading(false);
       }
@@ -40,8 +44,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (session?.user) {
           fetchProfile(session.user.id);
+          checkIsAdmin();
         } else {
           setProfile(null);
+          setIsAdmin(false);
           setIsLoading(false);
         }
       }
@@ -72,6 +78,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const checkIsAdmin = async () => {
+    try {
+      const { data, error } = await supabase.rpc('is_admin');
+      
+      if (error) {
+        console.error("Error checking admin status:", error);
+        setIsAdmin(false);
+        return false;
+      } else {
+        setIsAdmin(!!data);
+        return !!data;
+      }
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      setIsAdmin(false);
+      return false;
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -82,6 +107,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isLoading,
     signOut,
     profile,
+    isAdmin,
+    checkIsAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
