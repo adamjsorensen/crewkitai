@@ -52,7 +52,7 @@ const AiCoach = () => {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6 h-full">
+      <div className="flex flex-col gap-4 h-full">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
@@ -87,10 +87,10 @@ const AiCoach = () => {
           </div>
         </div>
         
-        <Separator className="mt-0 mb-2" />
+        <Separator className="my-0" />
         
         <Card className="p-0 overflow-hidden border-none shadow-md flex-1 bg-card/50">
-          <div className="flex flex-col h-[78vh]">
+          <div className="flex flex-col h-[85vh]">
             <div className="flex-1">
               <ChatInterface 
                 conversationId={selectedConversationId}

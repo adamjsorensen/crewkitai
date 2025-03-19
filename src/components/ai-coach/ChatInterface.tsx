@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -112,7 +111,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             role: 'user',
             content: msg.user_message,
             timestamp: new Date(msg.created_at),
-            imageUrl: msg.image_url // Add image URL to message
+            imageUrl: msg.image_url
           });
 
           chatMessages.push({
@@ -153,7 +152,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [messages, isLoading, isLoadingHistory]);
 
-  // Handle scroll button visibility
   useEffect(() => {
     const handleScroll = () => {
       if (!messagesContainerRef.current) return;
@@ -185,7 +183,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Validate file size (5MB max)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -195,7 +192,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         return;
       }
 
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         toast({
           title: "Invalid file type",
@@ -233,7 +229,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         throw error;
       }
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('chat_images')
         .getPublicUrl(filePath);
@@ -260,7 +255,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (imageFile) {
       imageUrl = await uploadImage(imageFile);
       if (!imageUrl && !input.trim()) {
-        // If image upload failed and there's no text message, don't proceed
         return;
       }
     }
@@ -518,12 +512,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-[75vh] relative">
+    <div className="flex flex-col h-[85vh] relative">
       <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent h-6 pointer-events-none" />
       
       <ScrollArea 
         ref={messagesContainerRef} 
-        className="flex-1 px-4 pt-6"
+        className="flex-1 px-4 pt-4"
       >
         <div className="space-y-1 pb-4 max-w-3xl mx-auto">
           {messages.map(message => (
@@ -571,8 +565,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       )}
       
       {messages.length === 1 && messages[0].id === 'welcome' && (
-        <div className="px-4 pb-4">
-          <p className="text-sm text-muted-foreground mb-3 ml-1">Try asking about:</p>
+        <div className="px-4 pb-3">
+          <p className="text-sm text-muted-foreground mb-2 ml-1">Try asking about:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {EXAMPLE_QUESTIONS.map((question, index) => (
               <Card 
@@ -591,124 +585,122 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       )}
       
       <div className="border-t px-4 py-3 bg-background/95 backdrop-blur-sm">
-        <div className="max-w-3xl mx-auto">
-          {imagePreviewUrl && (
-            <div className="relative mb-2 inline-block">
-              <div className="relative group">
-                <img 
-                  src={imagePreviewUrl} 
-                  alt="Upload preview" 
-                  className="h-20 w-auto rounded-md object-cover border border-border/40"
-                />
-                <Button 
-                  variant="destructive" 
-                  size="icon" 
-                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full" 
-                  onClick={removeImage}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex space-x-2">
-            <div className="flex-1 relative">
-              <Textarea 
-                ref={inputRef} 
-                value={input} 
-                onChange={e => setInput(e.target.value)} 
-                onKeyDown={handleKeyDown} 
-                placeholder="Ask your AI Coach anything about your painting business..." 
-                className="resize-none min-h-[56px] pr-16 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors rounded-xl" 
-                disabled={isLoading || isUploading} 
+        {imagePreviewUrl && (
+          <div className="relative mb-2 inline-block">
+            <div className="relative group">
+              <img 
+                src={imagePreviewUrl} 
+                alt="Upload preview" 
+                className="h-20 w-auto rounded-md object-cover border border-border/40"
               />
-              
-              <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                        onClick={handleImageClick}
-                        disabled={isLoading || isUploading}
-                      >
-                        <ImageIcon className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p className="text-xs">Attach image</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <AnimatedButton 
-                          onClick={handleSendMessage} 
-                          disabled={(!input.trim() && !imageFile) || isLoading || isUploading || !user}
-                          className="h-8 w-8 rounded-md"
-                        >
-                          {isLoading || isUploading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Send className="h-4 w-4" />
-                          )}
-                          <span className="sr-only">Send message</span>
-                        </AnimatedButton>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p className="text-xs">Send message</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+              <Button 
+                variant="destructive" 
+                size="icon" 
+                className="absolute -top-2 -right-2 h-5 w-5 rounded-full" 
+                onClick={removeImage}
+              >
+                <X className="h-3 w-3" />
+              </Button>
             </div>
           </div>
-          
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            accept="image/*"
-            className="hidden"
-          />
-          
-          <div className="flex items-center justify-between mt-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground">
-                  <Badge variant="outline" className="px-1.5 h-5 text-xs font-normal bg-primary/5 hover:bg-primary/10 text-primary">
-                    GPT-4o
-                  </Badge>
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem className="text-xs cursor-pointer">
-                  <Badge variant="outline" className="mr-2 px-1.5 h-5 text-xs font-normal bg-primary/5">
-                    GPT-4o
-                  </Badge>
-                  Most advanced model
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs cursor-pointer text-muted-foreground">
-                  <Badge variant="outline" className="mr-2 px-1.5 h-5 text-xs font-normal">
-                    GPT-4o mini
-                  </Badge>
-                  Faster responses
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        )}
+        
+        <div className="flex space-x-2">
+          <div className="flex-1 relative">
+            <Textarea 
+              ref={inputRef} 
+              value={input} 
+              onChange={e => setInput(e.target.value)} 
+              onKeyDown={handleKeyDown} 
+              placeholder="Ask your AI Coach anything about your painting business..." 
+              className="resize-none min-h-[56px] pr-16 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors rounded-xl" 
+              disabled={isLoading || isUploading} 
+            />
             
-            <p className="text-xs text-muted-foreground flex items-center">
-              <Sparkles className="h-3 w-3 mr-1" />
-              AI-powered advice for painting professionals
-            </p>
+            <div className="absolute right-2 bottom-2 flex items-center gap-1.5">
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                      onClick={handleImageClick}
+                      disabled={isLoading || isUploading}
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p className="text-xs">Attach image</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <AnimatedButton 
+                        onClick={handleSendMessage} 
+                        disabled={(!input.trim() && !imageFile) || isLoading || isUploading || !user}
+                        className="h-8 w-8 rounded-md"
+                      >
+                        {isLoading || isUploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">Send message</span>
+                      </AnimatedButton>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p className="text-xs">Send message</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
+        </div>
+        
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImageChange}
+          accept="image/*"
+          className="hidden"
+        />
+        
+        <div className="flex items-center justify-between mt-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground">
+                <Badge variant="outline" className="px-1.5 h-5 text-xs font-normal bg-primary/5 hover:bg-primary/10 text-primary">
+                  GPT-4o
+                </Badge>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuItem className="text-xs cursor-pointer">
+                <Badge variant="outline" className="mr-2 px-1.5 h-5 text-xs font-normal bg-primary/5">
+                  GPT-4o
+                </Badge>
+                Most advanced model
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-xs cursor-pointer text-muted-foreground">
+                <Badge variant="outline" className="mr-2 px-1.5 h-5 text-xs font-normal">
+                  GPT-4o mini
+                </Badge>
+                Faster responses
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <p className="text-xs text-muted-foreground flex items-center">
+            <Sparkles className="h-3 w-3 mr-1" />
+            AI-powered advice for painting professionals
+          </p>
         </div>
       </div>
     </div>
