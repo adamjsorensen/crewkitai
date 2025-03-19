@@ -10,7 +10,8 @@ import {
   RefreshCw, 
   HistoryIcon, 
   Sparkles, 
-  LightbulbIcon 
+  LightbulbIcon,
+  AlertCircle 
 } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import { Card } from '@/components/ui/card';
@@ -33,6 +34,7 @@ const ChatInterface = () => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
@@ -72,27 +74,45 @@ const ChatInterface = () => {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    setError(null);
     
     try {
-      setTimeout(() => {
-        const aiResponse: Message = {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: getMockResponse(input),
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, aiResponse]);
-        setIsLoading(false);
-      }, 1500);
+      const conversationContext = messages
+        .slice(-5)
+        .map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }));
+
+      const { data, error } = await supabase.functions.invoke('ai-coach', {
+        body: { 
+          message: input, 
+          userId: user?.id,
+          context: conversationContext
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const aiResponse: Message = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date(),
+      };
       
+      setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
       console.error('Error sending message:', error);
+      setError(error instanceof Error ? error.message : 'Failed to get a response');
       toast({
         title: "Error",
         description: "Failed to get a response. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -111,6 +131,23 @@ const ChatInterface = () => {
     }
   };
 
+  const handleRetry = () => {
+    const lastUserMessage = messages.findLast(msg => msg.role === 'user');
+    if (lastUserMessage) {
+      setInput(lastUserMessage.content);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        if (newMessages[newMessages.length - 1].role === 'assistant') {
+          newMessages.pop();
+        }
+        if (newMessages[newMessages.length - 1].role === 'user') {
+          newMessages.pop();
+        }
+        return newMessages;
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col h-[70vh]">
       <ScrollArea className="flex-1 p-4">
@@ -125,6 +162,15 @@ const ChatInterface = () => {
             <div className="flex items-center space-x-2 p-2 text-muted-foreground">
               <RefreshCw className="h-4 w-4 animate-spin" />
               <span>AI Coach is thinking...</span>
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md">
+              <AlertCircle className="h-4 w-4" />
+              <span>{error}</span>
+              <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
+                Retry
+              </Button>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -177,28 +223,6 @@ const ChatInterface = () => {
       </div>
     </div>
   );
-};
-
-const getMockResponse = (input: string): string => {
-  const lowerInput = input.toLowerCase();
-  
-  if (lowerInput.includes('price') || lowerInput.includes('quote') || lowerInput.includes('estimate')) {
-    return "For pricing a 2,000 sq ft exterior job, I recommend using the industry standard of $1.50-$3.50 per square foot, depending on several factors:\n\n1. Surface condition: Add 15-20% for heavy prep work\n2. Paint quality: Premium paints cost more but last longer\n3. Accessibility: Add 10-15% for difficult access\n4. Your local market rates\n\nFor this job, a baseline estimate would be $3,000-7,000. Always add a 10% buffer for unexpected issues. Would you like me to break down these costs in more detail?";
-  }
-  
-  if (lowerInput.includes('client') || lowerInput.includes('customer')) {
-    return "Handling difficult clients requires a combination of clear communication and professional boundaries. Here's my advice:\n\n1. Listen actively to their concerns without interrupting\n2. Document everything in writing - especially change requests\n3. Set clear expectations from the beginning with a detailed contract\n4. Offer solutions rather than focusing on problems\n5. Know when to walk away - some clients aren't worth the stress\n\nRemember, difficult clients often simply want to feel heard and respected. Would you like specific phrases you can use when dealing with common client complaints?";
-  }
-  
-  if (lowerInput.includes('crew') || lowerInput.includes('team') || lowerInput.includes('staff')) {
-    return "To improve crew efficiency, focus on these five areas:\n\n1. Morning planning: Start each day with a 10-minute huddle to set clear goals\n2. Proper sequencing: Ensure prep, painting, and cleanup crews are properly staggered\n3. Material staging: Have all supplies organized and accessible before work begins\n4. Skills matching: Assign tasks based on individual strengths\n5. Recognition: Acknowledge good work and offer performance-based incentives\n\nMany painting contractors have increased productivity by 20-30% by implementing these practices. What specific efficiency challenges is your crew facing?";
-  }
-  
-  if (lowerInput.includes('marketing') || lowerInput.includes('advertis') || lowerInput.includes('lead')) {
-    return "For marketing during slow seasons (typically winter in most regions), try these targeted approaches:\n\n1. Interior painting promotions with seasonal discounts (10-15% off)\n2. Maintenance packages for previous clients\n3. Partner with complementary businesses (realtors, interior designers)\n4. Content marketing showing 'before/after' transformations on social media\n5. Early-bird specials for spring/summer projects booked during winter\n\nLocal SEO is also crucial - ensure your Google Business Profile is optimized with winter-specific services highlighted. Would you like me to suggest a specific 3-month winter marketing plan?";
-  }
-  
-  return "Thanks for your question about " + input + ". That's an important aspect of running a successful painting business. While I'm currently in demo mode with limited responses, in the full version I'll provide detailed, customized advice specific to your situation, drawing from industry best practices and data. Is there a particular aspect of this topic you'd like to focus on?";
 };
 
 export default ChatInterface;
