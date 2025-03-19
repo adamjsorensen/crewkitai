@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Loader2,
   Trash2,
-  Copy
+  Copy,
+  PaintBucket
 } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import { Card } from '@/components/ui/card';

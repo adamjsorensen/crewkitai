@@ -56,11 +56,18 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                 ol: ({ node, ...props }) => (
                   <ol {...props} className="list-decimal pl-6 my-2" />
                 ),
-                code: ({ node, inline, ...props }) => (
-                  inline 
-                    ? <code {...props} className="bg-muted/70 px-1 py-0.5 rounded text-xs" />
-                    : <code {...props} className="block bg-muted/50 p-2 rounded text-xs overflow-x-auto" />
-                )
+                code: ({ node, className, children, ...props }) => {
+                  const match = /language-(\w+)/.exec(className || '');
+                  return !className ? (
+                    <code className="bg-muted/70 px-1 py-0.5 rounded text-xs" {...props}>
+                      {children}
+                    </code>
+                  ) : (
+                    <code className="block bg-muted/50 p-2 rounded text-xs overflow-x-auto" {...props}>
+                      {children}
+                    </code>
+                  );
+                }
               }}
             >
               {message.content}
