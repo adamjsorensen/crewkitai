@@ -5,18 +5,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, RefreshCw, HistoryIcon, Sparkles, LightbulbIcon, AlertCircle, Loader2, Trash2, Copy, PaintBucket, PlusCircle, Image as ImageIcon, X, ZoomIn, ChevronDown, ArrowDown } from 'lucide-react';
+import { Send, RefreshCw, HistoryIcon, Sparkles, LightbulbIcon, AlertCircle, Loader2, Trash2, Copy, PaintBucket, PlusCircle, Image as ImageIcon, X, ZoomIn, ChevronDown, ArrowDown, Brain } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import { Card } from '@/components/ui/card';
 import TypingIndicator from './TypingIndicator';
 import AnimatedButton from '@/components/ui-components/AnimatedButton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Toggle } from '@/components/ui/toggle';
 import { Badge } from "@/components/ui/badge";
 
 type Message = {
@@ -55,6 +50,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isThinkMode, setIsThinkMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -294,7 +290,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           imageUrl: imageUrl,
           userId: user.id,
           context: conversationContext,
-          conversationId: conversationId
+          conversationId: conversationId,
+          thinkMode: isThinkMode
         }
       });
       
@@ -310,6 +307,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       };
       
       setMessages(prev => [...prev, aiResponse]);
+      setIsThinkMode(false); // Reset think mode after sending
 
       if (!conversationId) {
         try {
@@ -639,6 +637,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 
                 <Tooltip>
                   <TooltipTrigger asChild>
+                    <Button
+                      variant={isThinkMode ? "secondary" : "ghost"}
+                      size="icon"
+                      onClick={() => setIsThinkMode(!isThinkMode)}
+                      className="h-8 w-8 rounded-md mr-1"
+                      disabled={isLoading || isUploading}
+                    >
+                      <Brain className={`h-4 w-4 ${isThinkMode ? "text-primary" : "text-muted-foreground"}`} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p className="text-xs">Let your coach take their time to think</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <div>
                       <AnimatedButton 
                         onClick={handleSendMessage} 
@@ -672,30 +687,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         />
         
         <div className="flex items-center justify-between mt-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground">
-                <Badge variant="outline" className="px-1.5 h-5 text-xs font-normal bg-primary/5 hover:bg-primary/10 text-primary">
-                  GPT-4o
-                </Badge>
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              <DropdownMenuItem className="text-xs cursor-pointer">
-                <Badge variant="outline" className="mr-2 px-1.5 h-5 text-xs font-normal bg-primary/5">
-                  GPT-4o
-                </Badge>
-                Most advanced model
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-xs cursor-pointer text-muted-foreground">
-                <Badge variant="outline" className="mr-2 px-1.5 h-5 text-xs font-normal">
-                  GPT-4o mini
-                </Badge>
-                Faster responses
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <p className="text-xs text-muted-foreground">
+            {isThinkMode ? (
+              <Badge variant="outline" className="px-1.5 h-5 text-xs font-normal bg-secondary/10 text-secondary">
+                <Brain className="h-3 w-3 mr-1" /> Think Mode
+              </Badge>
+            ) : (
+              <span className="opacity-0">.</span> /* Invisible placeholder to maintain layout */
+            )}
+          </p>
           
           <p className="text-xs text-muted-foreground flex items-center">
             <Sparkles className="h-3 w-3 mr-1" />

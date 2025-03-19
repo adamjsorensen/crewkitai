@@ -27,7 +27,7 @@ serve(async (req) => {
     );
 
     // Get the request body
-    const { message, imageUrl, userId, context = [], conversationId = null } = await req.json();
+    const { message, imageUrl, userId, context = [], conversationId = null, thinkMode = false } = await req.json();
     
     if (!message && !imageUrl) {
       return new Response(
@@ -69,6 +69,11 @@ serve(async (req) => {
     console.log(`Message: ${message ? message.substring(0, 50) + '...' : 'No text message'}`);
     console.log(`Image URL: ${imageUrl ? 'Yes' : 'No'}`);
     console.log(`Conversation ID: ${conversationId || 'new conversation'}`);
+    console.log(`Think Mode: ${thinkMode ? 'Yes' : 'No'}`);
+
+    // Select model based on thinkMode
+    const model = thinkMode ? 'o3-mini-2025-01-31' : 'gpt-4o';
+    console.log(`Using model: ${model}`);
 
     // Call OpenAI API
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -78,7 +83,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${openaiApiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // Using a model that can understand images
+        model: model,
         messages: messages,
         temperature: 0.7,
         max_tokens: 1000
