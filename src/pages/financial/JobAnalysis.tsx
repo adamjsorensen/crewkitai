@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getJobs, getTransactions, createJob, updateJob, deleteJob } from "@/services/financialService";
 import FinancialLayout from "@/components/financial/FinancialLayout";
 import {
@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Job, Transaction } from "@/types/financial";
-import { MoreHorizontal, Plus, Edit, Trash, FileSpreadsheet } from "lucide-react";
+import { MoreHorizontal, Plus, Edit, Trash, FileSpreadsheet, Minus, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -46,19 +46,48 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatCard from "@/components/financial/StatCard";
 import { PieChart, ResponsiveContainer, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
 
+// Custom icon for Coins
+const Coins = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <circle cx="8" cy="8" r="6" />
+    <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
+    <path d="M7 6h1v4" />
+    <path d="m16.71 13.88.7.71-2.82 2.82" />
+  </svg>
+);
+
 const JobAnalysis = () => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [openJobDialog, setOpenJobDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [newJob, setNewJob] = useState({
+  const [newJob, setNewJob] = useState<{
+    name: string;
+    client_name: string;
+    description: string;
+    start_date: string;
+    end_date: string;
+    status: "planned" | "in_progress" | "completed" | "cancelled";
+  }>({
     name: "",
     client_name: "",
     description: "",
     start_date: "",
     end_date: "",
-    status: "planned" as const,
+    status: "planned",
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
 
   // Fetch jobs
   const {
@@ -102,8 +131,8 @@ const JobAnalysis = () => {
     try {
       await updateJob(selectedJob.id, {
         name: newJob.name,
-        client_name: newJob.client_name,
-        description: newJob.description,
+        client_name: newJob.client_name ? newJob.client_name : undefined,
+        description: newJob.description ? newJob.description : undefined,
         start_date: newJob.start_date ? new Date(newJob.start_date).toISOString() : undefined,
         end_date: newJob.end_date ? new Date(newJob.end_date).toISOString() : undefined,
         status: newJob.status,
@@ -264,7 +293,7 @@ const JobAnalysis = () => {
                     id="status"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={newJob.status}
-                    onChange={(e) => setNewJob({ ...newJob, status: e.target.value as any })}
+                    onChange={(e) => setNewJob({ ...newJob, status: e.target.value as "planned" | "in_progress" | "completed" | "cancelled" })}
                   >
                     <option value="planned">Planned</option>
                     <option value="in_progress">In Progress</option>
@@ -439,7 +468,7 @@ const JobAnalysis = () => {
                     <StatCard
                       title="Revenue"
                       value={selectedJob.total_revenue}
-                      icon={Plus}
+                      icon={DollarSign}
                       iconColor="text-green-500"
                     />
                     <StatCard
@@ -481,7 +510,7 @@ const JobAnalysis = () => {
                                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                               </Pie>
-                              <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+                              <Tooltip formatter={(value: any) => `$${Number(value).toFixed(2)}`} />
                             </PieChart>
                           </ResponsiveContainer>
                         </div>
@@ -557,43 +586,5 @@ const JobAnalysis = () => {
     </FinancialLayout>
   );
 };
-
-// Add missing icons
-const Minus = (props: any) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M5 12h14" />
-  </svg>
-);
-
-const Coins = (props: any) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <circle cx="8" cy="8" r="6" />
-    <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
-    <path d="M7 6h1v4" />
-    <path d="m16.71 13.88.7.71-2.82 2.82" />
-  </svg>
-);
 
 export default JobAnalysis;

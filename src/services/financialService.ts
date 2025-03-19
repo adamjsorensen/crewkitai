@@ -8,6 +8,16 @@ import {
   FinancialSummary,
   DateRange
 } from "@/types/financial";
+import { Session } from "@supabase/supabase-js";
+
+// Function to get the current user ID from the session
+const getUserId = async (): Promise<string> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) {
+    throw new Error("User not authenticated");
+  }
+  return session.user.id;
+};
 
 // Categories
 export const getCategories = async (): Promise<FinancialCategory[]> => {
@@ -21,13 +31,18 @@ export const getCategories = async (): Promise<FinancialCategory[]> => {
     throw error;
   }
   
-  return data;
+  return data as unknown as FinancialCategory[];
 };
 
 export const createCategory = async (category: Omit<FinancialCategory, 'id' | 'created_at' | 'updated_at'>): Promise<FinancialCategory> => {
+  const userId = await getUserId();
+  
   const { data, error } = await supabase
     .from('financial_categories')
-    .insert(category)
+    .insert({
+      ...category,
+      user_id: userId
+    })
     .select()
     .single();
   
@@ -36,7 +51,7 @@ export const createCategory = async (category: Omit<FinancialCategory, 'id' | 'c
     throw error;
   }
   
-  return data;
+  return data as unknown as FinancialCategory;
 };
 
 export const updateCategory = async (id: string, category: Partial<FinancialCategory>): Promise<FinancialCategory> => {
@@ -52,7 +67,7 @@ export const updateCategory = async (id: string, category: Partial<FinancialCate
     throw error;
   }
   
-  return data;
+  return data as unknown as FinancialCategory;
 };
 
 export const deleteCategory = async (id: string): Promise<void> => {
@@ -79,7 +94,7 @@ export const getJobs = async (): Promise<Job[]> => {
     throw error;
   }
   
-  return data;
+  return data as unknown as Job[];
 };
 
 export const getJob = async (id: string): Promise<Job> => {
@@ -94,16 +109,19 @@ export const getJob = async (id: string): Promise<Job> => {
     throw error;
   }
   
-  return data;
+  return data as unknown as Job;
 };
 
 export const createJob = async (job: Omit<Job, 'id' | 'created_at' | 'updated_at' | 'total_revenue' | 'total_expenses'>): Promise<Job> => {
+  const userId = await getUserId();
+  
   const { data, error } = await supabase
     .from('jobs')
     .insert({
       ...job,
       total_revenue: 0,
-      total_expenses: 0
+      total_expenses: 0,
+      user_id: userId
     })
     .select()
     .single();
@@ -113,7 +131,7 @@ export const createJob = async (job: Omit<Job, 'id' | 'created_at' | 'updated_at
     throw error;
   }
   
-  return data;
+  return data as unknown as Job;
 };
 
 export const updateJob = async (id: string, job: Partial<Job>): Promise<Job> => {
@@ -129,7 +147,7 @@ export const updateJob = async (id: string, job: Partial<Job>): Promise<Job> => 
     throw error;
   }
   
-  return data;
+  return data as unknown as Job;
 };
 
 export const deleteJob = async (id: string): Promise<void> => {
@@ -189,13 +207,18 @@ export const getTransactions = async (filters?: {
     ...transaction,
     category_name: transaction.financial_categories?.name,
     job_name: transaction.jobs?.name
-  }));
+  })) as unknown as Transaction[];
 };
 
 export const createTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at' | 'category_name' | 'job_name'>): Promise<Transaction> => {
+  const userId = await getUserId();
+  
   const { data, error } = await supabase
     .from('transactions')
-    .insert(transaction)
+    .insert({
+      ...transaction,
+      user_id: userId
+    })
     .select()
     .single();
   
@@ -209,7 +232,7 @@ export const createTransaction = async (transaction: Omit<Transaction, 'id' | 'c
     await updateJobTotals(transaction.job_id);
   }
   
-  return data;
+  return data as unknown as Transaction;
 };
 
 export const updateTransaction = async (id: string, transaction: Partial<Transaction>): Promise<Transaction> => {
@@ -237,7 +260,7 @@ export const updateTransaction = async (id: string, transaction: Partial<Transac
     await updateJobTotals(fullTransaction.job_id);
   }
   
-  return data;
+  return data as unknown as Transaction;
 };
 
 export const deleteTransaction = async (id: string): Promise<void> => {
@@ -313,16 +336,19 @@ export const getFinancialStatements = async (): Promise<FinancialStatement[]> =>
     throw error;
   }
   
-  return data;
+  return data as unknown as FinancialStatement[];
 };
 
 export const createFinancialStatement = async (
   statement: Omit<FinancialStatement, 'id' | 'upload_date' | 'processed' | 'error_message'>
 ): Promise<FinancialStatement> => {
+  const userId = await getUserId();
+  
   const { data, error } = await supabase
     .from('financial_statements')
     .insert({
       ...statement,
+      user_id: userId,
       processed: false
     })
     .select()
@@ -333,7 +359,7 @@ export const createFinancialStatement = async (
     throw error;
   }
   
-  return data;
+  return data as unknown as FinancialStatement;
 };
 
 export const uploadFinancialDocument = async (file: File, statementType: 'bank' | 'sales' | 'expenses'): Promise<string> => {

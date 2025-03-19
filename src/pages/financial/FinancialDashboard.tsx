@@ -5,11 +5,10 @@ import { getFinancialSummary } from "@/services/financialService";
 import FinancialLayout from "@/components/financial/FinancialLayout";
 import FinancialDateFilter from "@/components/financial/FinancialDateFilter";
 import StatCard from "@/components/financial/StatCard";
-import { DollarSign, TrendingUp, TrendingDown, PieChart, BarChart } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDateRange } from "@/hooks/useDateRange";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart as ReBarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend, Tooltip } from "recharts";
+import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend, Tooltip, BarChart, Bar, XAxis, YAxis } from "recharts";
 
 const FinancialDashboard = () => {
   const { 
@@ -121,7 +120,7 @@ const FinancialDashboard = () => {
               <CardTitle>Revenue & Expenses</CardTitle>
             </CardHeader>
             <CardContent className="h-80">
-              {currentSummary && (
+              {currentSummary && currentSummary.monthly_data.length > 0 && (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={currentSummary.monthly_data}
@@ -146,9 +145,9 @@ const FinancialDashboard = () => {
               <CardTitle>Expenses by Category</CardTitle>
             </CardHeader>
             <CardContent className="h-80">
-              {currentSummary && (
+              {currentSummary && pieData.length > 0 && (
                 <ResponsiveContainer width="100%" height="100%">
-                  <RePieChart>
+                  <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
@@ -163,8 +162,8 @@ const FinancialDashboard = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
-                  </RePieChart>
+                    <Tooltip formatter={(value: any) => `$${Number(value).toFixed(2)}`} />
+                  </PieChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
@@ -177,7 +176,7 @@ const FinancialDashboard = () => {
             <CardTitle>Profit Trend</CardTitle>
           </CardHeader>
           <CardContent className="h-80">
-            {currentSummary && (
+            {currentSummary && currentSummary.monthly_data.length > 0 && (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={currentSummary.monthly_data}
