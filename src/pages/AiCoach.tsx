@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import ChatInterface from '@/components/ai-coach/ChatInterface';
-import { PaperPlaneIcon, Sparkles } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 
 const AiCoach = () => {
   const { user } = useAuth();

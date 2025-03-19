@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  PaperPlaneIcon, 
+  Send, 
   RefreshCw, 
   HistoryIcon, 
   Sparkles, 
@@ -40,7 +39,6 @@ const ChatInterface = () => {
   const { toast } = useToast();
   
   useEffect(() => {
-    // Add welcome message
     if (messages.length === 0) {
       setMessages([
         {
@@ -76,7 +74,6 @@ const ChatInterface = () => {
     setIsLoading(true);
     
     try {
-      // This is a mock response until we implement the actual API call
       setTimeout(() => {
         const aiResponse: Message = {
           id: `assistant-${Date.now()}`,
@@ -88,11 +85,6 @@ const ChatInterface = () => {
         setMessages(prev => [...prev, aiResponse]);
         setIsLoading(false);
       }, 1500);
-      
-      // In the future, we'll replace this with an actual API call:
-      // const { data, error } = await supabase.functions.invoke('ai-coach', {
-      //   body: { message: input },
-      // });
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -174,7 +166,7 @@ const ChatInterface = () => {
             disabled={!input.trim() || isLoading}
             className="self-end"
           >
-            <PaperPlaneIcon className="h-4 w-4" />
+            <Send className="h-4 w-4" />
             <span className="sr-only">Send message</span>
           </Button>
         </div>
@@ -187,7 +179,6 @@ const ChatInterface = () => {
   );
 };
 
-// Mock response function - will be replaced with real AI responses
 const getMockResponse = (input: string): string => {
   const lowerInput = input.toLowerCase();
   
