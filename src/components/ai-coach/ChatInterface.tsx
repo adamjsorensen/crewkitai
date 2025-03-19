@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, RefreshCw, HistoryIcon, Sparkles, LightbulbIcon, AlertCircle, Loader2, Trash2, Copy, PaintBucket, PlusCircle } from 'lucide-react';
+import { Send, RefreshCw, HistoryIcon, Sparkles, LightbulbIcon, AlertCircle, Loader2, Trash2, Copy, PaintBucket, PlusCircle, Image as ImageIcon, X, ZoomIn } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 import { Card } from '@/components/ui/card';
 import TypingIndicator from './TypingIndicator';
@@ -16,6 +17,7 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  imageUrl?: string; // Add support for image URLs
 };
 
 const EXAMPLE_QUESTIONS = ["How do I price a 2,000 sq ft exterior job?", "What's the best way to handle a difficult client?", "How can I improve my crew's efficiency?", "What marketing strategies work during slow seasons?"];
@@ -37,8 +39,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCopying, setIsCopying] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     user
   } = useAuth();
@@ -90,7 +96,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             id: `user-${msg.id}`,
             role: 'user',
             content: msg.user_message,
-            timestamp: new Date(msg.created_at)
+            timestamp: new Date(msg.created_at),
+            imageUrl: msg.image_url // Add image URL to message
           });
 
           chatMessages.push({
@@ -137,44 +144,145 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     });
   };
 
+  const handleImageClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image under 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an image file",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setImageFile(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      setIsUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `${user?.id}/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('chat_images')
+        .upload(filePath, file);
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('chat_images')
+        .getPublicUrl(filePath);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Upload failed",
+        description: "Could not upload the image. Please try again.",
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSendMessage = async () => {
-    if (!input.trim() || isLoading || !user) return;
+    if ((!input.trim() && !imageFile) || isLoading || !user) return;
+    
+    let imageUrl: string | null = null;
+    
+    if (imageFile) {
+      imageUrl = await uploadImage(imageFile);
+      if (!imageUrl && !input.trim()) {
+        // If image upload failed and there's no text message, don't proceed
+        return;
+      }
+    }
+    
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: input,
-      timestamp: new Date()
+      content: input.trim(),
+      timestamp: new Date(),
+      imageUrl: imageUrl || undefined
     };
+    
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setImageFile(null);
+    setImagePreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
     setIsLoading(true);
     setError(null);
+    
     try {
       const conversationContext = messages.filter(msg => msg.id !== 'welcome')
       .slice(-5).map(msg => ({
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content
       }));
+      
       const {
         data,
         error
       } = await supabase.functions.invoke('ai-coach', {
         body: {
           message: input,
+          imageUrl: imageUrl,
           userId: user.id,
           context: conversationContext,
           conversationId: conversationId
         }
       });
+      
       if (error) {
         throw new Error(error.message);
       }
+      
       const aiResponse: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         content: data.response,
         timestamp: new Date()
       };
+      
       setMessages(prev => [...prev, aiResponse]);
 
       if (!conversationId) {
@@ -188,8 +296,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             user_message: input,
             ai_response: data.response,
             is_root: true,
-            title
+            title,
+            image_url: imageUrl
           }).select('id').single();
+          
           if (rootError) throw rootError;
           if (onConversationCreated && rootData?.id) {
             onConversationCreated(rootData.id);
@@ -203,7 +313,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             user_id: user.id,
             user_message: input,
             ai_response: data.response,
-            conversation_id: conversationId
+            conversation_id: conversationId,
+            image_url: imageUrl
           });
         } catch (insertError) {
           console.error('Error adding to conversation thread:', insertError);
@@ -416,13 +527,68 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>}
       
       <div className="border-t p-3 bg-background">
+        {imagePreviewUrl && (
+          <div className="relative mb-2 inline-block">
+            <div className="relative group">
+              <img 
+                src={imagePreviewUrl} 
+                alt="Upload preview" 
+                className="h-20 w-auto rounded-md object-cover border border-muted-foreground/20"
+              />
+              <Button 
+                variant="destructive" 
+                size="icon" 
+                className="absolute -top-2 -right-2 h-5 w-5 rounded-full" 
+                onClick={removeImage}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        )}
+        
         <div className="flex space-x-2">
-          <Textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask your AI Coach anything about your painting business..." className="resize-none min-h-[50px] focus:border-primary focus:ring-1 focus:ring-primary transition-colors" disabled={isLoading} />
-          <AnimatedButton onClick={handleSendMessage} disabled={!input.trim() || isLoading || !user} className="self-end">
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            <span className="sr-only">Send message</span>
-          </AnimatedButton>
+          <Textarea 
+            ref={inputRef} 
+            value={input} 
+            onChange={e => setInput(e.target.value)} 
+            onKeyDown={handleKeyDown} 
+            placeholder="Ask your AI Coach anything about your painting business..." 
+            className="resize-none min-h-[50px] focus:border-primary focus:ring-1 focus:ring-primary transition-colors" 
+            disabled={isLoading || isUploading} 
+          />
+          
+          <div className="flex flex-col space-y-2 self-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-md"
+              onClick={handleImageClick}
+              disabled={isLoading || isUploading}
+              title="Attach image"
+            >
+              <ImageIcon className="h-4 w-4" />
+            </Button>
+            
+            <AnimatedButton 
+              onClick={handleSendMessage} 
+              disabled={(!input.trim() && !imageFile) || isLoading || isUploading || !user}
+            >
+              {isLoading || isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              <span className="sr-only">Send message</span>
+            </AnimatedButton>
+          </div>
         </div>
+        
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImageChange}
+          accept="image/*"
+          className="hidden"
+        />
+        
         <p className="text-xs text-muted-foreground mt-1.5 flex items-center">
           <Sparkles className="h-3 w-3 mr-1" />
           AI-powered advice tailored for painting professionals

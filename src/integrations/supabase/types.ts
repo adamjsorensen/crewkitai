@@ -15,6 +15,7 @@ export type Database = {
           conversation_id: string | null
           created_at: string
           id: string
+          image_url: string | null
           is_root: boolean
           pinned: boolean
           summary: string | null
@@ -27,6 +28,7 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           id?: string
+          image_url?: string | null
           is_root?: boolean
           pinned?: boolean
           summary?: string | null
@@ -39,6 +41,7 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           id?: string
+          image_url?: string | null
           is_root?: boolean
           pinned?: boolean
           summary?: string | null

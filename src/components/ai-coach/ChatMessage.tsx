@@ -1,18 +1,20 @@
 
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { PaintBucket, User, RefreshCw, Copy, Share2, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
+import { PaintBucket, User, RefreshCw, Copy, Share2, ThumbsUp, ThumbsDown, Loader2, ZoomIn } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Toggle } from '@/components/ui/toggle';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  imageUrl?: string; // Add support for image URLs
 };
 
 interface ChatMessageProps {
@@ -25,6 +27,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   
   const handleCopy = async () => {
     try {
@@ -100,6 +103,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
             : "bg-primary text-primary-foreground ml-auto"
         )}
       >
+        {message.imageUrl && (
+          <div className="mb-2 group relative cursor-pointer" onClick={() => setImageDialogOpen(true)}>
+            <img 
+              src={message.imageUrl} 
+              alt="Uploaded image" 
+              className="max-h-40 w-auto rounded-md object-cover" 
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <ZoomIn className="h-8 w-8 text-white" />
+            </div>
+          </div>
+        )}
+        
         <div className="text-sm">
           {isAssistant ? (
             <ReactMarkdown 
@@ -233,6 +249,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
           <User className="h-4 w-4 text-secondary-foreground" />
         </div>
       )}
+
+      {/* Image Dialog for fullscreen viewing */}
+      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none">
+          <div className="relative">
+            <img 
+              src={message.imageUrl} 
+              alt="Fullscreen view" 
+              className="w-full h-auto object-contain max-h-[80vh]" 
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

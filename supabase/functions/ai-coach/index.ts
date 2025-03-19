@@ -27,11 +27,11 @@ serve(async (req) => {
     );
 
     // Get the request body
-    const { message, userId, context = [], conversationId = null } = await req.json();
+    const { message, imageUrl, userId, context = [], conversationId = null } = await req.json();
     
-    if (!message) {
+    if (!message && !imageUrl) {
       return new Response(
-        JSON.stringify({ error: 'Message is required' }),
+        JSON.stringify({ error: 'Message or image is required' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -39,21 +39,26 @@ serve(async (req) => {
       );
     }
 
+    const userContent = imageUrl 
+      ? `${message ? message + '\n\n' : ''}[Image: ${imageUrl}]`
+      : message;
+
     const fullContext = [
       {
         role: 'system',
-        content: "You are an AI Coach specializing in the painting industry. Your goal is to provide expert advice tailored for painting professionals and businesses. Focus on areas like pricing jobs, managing clients, leading crews, and marketing strategies. Provide clear, actionable steps when giving advice. Use a friendly, supportive tone that makes complex topics approachable. Your responses should be industry-specific and practical. If you don't know an answer, be honest and don't make up information."
+        content: "You are an AI Coach specializing in the painting industry. Your goal is to provide expert advice tailored for painting professionals and businesses. Focus on areas like pricing jobs, managing clients, leading crews, and marketing strategies. Provide clear, actionable steps when giving advice. Use a friendly, supportive tone that makes complex topics approachable. Your responses should be industry-specific and practical. When the user shares an image, analyze it thoughtfully in the context of the painting industry (e.g., technique, color choices, surface preparation). If you don't know an answer, be honest and don't make up information."
       },
       ...context,
       {
         role: 'user',
-        content: message
+        content: userContent
       }
     ];
 
     // Log details for debugging
     console.log(`Processing request for user: ${userId || 'anonymous'}`);
-    console.log(`Message: ${message.substring(0, 50)}...`);
+    console.log(`Message: ${message ? message.substring(0, 50) + '...' : 'No text message'}`);
+    console.log(`Image URL: ${imageUrl ? 'Yes' : 'No'}`);
     console.log(`Conversation ID: ${conversationId || 'new conversation'}`);
 
     // Call OpenAI API
@@ -64,7 +69,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${openaiApiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini', // Use a model that can understand image references
         messages: fullContext,
         temperature: 0.7,
         max_tokens: 1000
@@ -79,10 +84,6 @@ serve(async (req) => {
 
     const data = await openAIResponse.json();
     const aiResponse = data.choices[0].message.content;
-
-    // The conversation metadata is stored in the database by the frontend
-    // We don't need to store it here as the frontend handles that now
-    // This improves error handling as storage failures won't affect the response
 
     return new Response(
       JSON.stringify({ 
