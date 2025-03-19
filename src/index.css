@@ -144,6 +144,38 @@
   .section {
     @apply py-16 md:py-24 px-6 md:px-0;
   }
+  
+  /* Compact prose styling for chat messages */
+  .prose-compact {
+    @apply leading-snug;
+  }
+  
+  .prose-compact p {
+    @apply my-1.5;
+  }
+  
+  .prose-compact h1,
+  .prose-compact h2,
+  .prose-compact h3 {
+    @apply mt-3 mb-1;
+  }
+  
+  .prose-compact ul,
+  .prose-compact ol {
+    @apply my-1.5 pl-5;
+  }
+  
+  .prose-compact li {
+    @apply my-0.5;
+  }
+  
+  .prose-compact pre {
+    @apply my-2;
+  }
+  
+  .prose-compact blockquote {
+    @apply my-2 pl-3 border-l-2 border-muted-foreground/30;
+  }
 }
 
 /* Font loading optimization */

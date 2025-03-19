@@ -196,14 +196,14 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-[70vh] relative">
-      <div className="absolute top-3 right-3 z-10 flex gap-2">
+    <div className="flex flex-col h-[75vh] relative">
+      <div className="absolute top-2 right-2 z-10 flex gap-1">
         <Button
           variant="ghost"
           size="sm"
           disabled={messages.length <= 1 || isLoading || isCopying}
           onClick={copyConversation}
-          className="h-8 px-2"
+          className="h-7 px-2"
           title="Copy conversation"
           aria-label="Copy conversation to clipboard"
         >
@@ -220,7 +220,7 @@ const ChatInterface = () => {
           size="sm"
           disabled={messages.length <= 1 || isLoading}
           onClick={clearConversation}
-          className="text-destructive hover:text-destructive h-8 px-2"
+          className="text-destructive hover:text-destructive h-7 px-2"
           title="Clear conversation"
           aria-label="Clear conversation and start new"
         >
@@ -229,8 +229,8 @@ const ChatInterface = () => {
         </Button>
       </div>
       
-      <ScrollArea className="flex-1 p-4 pt-10">
-        <div className="space-y-4">
+      <ScrollArea className="flex-1 p-3 pt-8">
+        <div className="space-y-3">
           {messages.map(message => (
             <ChatMessage 
               key={message.id} 
@@ -238,17 +238,17 @@ const ChatInterface = () => {
             />
           ))}
           {isLoading && (
-            <div className="flex items-start gap-3 animate-fade-in">
+            <div className="flex items-start gap-2 animate-fade-in">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                 <PaintBucket className="h-4 w-4 text-white" />
               </div>
-              <div className="rounded-xl p-3 bg-muted">
+              <div className="rounded-xl p-2 bg-muted">
                 <TypingIndicator />
               </div>
             </div>
           )}
           {error && (
-            <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md animate-fade-in">
+            <div className="flex items-center space-x-2 p-2 text-destructive bg-destructive/10 rounded-md animate-fade-in">
               <AlertCircle className="h-4 w-4" />
               <span>{error}</span>
               <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
@@ -261,14 +261,14 @@ const ChatInterface = () => {
       </ScrollArea>
       
       {messages.length === 1 && (
-        <div className="px-4 pb-4">
-          <p className="text-sm text-muted-foreground mb-3">Try asking about:</p>
+        <div className="px-3 pb-3">
+          <p className="text-sm text-muted-foreground mb-2">Try asking about:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {EXAMPLE_QUESTIONS.map((question, index) => (
               <Button 
                 key={index} 
                 variant="outline" 
-                className="justify-start text-left h-auto py-2 px-3 text-sm hover:bg-muted/50 transition-colors"
+                className="justify-start text-left h-auto py-1.5 px-2 text-sm hover:bg-muted/50 transition-colors"
                 onClick={() => handleExampleClick(question)}
               >
                 <LightbulbIcon className="h-4 w-4 mr-2 text-primary" />
@@ -279,7 +279,7 @@ const ChatInterface = () => {
         </div>
       )}
       
-      <div className="border-t p-4 bg-background">
+      <div className="border-t p-3 bg-background">
         <div className="flex space-x-2">
           <Textarea
             ref={inputRef}
@@ -287,7 +287,7 @@ const ChatInterface = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask your AI Coach anything about your painting business..."
-            className="resize-none min-h-[60px] focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            className="resize-none min-h-[50px] focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             disabled={isLoading}
           />
           <AnimatedButton
@@ -303,7 +303,7 @@ const ChatInterface = () => {
             <span className="sr-only">Send message</span>
           </AnimatedButton>
         </div>
-        <p className="text-xs text-muted-foreground mt-2 flex items-center">
+        <p className="text-xs text-muted-foreground mt-1.5 flex items-center">
           <Sparkles className="h-3 w-3 mr-1" />
           AI-powered advice tailored for painting professionals
         </p>

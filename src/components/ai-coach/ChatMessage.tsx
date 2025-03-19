@@ -23,7 +23,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   return (
     <div 
       className={cn(
-        "flex gap-3 max-w-full animate-fade-in",
+        "flex gap-2 max-w-full animate-fade-in",
         isAssistant ? "items-start" : "items-start justify-end"
       )}
     >
@@ -35,26 +35,41 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       
       <div 
         className={cn(
-          "rounded-xl p-3 max-w-[85%] break-words shadow-sm",
+          "rounded-xl p-2.5 max-w-[88%] break-words shadow-sm",
           isAssistant 
             ? "bg-muted text-foreground" 
             : "bg-primary text-primary-foreground ml-auto"
         )}
       >
-        <div className="whitespace-pre-line text-sm">
+        <div className="text-sm">
           {isAssistant ? (
             <ReactMarkdown 
               remarkPlugins={[remarkGfm]}
-              className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-p:leading-relaxed prose-pre:bg-muted/50 prose-pre:p-2 prose-pre:rounded"
+              className="prose-compact prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-p:my-1.5 prose-pre:bg-muted/50 prose-pre:p-2 prose-pre:rounded"
               components={{
+                p: ({ node, ...props }) => (
+                  <p {...props} className="my-1.5 leading-normal" />
+                ),
+                h1: ({ node, ...props }) => (
+                  <h1 {...props} className="text-base font-semibold mt-3 mb-1" />
+                ),
+                h2: ({ node, ...props }) => (
+                  <h2 {...props} className="text-base font-semibold mt-3 mb-1" />
+                ),
+                h3: ({ node, ...props }) => (
+                  <h3 {...props} className="text-sm font-semibold mt-3 mb-1" />
+                ),
                 a: ({ node, ...props }) => (
                   <a {...props} className="text-primary underline hover:text-primary/80" target="_blank" rel="noopener noreferrer" />
                 ),
                 ul: ({ node, ...props }) => (
-                  <ul {...props} className="list-disc pl-6 my-2" />
+                  <ul {...props} className="list-disc pl-5 my-1.5" />
                 ),
                 ol: ({ node, ...props }) => (
-                  <ol {...props} className="list-decimal pl-6 my-2" />
+                  <ol {...props} className="list-decimal pl-5 my-1.5" />
+                ),
+                li: ({ node, ...props }) => (
+                  <li {...props} className="my-0.5" />
                 ),
                 code: ({ node, className, children, ...props }) => {
                   const match = /language-(\w+)/.exec(className || '');
