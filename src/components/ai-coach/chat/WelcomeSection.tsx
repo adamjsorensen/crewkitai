@@ -84,9 +84,9 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
                 
                 <div className="mt-3 space-y-1.5">
                   {category.examples.map((example, i) => (
-                    <div 
+                    <button 
                       key={i}
-                      className="flex items-start gap-2 group cursor-pointer"
+                      className="flex items-start gap-2 group cursor-pointer w-full text-left"
                       onClick={(e) => {
                         e.stopPropagation();
                         onCategorySelect(example);
@@ -94,7 +94,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
                     >
                       <MessageSquare className="h-3.5 w-3.5 text-primary mt-1 flex-shrink-0" />
                       <p className="text-sm group-hover:text-primary transition-colors">{example}</p>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
