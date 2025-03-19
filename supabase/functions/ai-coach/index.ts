@@ -39,21 +39,30 @@ serve(async (req) => {
       );
     }
 
-    const userContent = imageUrl 
-      ? `${message ? message + '\n\n' : ''}[Image: ${imageUrl}]`
-      : message;
-
-    const fullContext = [
+    // Prepare messages for OpenAI API
+    const messages = [
       {
         role: 'system',
         content: "You are an AI Coach specializing in the painting industry. Your goal is to provide expert advice tailored for painting professionals and businesses. Focus on areas like pricing jobs, managing clients, leading crews, and marketing strategies. Provide clear, actionable steps when giving advice. Use a friendly, supportive tone that makes complex topics approachable. Your responses should be industry-specific and practical. When the user shares an image, analyze it thoughtfully in the context of the painting industry (e.g., technique, color choices, surface preparation). If you don't know an answer, be honest and don't make up information."
       },
-      ...context,
-      {
-        role: 'user',
-        content: userContent
-      }
+      ...context
     ];
+
+    // Add user message with image if provided
+    if (imageUrl) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: message || 'Please analyze this image.' },
+          { type: 'image_url', image_url: { url: imageUrl } }
+        ]
+      });
+    } else {
+      messages.push({
+        role: 'user',
+        content: message
+      });
+    }
 
     // Log details for debugging
     console.log(`Processing request for user: ${userId || 'anonymous'}`);
@@ -69,8 +78,8 @@ serve(async (req) => {
         'Authorization': `Bearer ${openaiApiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Use a model that can understand image references
-        messages: fullContext,
+        model: 'gpt-4o', // Using a model that can understand images
+        messages: messages,
         temperature: 0.7,
         max_tokens: 1000
       })
