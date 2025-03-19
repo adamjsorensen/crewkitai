@@ -7,22 +7,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useConversations } from '@/hooks/useConversations';
 import ChatInterface from '@/components/ai-coach/ChatInterface';
-import ConversationList from '@/components/ai-coach/ConversationList';
+import ConversationDialog from '@/components/ai-coach/ConversationDialog';
 import ConversationDrawer from '@/components/ai-coach/ConversationDrawer';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { useMediaQuery } from '@/hooks/use-mobile';
-
-const MIN_CONVERSATION_PANEL_SIZE = 15;
-const DEFAULT_CONVERSATION_PANEL_SIZE = 25;
+import { Button } from '@/components/ui/button';
+import { PlusCircle, HistoryIcon } from 'lucide-react';
 
 const AiCoach = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const isTablet = useMediaQuery('(min-width: 768px)');
   
-  const [collapsedConversationPanel, setCollapsedConversationPanel] = useState(!isDesktop);
+  const [dialogOpen, setDialogOpen] = useState(false);
   
   const {
     conversations,
@@ -45,8 +40,13 @@ const AiCoach = () => {
     }
   }, [user, navigate, toast]);
 
-  const handlePanelResize = (size: number) => {
-    setCollapsedConversationPanel(size <= MIN_CONVERSATION_PANEL_SIZE);
+  const handleOpenDialog = () => {
+    setDialogOpen(true);
+  };
+
+  const handleNewConversation = () => {
+    createNewConversation();
+    // Don't close dialog here, let user explicitly close it
   };
 
   return (
@@ -58,87 +58,56 @@ const AiCoach = () => {
             <p className="text-muted-foreground">Get expert advice for your painting business</p>
           </div>
           
-          {isTablet && !isDesktop && (
-            <ConversationDrawer 
-              conversations={conversations}
-              selectedConversationId={selectedConversationId}
-              onSelectConversation={selectConversation}
-              onNewConversation={createNewConversation}
-              onDeleteConversation={deleteConversation}
-              onPinConversation={togglePinConversation}
-            />
-          )}
+          <div className="flex gap-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={createNewConversation}
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>New Chat</span>
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={handleOpenDialog}
+            >
+              <HistoryIcon className="h-4 w-4" />
+              <span>History</span>
+            </Button>
+          </div>
         </div>
         
         <Card className="p-0 overflow-hidden border-none shadow-md flex-1">
-          {isDesktop || isTablet ? (
-            <ResizablePanelGroup
-              direction="horizontal"
-              className="min-h-[75vh]"
-            >
-              <ResizablePanel 
-                defaultSize={DEFAULT_CONVERSATION_PANEL_SIZE} 
-                minSize={MIN_CONVERSATION_PANEL_SIZE}
-                maxSize={40}
-                collapsible={true}
-                collapsedSize={3.5}
-                onResize={handlePanelResize}
-                className={`border-r ${collapsedConversationPanel ? 'min-w-[50px]' : 'min-w-[250px]'}`}
-              >
-                {!collapsedConversationPanel && (
-                  <ConversationList 
-                    conversations={conversations}
-                    selectedConversationId={selectedConversationId}
-                    onSelectConversation={selectConversation}
-                    onNewConversation={createNewConversation}
-                    onDeleteConversation={deleteConversation}
-                    onPinConversation={togglePinConversation}
-                  />
-                )}
-              </ResizablePanel>
-              
-              <ResizableHandle withHandle />
-              
-              <ResizablePanel defaultSize={100 - DEFAULT_CONVERSATION_PANEL_SIZE}>
-                <ChatInterface 
-                  conversationId={selectedConversationId} 
-                  onConversationCreated={(id) => {
-                    // When a new conversation is created we should update the selected conversation
-                    if (id && !selectedConversationId) {
-                      selectConversation(id);
-                    }
-                  }}
-                />
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          ) : (
-            // Mobile view
-            <div className="flex flex-col h-[75vh]">
-              <div className="flex justify-between items-center p-3 border-b">
-                <h2 className="text-lg font-medium">AI Coach</h2>
-                <ConversationDrawer 
-                  conversations={conversations}
-                  selectedConversationId={selectedConversationId}
-                  onSelectConversation={selectConversation}
-                  onNewConversation={createNewConversation}
-                  onDeleteConversation={deleteConversation}
-                  onPinConversation={togglePinConversation}
-                />
-              </div>
-              <div className="flex-1">
-                <ChatInterface 
-                  conversationId={selectedConversationId}
-                  onConversationCreated={(id) => {
-                    if (id && !selectedConversationId) {
-                      selectConversation(id);
-                    }
-                  }}
-                />
-              </div>
+          <div className="flex flex-col h-[75vh]">
+            <div className="flex-1">
+              <ChatInterface 
+                conversationId={selectedConversationId}
+                onConversationCreated={(id) => {
+                  if (id && !selectedConversationId) {
+                    selectConversation(id);
+                  }
+                }}
+              />
             </div>
-          )}
+          </div>
         </Card>
       </div>
+      
+      {/* Conversation History Dialog */}
+      <ConversationDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        conversations={conversations}
+        selectedConversationId={selectedConversationId}
+        onSelectConversation={selectConversation}
+        onNewConversation={handleNewConversation}
+        onDeleteConversation={deleteConversation}
+        onPinConversation={togglePinConversation}
+      />
     </DashboardLayout>
   );
 };
