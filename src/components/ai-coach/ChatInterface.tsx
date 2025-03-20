@@ -35,6 +35,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const isMobile = useIsMobile();
   // Track if a message has been sent
   const [hasInteracted, setHasInteracted] = useState(false);
+  // Track if we're showing loading state while immediately transitioning
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   const {
     input,
@@ -64,24 +66,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     scrollToBottom
   } = useChat(conversationId, isNewChat, onConversationCreated);
 
-  // Wrap the send message handler to track interaction
+  // Wrap the send message handler to track interaction and show immediate loading
   const handleSendMessage = () => {
+    if (!input.trim() && !imageFile) return;
     setHasInteracted(true);
+    setIsTransitioning(true);
     originalHandleSendMessage();
   };
 
-  // Wrap the example click handler to track interaction
+  // Wrap the example click handler to track interaction and show immediate loading
   const handleExampleClick = (question: string) => {
     setHasInteracted(true);
-    originalHandleExampleClick(question);
+    setIsTransitioning(true);
+    setInput(question);
+    // Small delay to ensure state updates before sending
+    setTimeout(() => {
+      originalHandleExampleClick(question);
+    }, 50);
   };
 
   // Reset interaction state when starting a new chat
   useEffect(() => {
     if (isNewChat && !conversationId && messages.length <= 1) {
       setHasInteracted(false);
+      setIsTransitioning(false);
     }
   }, [isNewChat, conversationId, messages.length]);
+
+  // Reset transitioning state once loading is complete
+  useEffect(() => {
+    if (!isLoading && isTransitioning) {
+      setIsTransitioning(false);
+    }
+  }, [isLoading, isTransitioning]);
 
   if (isLoadingHistory) {
     return <div className="flex flex-col h-[75vh] items-center justify-center">
@@ -92,7 +109,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Determine whether to show welcome or conversation view
   // Show welcome section only when it's a new chat with no messages and user hasn't interacted
-  const showWelcome = isNewChat && !conversationId && messages.length <= 1 && !hasInteracted;
+  const showWelcome = isNewChat && !conversationId && messages.length <= 1 && !hasInteracted && !isTransitioning;
 
   return (
     <div className={`flex flex-col h-full max-h-[85vh] relative overflow-hidden ${isMobile ? 'pt-2' : ''}`}>
@@ -105,7 +122,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <Suspense fallback={<MessageSkeleton />}>
             <MessageList 
               messages={messages}
-              isLoading={isLoading}
+              isLoading={isLoading || isTransitioning}
               isLoadingHistory={isLoadingHistory}
               error={error}
               handleRetry={handleRetry}
@@ -116,6 +133,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               messagesContainerRef={messagesContainerRef}
               handleExampleClick={handleExampleClick}
               isMobile={isMobile}
+              isTransitioning={isTransitioning}
             />
           </Suspense>
         </div>

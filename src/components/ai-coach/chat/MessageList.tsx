@@ -31,6 +31,7 @@ interface MessageListProps {
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   handleExampleClick: (question: string) => void;
   isMobile?: boolean;
+  isTransitioning?: boolean;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -45,7 +46,8 @@ const MessageList: React.FC<MessageListProps> = ({
   messagesEndRef,
   messagesContainerRef,
   handleExampleClick,
-  isMobile = false
+  isMobile = false,
+  isTransitioning = false
 }) => {
   const isWelcomeScreen = messages.length === 1 && messages[0].id === 'welcome';
   const { ref: bottomInViewRef, inView: isBottomInView } = useInView({
@@ -66,13 +68,15 @@ const MessageList: React.FC<MessageListProps> = ({
     );
   }
 
-  // Show minimal UI when there are no messages to show yet (first interaction)
-  if (messages.length === 0) {
+  // Show loading UI when transitioning from welcome to chat or during initial empty state
+  if ((messages.length === 0 || isTransitioning) && !isWelcomeScreen) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Starting conversation...</p>
+          <p className="text-muted-foreground">
+            {isTransitioning ? "Processing your message..." : "Starting conversation..."}
+          </p>
         </div>
       </div>
     );

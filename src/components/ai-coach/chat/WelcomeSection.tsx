@@ -81,7 +81,11 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
       
       {/* Sheet component for mobile categories */}
       <Sheet open={showTabSheet} onOpenChange={setShowTabSheet}>
-        <SheetContent side="bottom" className="h-[70vh] px-0 z-50 bg-background">
+        <SheetContent 
+          side="bottom" 
+          className="px-0 h-[70vh] z-[100] bg-background border-t border-border/30 shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
           <SheetHeader className="px-4 mb-2">
             <SheetTitle>Choose a category</SheetTitle>
           </SheetHeader>
