@@ -15,12 +15,18 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const AiCoach = () => {
+  console.log("[AiCoach] Component rendered");
+  
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  useEffect(() => {
+    console.log("[AiCoach] isMobile state:", isMobile);
+  }, [isMobile]);
   
   const {
     conversations,
@@ -34,6 +40,11 @@ const AiCoach = () => {
   } = useConversations();
 
   useEffect(() => {
+    console.log("[AiCoach] Selected conversation ID:", selectedConversationId);
+    console.log("[AiCoach] Is new chat:", isNewChat);
+  }, [selectedConversationId, isNewChat]);
+
+  useEffect(() => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -45,20 +56,24 @@ const AiCoach = () => {
     
     // Prevent body scrolling on mobile to fix the chat interface to bottom
     if (isMobile) {
+      console.log("[AiCoach] Applying body overflow: hidden for mobile");
       document.body.style.overflow = 'hidden';
     }
     
     return () => {
       // Restore body scrolling when component unmounts
+      console.log("[AiCoach] Restoring body overflow on unmount");
       document.body.style.overflow = '';
     };
   }, [user, navigate, toast, isMobile]);
 
   const handleOpenDialog = () => {
+    console.log("[AiCoach] Opening conversation dialog");
     setDialogOpen(true);
   };
 
   const handleNewConversation = () => {
+    console.log("[AiCoach] Creating new conversation");
     createNewConversation();
   };
 
@@ -144,6 +159,7 @@ const AiCoach = () => {
                   conversationId={selectedConversationId}
                   isNewChat={isNewChat}
                   onConversationCreated={(id) => {
+                    console.log("[AiCoach] Conversation created with ID:", id);
                     if (id) {
                       selectConversation(id);
                     }
@@ -168,13 +184,25 @@ const AiCoach = () => {
       {/* Conversation History Dialog */}
       <ConversationDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          console.log("[AiCoach] Dialog open state changing to:", open);
+          setDialogOpen(open);
+        }}
         conversations={conversations}
         selectedConversationId={selectedConversationId}
-        onSelectConversation={selectConversation}
+        onSelectConversation={(id) => {
+          console.log("[AiCoach] Selecting conversation:", id);
+          selectConversation(id);
+        }}
         onNewConversation={handleNewConversation}
-        onDeleteConversation={deleteConversation}
-        onPinConversation={togglePinConversation}
+        onDeleteConversation={(id) => {
+          console.log("[AiCoach] Deleting conversation:", id);
+          deleteConversation(id);
+        }}
+        onPinConversation={(id) => {
+          console.log("[AiCoach] Toggling pin for conversation:", id);
+          togglePinConversation(id);
+        }}
       />
     </DashboardLayout>
   );

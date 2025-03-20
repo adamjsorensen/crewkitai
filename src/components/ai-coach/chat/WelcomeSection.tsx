@@ -22,6 +22,11 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
   const [showTabSheet, setShowTabSheet] = useState(false);
   const isMobile = useIsMobile();
   
+  // Add logging for sheet state changes
+  useEffect(() => {
+    console.log("[WelcomeSection] Sheet state changed:", showTabSheet);
+  }, [showTabSheet]);
+  
   // Dynamic icon component renderer
   const renderIcon = (iconName: string, colorClass: string) => {
     const IconComponent = (LucideIcons as any)[iconName] || LucideIcons.MessageSquare;
@@ -64,11 +69,37 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
   // Find the active category
   const activeCategory = categories.find(cat => cat.id === activeTab) || categories[0];
 
+  // Log click event and wrap with try/catch for debugging
+  const handleOpenSheet = (e: React.MouseEvent) => {
+    console.log("[WelcomeSection] Button clicked, current sheet state:", showTabSheet);
+    console.log("[WelcomeSection] Event target:", e.target);
+    console.log("[WelcomeSection] Event currentTarget:", e.currentTarget);
+    
+    try {
+      // Stop event from propagating to parent elements
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Toggle sheet visibility with a small delay to ensure state change is processed
+      console.log("[WelcomeSection] Setting sheet state to:", !showTabSheet);
+      setShowTabSheet(prev => !prev);
+    } catch (error) {
+      console.error("[WelcomeSection] Error in handleOpenSheet:", error);
+    }
+  };
+
+  // Debug sheet state changes
+  const handleSheetOpenChange = (open: boolean) => {
+    console.log("[WelcomeSection] Sheet state changing via SheetContent to:", open);
+    console.log("[WelcomeSection] Current state before change:", showTabSheet);
+    setShowTabSheet(open);
+  };
+
   // Enhanced Mobile category selector
   const MobileCategorySelector = () => (
     <div className="px-4 py-2">
       <Button 
-        onClick={() => setShowTabSheet(true)}
+        onClick={handleOpenSheet}
         className="w-full flex items-center justify-between py-3 px-4 rounded-lg bg-accent/50 border border-border/40 text-left"
         variant="outline"
       >
@@ -80,11 +111,14 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
       </Button>
       
       {/* Sheet component for mobile categories */}
-      <Sheet open={showTabSheet} onOpenChange={setShowTabSheet}>
+      <Sheet open={showTabSheet} onOpenChange={handleSheetOpenChange}>
         <SheetContent 
           side="bottom" 
           className="px-0 h-[70vh] rounded-t-xl z-[100] bg-background border-t border-border/30 shadow-lg"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            console.log("[WelcomeSection] SheetContent clicked, stopping propagation");
+            e.stopPropagation();
+          }}
         >
           <SheetHeader className="px-4 mb-2">
             <SheetTitle>Choose a category</SheetTitle>
@@ -101,7 +135,9 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
                       : "hover:bg-accent"
                   )}
                   variant="ghost"
-                  onClick={() => {
+                  onClick={(e) => {
+                    console.log("[WelcomeSection] Category selected:", category.id);
+                    e.stopPropagation();
                     setActiveTab(category.id);
                     setShowTabSheet(false);
                   }}

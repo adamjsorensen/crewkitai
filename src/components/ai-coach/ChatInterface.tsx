@@ -31,12 +31,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isNewChat = true,
   onConversationCreated
 }) => {
+  console.log("[ChatInterface] Render - conversationId:", conversationId, "isNewChat:", isNewChat);
+  
   const { user } = useAuth();
   const isMobile = useIsMobile();
   // Track if a message has been sent
   const [hasInteracted, setHasInteracted] = useState(false);
   // Track if we're showing loading state while immediately transitioning
   const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  useEffect(() => {
+    console.log("[ChatInterface] Component mounted, isMobile:", isMobile);
+    
+    return () => {
+      console.log("[ChatInterface] Component unmounting");
+    };
+  }, [isMobile]);
   
   const {
     input,
@@ -69,6 +79,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // Wrap the send message handler to track interaction and show immediate loading
   const handleSendMessage = () => {
     if (!input.trim() && !imageFile) return;
+    console.log("[ChatInterface] Message send initiated");
     setHasInteracted(true);
     setIsTransitioning(true);
     originalHandleSendMessage();
@@ -76,6 +87,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Wrap the example click handler to track interaction and show immediate loading
   const handleExampleClick = (question: string) => {
+    console.log("[ChatInterface] Example clicked:", question);
     setHasInteracted(true);
     setIsTransitioning(true);
     setInput(question);
@@ -88,6 +100,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // Reset interaction state when starting a new chat
   useEffect(() => {
     if (isNewChat && !conversationId && messages.length <= 1) {
+      console.log("[ChatInterface] Resetting interaction state");
       setHasInteracted(false);
       setIsTransitioning(false);
     }
@@ -96,11 +109,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // Reset transitioning state once loading is complete
   useEffect(() => {
     if (!isLoading && isTransitioning) {
+      console.log("[ChatInterface] Resetting transitioning state");
       setIsTransitioning(false);
     }
   }, [isLoading, isTransitioning]);
 
+  // Log when welcome section should be shown
+  useEffect(() => {
+    const showWelcome = isNewChat && !conversationId && messages.length <= 1 && !hasInteracted && !isTransitioning;
+    console.log("[ChatInterface] Welcome section visibility:", showWelcome);
+  }, [isNewChat, conversationId, messages.length, hasInteracted, isTransitioning]);
+
   if (isLoadingHistory) {
+    console.log("[ChatInterface] Loading history...");
     return <div className="flex flex-col h-[75vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p className="text-muted-foreground">Loading conversation...</p>
