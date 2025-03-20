@@ -474,6 +474,32 @@ export const useChat = (
     }
   };
 
+  const handleFollowUpQuestion = (question: string) => {
+    setInput(question);
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+      handleSendMessage();
+    }, 100);
+  };
+
+  const handleExplainFurther = (messageId: string) => {
+    const messageIndex = messages.findIndex(msg => msg.id === messageId);
+    if (messageIndex < 0) return;
+    
+    const assistantMessage = messages[messageIndex];
+    if (assistantMessage.role !== 'assistant') return;
+    
+    setInput(`Could you explain this in more detail: "${assistantMessage.content.substring(0, 100)}..."`);
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+      handleSendMessage();
+    }, 100);
+  };
+
   return {
     input,
     setInput,
@@ -501,6 +527,8 @@ export const useChat = (
     copyConversation,
     clearConversation,
     handleRegenerateMessage,
+    handleFollowUpQuestion,
+    handleExplainFurther,
     scrollToBottom
   };
 };
