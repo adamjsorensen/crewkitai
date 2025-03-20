@@ -10,10 +10,14 @@ import SystemPromptField from "./settings/SystemPromptField";
 import TemperatureField from "./settings/TemperatureField";
 import MaxTokensField from "./settings/MaxTokensField";
 import ModelsConfigField from "./settings/ModelsConfigField";
+import ContentManagement from "./settings/ContentManagement";
 import SaveButton from "./settings/SaveButton";
 import LoadingSpinner from "./settings/LoadingSpinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Settings, FileText } from "lucide-react";
 
 const AiSettingsForm = () => {
+  const [activeTab, setActiveTab] = React.useState("model-settings");
   const { settings, isLoading } = useAiSettings();
   const { saveSettings, isSaving } = useSaveAiSettings();
   
@@ -51,20 +55,39 @@ const AiSettingsForm = () => {
       </CardHeader>
       
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <SystemPromptField form={form} />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <TemperatureField form={form} />
-              <MaxTokensField form={form} />
-            </div>
-            
-            <ModelsConfigField form={form} />
-            
-            <SaveButton isSaving={isSaving} />
-          </form>
-        </Form>
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="model-settings" className="flex items-center gap-1.5">
+              <Settings className="h-4 w-4" />
+              <span>Model Settings</span>
+            </TabsTrigger>
+            <TabsTrigger value="content-management" className="flex items-center gap-1.5">
+              <FileText className="h-4 w-4" />
+              <span>Content Management</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="model-settings">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <SystemPromptField form={form} />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <TemperatureField form={form} />
+                  <MaxTokensField form={form} />
+                </div>
+                
+                <ModelsConfigField form={form} />
+                
+                <SaveButton isSaving={isSaving} />
+              </form>
+            </Form>
+          </TabsContent>
+          
+          <TabsContent value="content-management">
+            <ContentManagement />
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
