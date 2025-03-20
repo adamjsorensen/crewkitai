@@ -79,8 +79,9 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
         <ChevronDown className="h-5 w-5 text-muted-foreground" />
       </Button>
       
+      {/* Sheet component for mobile categories */}
       <Sheet open={showTabSheet} onOpenChange={setShowTabSheet}>
-        <SheetContent side="bottom" className="h-[70vh] px-0">
+        <SheetContent side="bottom" className="h-[70vh] px-0 z-50 bg-background">
           <SheetHeader className="px-4 mb-2">
             <SheetTitle>Choose a category</SheetTitle>
           </SheetHeader>
@@ -135,7 +136,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
           {isMobile && <MobileCategorySelector />}
           
           <Tabs 
-            defaultValue={activeTab || (categories[0]?.id || "")} 
+            value={activeTab || (categories[0]?.id || "")} 
             onValueChange={(value) => setActiveTab(value)}
             className="w-full"
           >
