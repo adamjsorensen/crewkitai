@@ -28,6 +28,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
+  SidebarSeparator,
   SidebarTrigger,
   useSidebar
 } from "@/components/ui/sidebar";
@@ -67,14 +68,16 @@ const DashboardSidebar = () => {
   // Renamed the function to SidebarContentItems to avoid conflict with the imported component
   const SidebarContentItems = () => (
     <>
-      <SidebarHeader>
-        <div className="flex items-center gap-2 p-4">
+      <SidebarHeader className="py-3">
+        <div className="flex items-center gap-2 px-4">
           <PaintBucket className="h-6 w-6 text-primary" />
           <span className="font-display text-lg font-semibold">CrewkitAI</span>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarSeparator />
+
+      <SidebarContent className="flex-1">
         <SidebarGroup>
           <SidebarMenu>
             {navItems.map((item) => (
@@ -95,37 +98,40 @@ const DashboardSidebar = () => {
         </SidebarGroup>
 
         {isAdmin && (
-          <SidebarGroup>
-            <SidebarMenu>
-              {adminItems.map((item) => (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname.startsWith(item.path.split('/').slice(0, 3).join('/'))}
-                    tooltip={item.name}
-                  >
-                    <Link to={item.path}>
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.name}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
+          <>
+            <SidebarSeparator className="my-2" />
+            <SidebarGroup>
+              <SidebarMenu>
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname.startsWith(item.path.split('/').slice(0, 3).join('/'))}
+                      tooltip={item.name}
+                    >
+                      <Link to={item.path}>
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          </>
         )}
       </SidebarContent>
 
-      <SidebarFooter>
-        <div className="p-4">
-          <SidebarMenuButton 
-            onClick={handleSignOut}
-            tooltip="Sign Out"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Sign Out</span>
-          </SidebarMenuButton>
-        </div>
+      <SidebarSeparator className="my-2" />
+
+      <SidebarFooter className="py-3 px-2">
+        <SidebarMenuButton 
+          onClick={handleSignOut}
+          tooltip="Sign Out"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Sign Out</span>
+        </SidebarMenuButton>
       </SidebarFooter>
     </>
   );
@@ -164,8 +170,8 @@ const DashboardSidebar = () => {
         <SidebarRail />
       </Sidebar>
       
-      {/* Collapsible sidebar toggle for desktop */}
-      <div className="fixed bottom-4 left-4 z-50 md:flex hidden">
+      {/* Move collapse button to bottom-left corner with proper spacing */}
+      <div className="fixed bottom-6 left-6 z-50 md:flex hidden">
         <Button 
           variant="outline" 
           size="icon" 
