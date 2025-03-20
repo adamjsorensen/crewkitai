@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useChat } from './chat/useChat';
@@ -7,6 +7,7 @@ import MessageList from './chat/MessageList';
 import ChatMessageInput from './chat/ChatMessageInput';
 import ImagePreview from './chat/ImagePreview';
 import { useIsMobile } from '@/hooks/use-mobile';
+import MessageSkeleton from './chat/MessageSkeleton';
 
 type Message = {
   id: string;
@@ -68,19 +69,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <div className={`flex flex-col h-full max-h-[85vh] relative overflow-hidden ${isMobile ? 'pt-2' : ''}`}>
       <div className="flex-1 overflow-hidden">
-        <MessageList 
-          messages={messages}
-          isLoading={isLoading}
-          error={error}
-          handleRetry={handleRetry}
-          handleRegenerateMessage={handleRegenerateMessage}
-          showScrollButton={showScrollButton}
-          scrollToBottom={scrollToBottom}
-          messagesEndRef={messagesEndRef}
-          messagesContainerRef={messagesContainerRef}
-          handleExampleClick={handleExampleClick}
-          isMobile={isMobile}
-        />
+        <Suspense fallback={<MessageSkeleton />}>
+          <MessageList 
+            messages={messages}
+            isLoading={isLoading}
+            isLoadingHistory={isLoadingHistory}
+            error={error}
+            handleRetry={handleRetry}
+            handleRegenerateMessage={handleRegenerateMessage}
+            showScrollButton={showScrollButton}
+            scrollToBottom={scrollToBottom}
+            messagesEndRef={messagesEndRef}
+            messagesContainerRef={messagesContainerRef}
+            handleExampleClick={handleExampleClick}
+            isMobile={isMobile}
+          />
+        </Suspense>
       </div>
       
       <div className={`sticky bottom-0 left-0 right-0 border-t px-3 sm:px-4 py-2 sm:py-3 bg-background/95 backdrop-blur-sm ${isMobile ? 'pb-safe' : ''}`}>

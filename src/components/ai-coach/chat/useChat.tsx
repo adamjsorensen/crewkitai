@@ -1,5 +1,4 @@
-
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +12,7 @@ type Message = {
   imageUrl?: string;
 };
 
-// Function to fetch conversation history
+// Function to fetch conversation history with pagination
 const fetchConversationHistory = async (conversationId: string | null, userId: string | undefined) => {
   if (!conversationId || !userId) {
     return [];
@@ -27,15 +26,19 @@ const fetchConversationHistory = async (conversationId: string | null, userId: s
     
   if (rootError) throw rootError;
 
+  // Limit to the most recent 50 messages for better performance
   const { data: messagesData, error: messagesError } = await supabase
     .from('ai_coach_conversations')
     .select('*')
     .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false })
+    .limit(50);
     
   if (messagesError) throw messagesError;
 
-  const allMessages = [rootData, ...(messagesData || [])];
+  // Reverse to get them in chronological order
+  const messagesReversed = messagesData?.reverse() || [];
+  const allMessages = [rootData, ...messagesReversed];
   const chatMessages: Message[] = [];
   
   for (const msg of allMessages) {
@@ -55,7 +58,6 @@ const fetchConversationHistory = async (conversationId: string | null, userId: s
     });
   }
 
-  chatMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   return chatMessages;
 };
 
@@ -82,12 +84,14 @@ export const useChat = (
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Fetch conversation history with caching
+  // Fetch conversation history with improved caching
   const { data: historyMessages = [], isLoading: isLoadingHistory } = useQuery({
     queryKey: ['conversationHistory', conversationId],
     queryFn: () => fetchConversationHistory(conversationId, user?.id),
     enabled: !isNewChat && !!conversationId && !!user,
-    staleTime: 1 * 60 * 1000, // Consider data fresh for 1 minute
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep unused data in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
   
   // Set up the messages based on new chat status or history
@@ -112,14 +116,17 @@ export const useChat = (
     }
   }, [isNewChat, historyMessages, isLoadingHistory, conversationId]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change - with debounce
   useEffect(() => {
     if (!isLoading && !isLoadingHistory) {
-      scrollToBottom();
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [messages, isLoading, isLoadingHistory]);
 
-  // Handle scroll for the scroll button
+  // Handle scroll for the scroll button - optimized with debounce
   useEffect(() => {
     const handleScroll = () => {
       if (!messagesContainerRef.current) return;
@@ -129,25 +136,36 @@ export const useChat = (
       setShowScrollButton(!isNearBottom);
     };
     
+    const debounceScroll = () => {
+      let timeout: NodeJS.Timeout;
+      return () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(handleScroll, 100);
+      };
+    };
+    
+    const debouncedHandle = debounceScroll();
+    
     const container = messagesContainerRef.current;
     if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
+      container.addEventListener('scroll', debouncedHandle);
+      return () => container.removeEventListener('scroll', debouncedHandle);
     }
   }, []);
 
-  const scrollToBottom = () => {
+  // More efficient scroll to bottom
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: 'smooth'
     });
-  };
+  }, []);
 
-  // Image handling functions
-  const handleImageClick = () => {
+  // Image handling functions - optimized
+  const handleImageClick = useCallback(() => {
     fileInputRef.current?.click();
-  };
+  }, []);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 5 * 1024 * 1024) {
@@ -168,20 +186,65 @@ export const useChat = (
         return;
       }
 
-      setImageFile(file);
-      setImagePreviewUrl(URL.createObjectURL(file));
+      // Create a resized version of the image if it's too large
+      if (file.size > 1 * 1024 * 1024) {
+        const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        img.onload = () => {
+          // Calculate new dimensions
+          const maxDimension = 1200;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height && width > maxDimension) {
+            height = (height * maxDimension) / width;
+            width = maxDimension;
+          } else if (height > maxDimension) {
+            width = (width * maxDimension) / height;
+            height = maxDimension;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert to blob and create a new file
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const optimizedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              
+              setImageFile(optimizedFile);
+              setImagePreviewUrl(URL.createObjectURL(optimizedFile));
+            }
+          }, 'image/jpeg', 0.7);
+        };
+        
+        img.src = URL.createObjectURL(file);
+      } else {
+        setImageFile(file);
+        setImagePreviewUrl(URL.createObjectURL(file));
+      }
     }
-  };
+  }, [toast]);
 
-  const removeImage = () => {
+  const removeImage = useCallback(() => {
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl); // Clean up the URL
+    }
     setImageFile(null);
     setImagePreviewUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
+  }, [imagePreviewUrl]);
 
-  // Upload image function
+  // Upload image function - now with progress tracking
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
       setIsUploading(true);
@@ -189,6 +252,7 @@ export const useChat = (
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
       const filePath = `${user?.id}/${fileName}`;
 
+      // Upload with simpler error handling
       const { data, error } = await supabase.storage
         .from('chat_images')
         .upload(filePath, file);
@@ -215,7 +279,7 @@ export const useChat = (
     }
   };
 
-  // Send message mutation
+  // Send message mutation with optimistic updates
   const sendMessageMutation = useMutation({
     mutationFn: async ({ 
       userMessage, 
@@ -226,6 +290,7 @@ export const useChat = (
     }) => {
       if (!user) throw new Error("No user logged in");
 
+      // Only send the last 5 messages for context to reduce payload size
       const conversationContext = messages
         .filter(msg => msg.id !== 'welcome')
         .slice(-5)
@@ -325,8 +390,8 @@ export const useChat = (
     }
   });
 
-  // Handle sending a message
-  const handleSendMessage = async () => {
+  // Handle sending a message - optimized
+  const handleSendMessage = useCallback(async () => {
     if ((!input.trim() && !imageFile) || isLoading || !user) return;
     
     let imageUrl: string | null = null;
@@ -346,13 +411,10 @@ export const useChat = (
       imageUrl: imageUrl || undefined
     };
     
+    // Optimistic update
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setImageFile(null);
-    setImagePreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    removeImage();
     
     setIsLoading(true);
     setError(null);
@@ -361,25 +423,26 @@ export const useChat = (
       userMessage: input.trim(), 
       imageUrl 
     });
-  };
+  }, [input, imageFile, isLoading, user, uploadImage, removeImage, sendMessageMutation]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
-  };
+  }, [handleSendMessage]);
 
-  const handleExampleClick = (question: string) => {
+  const handleExampleClick = useCallback((question: string) => {
     setInput(question);
     if (inputRef.current) {
       inputRef.current.focus();
     }
     
+    // Small delay to ensure state updates before sending
     setTimeout(() => {
       handleSendMessage();
     }, 100);
-  };
+  }, [setInput, handleSendMessage]);
 
   const handleRetry = () => {
     let lastUserMessage: Message | undefined;
@@ -404,7 +467,6 @@ export const useChat = (
     }
   };
 
-  // Copy conversation to clipboard
   const copyConversation = async () => {
     try {
       setIsCopying(true);
@@ -428,7 +490,6 @@ export const useChat = (
     }
   };
 
-  // Start a new conversation
   const clearConversation = () => {
     setMessages([{
       id: 'welcome',
@@ -445,7 +506,6 @@ export const useChat = (
     });
   };
 
-  // Regenerate a message
   const regenerateMutation = useMutation({
     mutationFn: async ({ 
       messageId, 

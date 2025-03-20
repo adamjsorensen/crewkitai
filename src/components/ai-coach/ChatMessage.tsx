@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { PaintBucket, User, RefreshCw, Copy, Share2, ThumbsUp, ThumbsDown, Loader2, ZoomIn, MoreHorizontal, BookmarkIcon, CheckCircle2, PinIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -30,9 +30,10 @@ type Message = {
 interface ChatMessageProps {
   message: Message;
   onRegenerate?: (messageId: string) => void;
+  isMobile?: boolean;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobile = false }) => {
   const isAssistant = message.role === 'assistant';
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
@@ -41,6 +42,29 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
   const [isSaved, setIsSaved] = useState(false);
   const [isVoted, setIsVoted] = useState<'up' | 'down' | null>(null);
   
+  // Don't extract key points on mobile to improve performance
+  const getKeyPoints = (content: string): string[] | null => {
+    if (!isAssistant || isMobile) return null;
+    
+    // Look for lists in the content
+    const listMatch = content.match(/(\n[0-9]+\.\s.+){2,}/g) || 
+                      content.match(/(\n\*\s.+){2,}/g) ||
+                      content.match(/(\n-\s.+){2,}/g);
+    
+    if (listMatch) {
+      return listMatch[0]
+        .split('\n')
+        .filter(item => item.trim())
+        .map(item => item.replace(/^[0-9]+\.\s|\*\s|-\s/, '').trim())
+        .slice(0, 3); // Limit to 3 points
+    }
+    
+    return null;
+  };
+
+  const keyPoints = getKeyPoints(message.content);
+  
+  // Basic message operations
   const handleCopy = async () => {
     try {
       setIsCopying(true);
@@ -112,28 +136,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
     }
   };
 
-  // Attempts to extract key points from assistant messages
-  const getKeyPoints = (content: string): string[] | null => {
-    if (!isAssistant) return null;
-    
-    // Look for lists in the content
-    const listMatch = content.match(/(\n[0-9]+\.\s.+){2,}/g) || 
-                      content.match(/(\n\*\s.+){2,}/g) ||
-                      content.match(/(\n-\s.+){2,}/g);
-    
-    if (listMatch) {
-      return listMatch[0]
-        .split('\n')
-        .filter(item => item.trim())
-        .map(item => item.replace(/^[0-9]+\.\s|\*\s|-\s/, '').trim())
-        .slice(0, 3); // Limit to 3 points
-    }
-    
-    return null;
-  };
-
-  const keyPoints = getKeyPoints(message.content);
-  
+  // Render simpler message content for mobile
   return (
     <div 
       className={cn(
@@ -160,7 +163,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
             <img 
               src={message.imageUrl} 
               alt="Uploaded image" 
-              className="max-h-48 w-auto rounded-lg object-cover border border-border/10" 
+              className="max-h-48 w-auto rounded-lg object-cover border border-border/10 lazy-load" 
+              loading="lazy"
             />
             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <ZoomIn className="h-8 w-8 text-white drop-shadow-md" />
@@ -219,8 +223,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
           )}
         </div>
         
-        {/* Key Points Section for assistant messages */}
-        {isAssistant && keyPoints && (
+        {/* Key Points Section for assistant messages - not shown on mobile */}
+        {isAssistant && keyPoints && !isMobile && (
           <Card className="mt-3 p-3 bg-primary/5 border-primary/10">
             <div className="flex items-center gap-1.5 mb-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
@@ -258,127 +262,193 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
         {isAssistant && (
           <div className="flex items-center justify-between mt-2.5 border-t border-border/20 pt-2">
             <div className="flex items-center gap-1">
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Toggle 
-                      size="sm" 
-                      variant="outline" 
-                      className={`h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background ${isVoted === 'up' ? 'text-primary bg-primary/10' : 'hover:text-primary'} transition-colors`}
-                      pressed={isVoted === 'up'}
-                      onPressedChange={() => handleVote('up')}
-                      aria-label="Mark as helpful"
-                    >
-                      <ThumbsUp className="h-3.5 w-3.5" />
-                    </Toggle>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">Mark as helpful</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Toggle 
-                      size="sm" 
-                      variant="outline" 
-                      className={`h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background ${isVoted === 'down' ? 'text-destructive bg-destructive/10' : 'hover:text-destructive'} transition-colors`}
-                      pressed={isVoted === 'down'}
-                      onPressedChange={() => handleVote('down')}
-                      aria-label="Mark as not helpful"
-                    >
-                      <ThumbsDown className="h-3.5 w-3.5" />
-                    </Toggle>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">Not helpful</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Toggle 
-                      size="sm" 
-                      variant="outline" 
-                      className={`h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background ${isSaved ? 'text-primary bg-primary/10' : 'hover:text-primary'} transition-colors`}
-                      pressed={isSaved}
-                      onPressedChange={handleSave}
-                      aria-label="Save message"
-                    >
-                      <BookmarkIcon className="h-3.5 w-3.5" />
-                    </Toggle>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">{isSaved ? 'Remove from saved' : 'Save message'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {isMobile ? (
+                // Simplified mobile controls
+                <>
+                  <Toggle 
+                    size="sm" 
+                    variant="outline" 
+                    className={`h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background ${isVoted === 'up' ? 'text-primary bg-primary/10' : ''}`}
+                    pressed={isVoted === 'up'}
+                    onPressedChange={() => handleVote('up')}
+                    aria-label="Mark as helpful"
+                  >
+                    <ThumbsUp className="h-3.5 w-3.5" />
+                  </Toggle>
+                  <Toggle 
+                    size="sm" 
+                    variant="outline" 
+                    className={`h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background ${isSaved ? 'text-primary bg-primary/10' : ''}`}
+                    pressed={isSaved}
+                    onPressedChange={handleSave}
+                    aria-label="Save message"
+                  >
+                    <BookmarkIcon className="h-3.5 w-3.5" />
+                  </Toggle>
+                </>
+              ) : (
+                // Desktop controls with tooltips
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Toggle 
+                        size="sm" 
+                        variant="outline" 
+                        className={`h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background ${isVoted === 'up' ? 'text-primary bg-primary/10' : 'hover:text-primary'} transition-colors`}
+                        pressed={isVoted === 'up'}
+                        onPressedChange={() => handleVote('up')}
+                        aria-label="Mark as helpful"
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                      </Toggle>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Mark as helpful</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Toggle 
+                        size="sm" 
+                        variant="outline" 
+                        className={`h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background ${isVoted === 'down' ? 'text-destructive bg-destructive/10' : 'hover:text-destructive'} transition-colors`}
+                        pressed={isVoted === 'down'}
+                        onPressedChange={() => handleVote('down')}
+                        aria-label="Mark as not helpful"
+                      >
+                        <ThumbsDown className="h-3.5 w-3.5" />
+                      </Toggle>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Not helpful</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Toggle 
+                        size="sm" 
+                        variant="outline" 
+                        className={`h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background ${isSaved ? 'text-primary bg-primary/10' : 'hover:text-primary'} transition-colors`}
+                        pressed={isSaved}
+                        onPressedChange={handleSave}
+                        aria-label="Save message"
+                      >
+                        <BookmarkIcon className="h-3.5 w-3.5" />
+                      </Toggle>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">{isSaved ? 'Remove from saved' : 'Save message'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             
             <div className="flex items-center gap-1">
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Toggle 
-                      size="sm" 
-                      variant="outline" 
-                      className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background hover:text-primary transition-colors"
-                      aria-label="Regenerate response"
-                      onClick={handleRegenerate}
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    </Toggle>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">Regenerate response</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Toggle 
-                      size="sm" 
-                      variant="outline" 
-                      className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background hover:text-primary transition-colors"
-                      aria-label="Copy to clipboard"
-                      onClick={handleCopy}
-                      disabled={isCopying}
-                    >
-                      {isCopying ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </Toggle>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">Copy to clipboard</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Toggle 
-                      size="sm" 
-                      variant="outline" 
-                      className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background hover:text-primary transition-colors"
-                      aria-label="More options"
-                    >
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </Toggle>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem onClick={handleShare} disabled={isSharing} className="flex items-center gap-2 text-xs cursor-pointer">
-                      {isSharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
-                      Share message
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="flex items-center gap-2 text-xs cursor-pointer">
-                      <PinIcon className="h-3.5 w-3.5" />
-                      Pin to conversation
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TooltipProvider>
+              {isMobile ? (
+                // Simplified mobile actions
+                <>
+                  <Toggle 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background transition-colors"
+                    aria-label="Regenerate response"
+                    onClick={handleRegenerate}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </Toggle>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Toggle 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background transition-colors"
+                        aria-label="More options"
+                      >
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </Toggle>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem onClick={handleCopy} disabled={isCopying} className="flex items-center gap-2 text-xs cursor-pointer">
+                        {isCopying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Copy className="h-3.5 w-3.5" />}
+                        Copy to clipboard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShare} disabled={isSharing} className="flex items-center gap-2 text-xs cursor-pointer">
+                        {isSharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+                        Share message
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                // Desktop controls with tooltips
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Toggle 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background hover:text-primary transition-colors"
+                        aria-label="Regenerate response"
+                        onClick={handleRegenerate}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </Toggle>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Regenerate response</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Toggle 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background hover:text-primary transition-colors"
+                        aria-label="Copy to clipboard"
+                        onClick={handleCopy}
+                        disabled={isCopying}
+                      >
+                        {isCopying ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </Toggle>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Copy to clipboard</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Toggle 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background hover:text-primary transition-colors"
+                        aria-label="More options"
+                      >
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </Toggle>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem onClick={handleShare} disabled={isSharing} className="flex items-center gap-2 text-xs cursor-pointer">
+                        {isSharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+                        Share message
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-2 text-xs cursor-pointer">
+                        <PinIcon className="h-3.5 w-3.5" />
+                        Pin to conversation
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         )}
@@ -398,6 +468,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
               src={message.imageUrl} 
               alt="Fullscreen view" 
               className="w-full h-auto object-contain max-h-[80vh] rounded-lg" 
+              loading="lazy"
             />
           </div>
         </DialogContent>
@@ -406,4 +477,5 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
   );
 };
 
-export default ChatMessage;
+// Use React.memo to prevent unnecessary re-renders
+export default memo(ChatMessage);

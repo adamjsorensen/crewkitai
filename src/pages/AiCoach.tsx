@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Card } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, HistoryIcon, PaintBucket, Brain } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const AiCoach = () => {
   const { user } = useAuth();
@@ -97,7 +98,7 @@ const AiCoach = () => {
         )}
         
         {isMobile && (
-          <div className="flex justify-between items-center px-2 py-2">
+          <div className="flex justify-between items-center px-2 py-2 sticky top-0 bg-background z-20 border-b">
             <div className="flex items-center">
               <div className="bg-primary/10 w-8 h-8 rounded-full flex items-center justify-center mr-2">
                 <PaintBucket className="h-4 w-4 text-primary" />
@@ -107,17 +108,8 @@ const AiCoach = () => {
             
             <div className="flex gap-1">
               <Button 
-                variant="default" 
+                variant="outline" 
                 size="sm" 
-                className="flex items-center gap-1 h-8 px-2 bg-primary/90 hover:bg-primary"
-                onClick={createNewConversation}
-              >
-                <PlusCircle className="h-3.5 w-3.5" />
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
                 className="flex items-center gap-1 h-8 px-2"
                 onClick={handleOpenDialog}
               >
@@ -132,18 +124,35 @@ const AiCoach = () => {
         <Card className={`p-0 overflow-hidden border-none shadow-md flex-1 bg-card/50 ${isMobile ? '-mx-4 rounded-none' : ''}`}>
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-hidden">
-              <ChatInterface 
-                conversationId={selectedConversationId}
-                isNewChat={isNewChat}
-                onConversationCreated={(id) => {
-                  if (id) {
-                    selectConversation(id);
-                  }
-                }}
-              />
+              <Suspense fallback={
+                <div className="p-4">
+                  <Skeleton className="h-24 w-full mb-4" />
+                  <Skeleton className="h-24 w-full" />
+                </div>
+              }>
+                <ChatInterface 
+                  conversationId={selectedConversationId}
+                  isNewChat={isNewChat}
+                  onConversationCreated={(id) => {
+                    if (id) {
+                      selectConversation(id);
+                    }
+                  }}
+                />
+              </Suspense>
             </div>
           </div>
         </Card>
+
+        {/* Mobile New Chat Floating Button */}
+        {isMobile && (
+          <Button
+            onClick={createNewConversation}
+            className="fixed bottom-20 right-4 shadow-lg z-20 rounded-full h-12 w-12 p-0 bg-primary hover:bg-primary/90"
+          >
+            <PlusCircle className="h-6 w-6" />
+          </Button>
+        )}
       </div>
       
       {/* Conversation History Dialog */}

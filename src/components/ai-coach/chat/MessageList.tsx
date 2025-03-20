@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Loader2, ArrowDown } from 'lucide-react';
@@ -7,6 +7,8 @@ import ChatMessage from '../ChatMessage';
 import TypingIndicator from '../TypingIndicator';
 import { PaintBucket } from 'lucide-react';
 import WelcomeSection from './WelcomeSection';
+import MessageSkeleton from './MessageSkeleton';
+import { useInView } from 'react-intersection-observer';
 
 type Message = {
   id: string;
@@ -19,6 +21,7 @@ type Message = {
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
+  isLoadingHistory: boolean;
   error: string | null;
   handleRetry: () => void;
   handleRegenerateMessage: (messageId: string) => void;
@@ -33,6 +36,7 @@ interface MessageListProps {
 const MessageList: React.FC<MessageListProps> = ({
   messages,
   isLoading,
+  isLoadingHistory,
   error,
   handleRetry,
   handleRegenerateMessage,
@@ -44,6 +48,23 @@ const MessageList: React.FC<MessageListProps> = ({
   isMobile = false
 }) => {
   const isWelcomeScreen = messages.length === 1 && messages[0].id === 'welcome';
+  const { ref: bottomInViewRef, inView: isBottomInView } = useInView({
+    threshold: 0.1,
+  });
+
+  // Limit visible messages to improve performance on mobile
+  const visibleMessages = isMobile && messages.length > 15
+    ? messages.slice(Math.max(0, messages.length - 15))
+    : messages;
+
+  if (isLoadingHistory) {
+    return (
+      <div className="h-full px-3 sm:px-4 pt-4">
+        <MessageSkeleton />
+        <MessageSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-hidden">
@@ -57,11 +78,12 @@ const MessageList: React.FC<MessageListProps> = ({
           <WelcomeSection onCategorySelect={handleExampleClick} />
         ) : (
           <div className="space-y-1 pb-4 max-w-3xl mx-auto">
-            {messages.map(message => (
+            {visibleMessages.map(message => (
               <ChatMessage 
                 key={message.id} 
                 message={message} 
-                onRegenerate={handleRegenerateMessage} 
+                onRegenerate={handleRegenerateMessage}
+                isMobile={isMobile}
               />
             ))}
             
@@ -87,11 +109,12 @@ const MessageList: React.FC<MessageListProps> = ({
             )}
             
             <div ref={messagesEndRef} />
+            <div ref={bottomInViewRef} className="h-1" />
           </div>
         )}
       </ScrollArea>
       
-      {showScrollButton && !isWelcomeScreen && (
+      {showScrollButton && !isWelcomeScreen && !isBottomInView && (
         <Button
           variant="outline"
           size="icon"
