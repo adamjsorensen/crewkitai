@@ -494,7 +494,7 @@ export const useChat = (
       const assistantMessageIndex = messages.findIndex(msg => msg.id === messageId);
       if (assistantMessageIndex <= 0) throw new Error("Invalid message to regenerate");
 
-      const userMessageIndex = assistantMessageIndex - 1;
+      let userMessageIndex = assistantMessageIndex - 1;
       while (userMessageIndex >= 0 && messages[userMessageIndex].role !== 'user') {
         userMessageIndex--;
       }
