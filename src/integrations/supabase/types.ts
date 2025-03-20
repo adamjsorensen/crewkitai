@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_coach_content_filters: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          filter_type: string
+          id: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          filter_type: string
+          id?: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          filter_type?: string
+          id?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       ai_coach_conversations: {
         Row: {
           ai_response: string
@@ -55,6 +82,56 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "ai_coach_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_coach_welcome_content: {
+        Row: {
+          category_id: string | null
+          content: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          icon_color: string | null
+          id: string
+          position: number | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          icon_color?: string | null
+          id?: string
+          position?: number | null
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          icon_color?: string | null
+          id?: string
+          position?: number | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_coach_welcome_content_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ai_coach_welcome_content"
             referencedColumns: ["id"]
           },
         ]

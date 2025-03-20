@@ -14,7 +14,9 @@ import ContentManagement from "./settings/ContentManagement";
 import SaveButton from "./settings/SaveButton";
 import LoadingSpinner from "./settings/LoadingSpinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, FileText } from "lucide-react";
+import { Settings, FileText, MessageSquare, AlertTriangle } from "lucide-react";
+import WelcomeContentManagement from "./settings/WelcomeContentManagement";
+import ContentFilters from "./settings/ContentFilters";
 
 const AiSettingsForm = () => {
   const [activeTab, setActiveTab] = React.useState("model-settings");
@@ -61,6 +63,14 @@ const AiSettingsForm = () => {
               <Settings className="h-4 w-4" />
               <span>Model Settings</span>
             </TabsTrigger>
+            <TabsTrigger value="welcome-content" className="flex items-center gap-1.5">
+              <MessageSquare className="h-4 w-4" />
+              <span>Welcome Content</span>
+            </TabsTrigger>
+            <TabsTrigger value="content-filters" className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Content Filters</span>
+            </TabsTrigger>
             <TabsTrigger value="content-management" className="flex items-center gap-1.5">
               <FileText className="h-4 w-4" />
               <span>Content Management</span>
@@ -82,6 +92,14 @@ const AiSettingsForm = () => {
                 <SaveButton isSaving={isSaving} />
               </form>
             </Form>
+          </TabsContent>
+          
+          <TabsContent value="welcome-content">
+            <WelcomeContentManagement />
+          </TabsContent>
+          
+          <TabsContent value="content-filters">
+            <ContentFilters />
           </TabsContent>
           
           <TabsContent value="content-management">
