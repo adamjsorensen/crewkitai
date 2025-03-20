@@ -1,5 +1,5 @@
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useChat } from './chat/useChat';
@@ -33,6 +33,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 }) => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  // Track if a message has been sent
+  const [hasInteracted, setHasInteracted] = useState(false);
   
   const {
     input,
@@ -54,13 +56,32 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     handleImageClick,
     handleImageChange,
     removeImage,
-    handleSendMessage,
+    handleSendMessage: originalHandleSendMessage,
     handleKeyDown,
-    handleExampleClick,
+    handleExampleClick: originalHandleExampleClick,
     handleRetry,
     handleRegenerateMessage,
     scrollToBottom
   } = useChat(conversationId, isNewChat, onConversationCreated);
+
+  // Wrap the send message handler to track interaction
+  const handleSendMessage = () => {
+    setHasInteracted(true);
+    originalHandleSendMessage();
+  };
+
+  // Wrap the example click handler to track interaction
+  const handleExampleClick = (question: string) => {
+    setHasInteracted(true);
+    originalHandleExampleClick(question);
+  };
+
+  // Reset interaction state when starting a new chat
+  useEffect(() => {
+    if (isNewChat && !conversationId && messages.length <= 1) {
+      setHasInteracted(false);
+    }
+  }, [isNewChat, conversationId, messages.length]);
 
   if (isLoadingHistory) {
     return <div className="flex flex-col h-[75vh] items-center justify-center">
@@ -69,8 +90,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>;
   }
 
-  // Show welcome section when it's a new chat with no messages yet
-  const showWelcome = isNewChat && !conversationId && messages.length === 0;
+  // Determine whether to show welcome or conversation view
+  // Show welcome section only when it's a new chat with no messages and user hasn't interacted
+  const showWelcome = isNewChat && !conversationId && messages.length <= 1 && !hasInteracted;
 
   return (
     <div className={`flex flex-col h-full max-h-[85vh] relative overflow-hidden ${isMobile ? 'pt-2' : ''}`}>

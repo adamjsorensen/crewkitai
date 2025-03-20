@@ -66,6 +66,18 @@ const MessageList: React.FC<MessageListProps> = ({
     );
   }
 
+  // Show minimal UI when there are no messages to show yet (first interaction)
+  if (messages.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Starting conversation...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-hidden">
       <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent h-6 pointer-events-none" />
