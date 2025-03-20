@@ -176,6 +176,46 @@
   .prose-compact blockquote {
     @apply my-2 pl-3 border-l-2 border-muted-foreground/30;
   }
+  
+  /* Mobile safe area utilities */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .mt-safe {
+    margin-top: env(safe-area-inset-top);
+  }
+  
+  .mr-safe {
+    margin-right: env(safe-area-inset-right);
+  }
+  
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .ml-safe {
+    margin-left: env(safe-area-inset-left);
+  }
+  
+  /* Touch-optimized styles */
+  .touch-callout-none {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }
 
 /* Font loading optimization */

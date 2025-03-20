@@ -11,11 +11,13 @@ import ConversationDialog from '@/components/ai-coach/ConversationDialog';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, HistoryIcon, PaintBucket, Brain } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const AiCoach = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   
@@ -54,47 +56,80 @@ const AiCoach = () => {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-4 h-full">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
-              {showWelcomeHeader ? <Brain className="h-5 w-5 text-primary" /> : <PaintBucket className="h-5 w-5 text-primary" />}
+        {!isMobile && (
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
+                {showWelcomeHeader ? <Brain className="h-5 w-5 text-primary" /> : <PaintBucket className="h-5 w-5 text-primary" />}
+              </div>
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight">AI Coach</h1>
+                {showWelcomeHeader ? (
+                  <p className="text-muted-foreground">Expert guidance tailored for painting professionals</p>
+                ) : (
+                  <p className="text-muted-foreground">Get expert advice for your painting business</p>
+                )}
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">AI Coach</h1>
-              {showWelcomeHeader ? (
-                <p className="text-muted-foreground">Expert guidance tailored for painting professionals</p>
-              ) : (
-                <p className="text-muted-foreground">Get expert advice for your painting business</p>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="flex items-center gap-1.5 bg-primary/90 hover:bg-primary"
-              onClick={createNewConversation}
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>New Chat</span>
-            </Button>
             
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1.5"
-              onClick={handleOpenDialog}
-            >
-              <HistoryIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">History</span>
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="flex items-center gap-1.5 bg-primary/90 hover:bg-primary"
+                onClick={createNewConversation}
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>New Chat</span>
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1.5"
+                onClick={handleOpenDialog}
+              >
+                <HistoryIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">History</span>
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
         
-        <Separator className="my-0" />
+        {isMobile && (
+          <div className="flex justify-between items-center px-2 py-2">
+            <div className="flex items-center">
+              <div className="bg-primary/10 w-8 h-8 rounded-full flex items-center justify-center mr-2">
+                <PaintBucket className="h-4 w-4 text-primary" />
+              </div>
+              <h1 className="text-xl font-bold">AI Coach</h1>
+            </div>
+            
+            <div className="flex gap-1">
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="flex items-center gap-1 h-8 px-2 bg-primary/90 hover:bg-primary"
+                onClick={createNewConversation}
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1 h-8 px-2"
+                onClick={handleOpenDialog}
+              >
+                <HistoryIcon className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
         
-        <Card className="p-0 overflow-hidden border-none shadow-md flex-1 bg-card/50">
+        {!isMobile && <Separator className="my-0" />}
+        
+        <Card className={`p-0 overflow-hidden border-none shadow-md flex-1 bg-card/50 ${isMobile ? '-mx-4 rounded-none' : ''}`}>
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-hidden">
               <ChatInterface 

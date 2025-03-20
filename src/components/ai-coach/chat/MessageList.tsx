@@ -27,6 +27,7 @@ interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement>;
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   handleExampleClick: (question: string) => void;
+  isMobile?: boolean;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -39,7 +40,8 @@ const MessageList: React.FC<MessageListProps> = ({
   scrollToBottom,
   messagesEndRef,
   messagesContainerRef,
-  handleExampleClick
+  handleExampleClick,
+  isMobile = false
 }) => {
   const isWelcomeScreen = messages.length === 1 && messages[0].id === 'welcome';
 
@@ -49,7 +51,7 @@ const MessageList: React.FC<MessageListProps> = ({
       
       <ScrollArea 
         ref={messagesContainerRef} 
-        className="h-full px-4 pt-4 overflow-y-auto"
+        className="h-full px-3 sm:px-4 pt-4 overflow-y-auto"
       >
         {isWelcomeScreen ? (
           <WelcomeSection onCategorySelect={handleExampleClick} />
@@ -93,10 +95,10 @@ const MessageList: React.FC<MessageListProps> = ({
         <Button
           variant="outline"
           size="icon"
-          className="absolute bottom-28 right-8 rounded-full shadow-md bg-background z-10 border border-border/50"
+          className={`absolute bottom-28 right-4 sm:right-8 rounded-full shadow-md bg-background z-10 border border-border/50 ${isMobile ? 'h-10 w-10' : ''}`}
           onClick={scrollToBottom}
         >
-          <ArrowDown className="h-4 w-4" />
+          <ArrowDown className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
         </Button>
       )}
     </div>

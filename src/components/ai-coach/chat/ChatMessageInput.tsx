@@ -20,6 +20,7 @@ interface ChatMessageInputProps {
   handleKeyDown: (e: React.KeyboardEvent) => void;
   user: any;
   inputRef?: React.RefObject<HTMLTextAreaElement>;
+  isMobile?: boolean;
 }
 
 const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
@@ -34,7 +35,8 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
   setIsThinkMode,
   handleKeyDown,
   user,
-  inputRef
+  inputRef,
+  isMobile = false
 }) => {
   const defaultInputRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = inputRef || defaultInputRef;
@@ -51,10 +53,10 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
             disabled={isLoading || isUploading}
           >
             <Brain className="h-3.5 w-3.5" />
-            <span className="text-xs font-medium">Think Mode</span>
+            <span className="text-xs font-medium">{isMobile ? "Think" : "Think Mode"}</span>
           </Button>
           
-          {isThinkMode && (
+          {isThinkMode && !isMobile && (
             <p className="text-xs text-muted-foreground ml-2 hidden md:block">
               Your coach will take their time to provide a deeper, more thoughtful response
             </p>
@@ -69,7 +71,7 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
           disabled={isLoading || isUploading}
         >
           <ImageIcon className="h-3.5 w-3.5" />
-          <span className="text-xs">Add Image</span>
+          <span className="text-xs">{isMobile ? "" : "Add Image"}</span>
         </Button>
       </div>
       
@@ -80,45 +82,64 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
             value={input} 
             onChange={e => setInput(e.target.value)} 
             onKeyDown={handleKeyDown} 
-            placeholder={isThinkMode ? "Ask a complex question for your coach to think about..." : "Ask your AI Coach anything about your painting business..."} 
-            className="resize-none min-h-[56px] pr-12 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors rounded-xl" 
+            placeholder={isThinkMode 
+              ? (isMobile ? "Ask a deeper question..." : "Ask a complex question for your coach to think about...") 
+              : (isMobile ? "Ask your AI Coach..." : "Ask your AI Coach anything about your painting business...")} 
+            className={`resize-none min-h-[56px] pr-12 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors rounded-xl text-sm sm:text-base ${isMobile ? 'text-base py-2.5' : ''}`}
             disabled={isLoading || isUploading} 
           />
           
           <div className="absolute right-2 bottom-2 flex items-center">
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <AnimatedButton 
-                      onClick={handleSendMessage} 
-                      disabled={(!input.trim() && !imageFile) || isLoading || isUploading || !user}
-                      className="h-8 w-8 rounded-md"
-                    >
-                      {isLoading || isUploading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                      <span className="sr-only">Send message</span>
-                    </AnimatedButton>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p className="text-xs">Send message</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {isMobile ? (
+              <AnimatedButton 
+                onClick={handleSendMessage} 
+                disabled={(!input.trim() && !imageFile) || isLoading || isUploading || !user}
+                className="h-9 w-9 rounded-md"
+              >
+                {isLoading || isUploading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+                <span className="sr-only">Send message</span>
+              </AnimatedButton>
+            ) : (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <AnimatedButton 
+                        onClick={handleSendMessage} 
+                        disabled={(!input.trim() && !imageFile) || isLoading || isUploading || !user}
+                        className="h-8 w-8 rounded-md"
+                      >
+                        {isLoading || isUploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">Send message</span>
+                      </AnimatedButton>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p className="text-xs">Send message</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
         </div>
       </div>
       
-      <div className="flex items-center justify-end mt-2">
-        <p className="text-xs text-muted-foreground flex items-center">
-          <span className="mr-1">✨</span>
-          AI-powered advice for painting professionals
-        </p>
-      </div>
+      {!isMobile && (
+        <div className="flex items-center justify-end mt-2">
+          <p className="text-xs text-muted-foreground flex items-center">
+            <span className="mr-1">✨</span>
+            AI-powered advice for painting professionals
+          </p>
+        </div>
+      )}
     </>
   );
 };

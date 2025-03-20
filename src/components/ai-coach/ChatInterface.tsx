@@ -6,6 +6,7 @@ import { useChat } from './chat/useChat';
 import MessageList from './chat/MessageList';
 import ChatMessageInput from './chat/ChatMessageInput';
 import ImagePreview from './chat/ImagePreview';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type Message = {
   id: string;
@@ -27,6 +28,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onConversationCreated
 }) => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   
   const {
     input,
@@ -77,10 +79,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           messagesEndRef={messagesEndRef}
           messagesContainerRef={messagesContainerRef}
           handleExampleClick={handleExampleClick}
+          isMobile={isMobile}
         />
       </div>
       
-      <div className="sticky bottom-0 left-0 right-0 border-t px-4 py-3 bg-background/95 backdrop-blur-sm">
+      <div className={`sticky bottom-0 left-0 right-0 border-t px-3 sm:px-4 py-2 sm:py-3 bg-background/95 backdrop-blur-sm ${isMobile ? 'pb-safe' : ''}`}>
         <ImagePreview 
           imagePreviewUrl={imagePreviewUrl} 
           removeImage={removeImage} 
@@ -99,6 +102,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           handleKeyDown={handleKeyDown}
           user={user}
           inputRef={inputRef}
+          isMobile={isMobile}
         />
       </div>
       

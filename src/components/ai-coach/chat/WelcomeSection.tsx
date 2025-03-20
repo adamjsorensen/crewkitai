@@ -1,13 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Sparkles } from 'lucide-react';
+import { MessageSquare, Sparkles, ChevronRight } from 'lucide-react';
 import { useWelcomeContent } from '@/hooks/useWelcomeContent';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as LucideIcons from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 interface WelcomeSectionProps {
   onCategorySelect: (category: string) => void;
@@ -16,6 +18,8 @@ interface WelcomeSectionProps {
 const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => {
   const { categories, isLoading, error } = useWelcomeContent();
   const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [showTabSheet, setShowTabSheet] = useState(false);
+  const isMobile = useIsMobile();
   
   // Dynamic icon component renderer
   const renderIcon = (iconName: string, colorClass: string) => {
@@ -23,7 +27,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
     return <IconComponent className={`h-5 w-5 text-${colorClass}`} />;
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Set the first category as active by default once loaded
     if (categories.length > 0 && !activeTab) {
       setActiveTab(categories[0].id);
@@ -59,48 +63,101 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
   // Find the active category
   const activeCategory = categories.find(cat => cat.id === activeTab) || categories[0];
 
+  // Mobile category selector
+  const MobileCategorySelector = () => (
+    <div className="px-4 py-2">
+      <button 
+        onClick={() => setShowTabSheet(true)}
+        className="w-full flex items-center justify-between py-3 px-4 rounded-lg bg-accent/50 border border-border/40 text-left"
+      >
+        <div className="flex items-center gap-2">
+          {activeCategory && renderIcon(activeCategory.icon, activeCategory.iconColor)}
+          <span className="font-medium">{activeCategory?.title}</span>
+        </div>
+        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+      </button>
+      
+      <Sheet open={showTabSheet} onOpenChange={setShowTabSheet}>
+        <SheetContent side="bottom" className="h-[70vh] px-0">
+          <SheetHeader className="px-4 mb-2">
+            <SheetTitle>Choose a category</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="h-full">
+            <div className="p-2 space-y-1">
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3 rounded-md text-left",
+                    activeTab === category.id 
+                      ? "bg-primary/10 text-primary" 
+                      : "hover:bg-accent"
+                  )}
+                  onClick={() => {
+                    setActiveTab(category.id);
+                    setShowTabSheet(false);
+                  }}
+                >
+                  {renderIcon(category.icon, category.iconColor)}
+                  <div>
+                    <div className="font-medium">{category.title}</div>
+                    <p className="text-sm text-muted-foreground line-clamp-1">{category.description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+
   return (
-    <ScrollArea className="h-full px-2">
-      <div className="py-6 mb-6 max-w-4xl mx-auto">
+    <ScrollArea className="h-full px-2 pt-2">
+      <div className="py-4 mb-6 max-w-4xl mx-auto">
         <Card className="overflow-hidden border-border/40 shadow-md">
-          <div className="px-6 pt-6 pb-4 border-b border-border/30 bg-background/50">
+          <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-border/30 bg-background/50">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="h-5 w-5 text-primary" />
               <h2 className="text-xl font-semibold text-foreground">AI Coach</h2>
             </div>
-            <h3 className="text-3xl font-extrabold tracking-tight text-foreground mt-3 mb-2">
+            <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground mt-3 mb-2">
               How can I help with your painting business today?
             </h3>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm sm:text-base">
               Ask me anything about running your painting business - from pricing and marketing to crew management and client relationships.
             </p>
           </div>
+          
+          {isMobile && <MobileCategorySelector />}
           
           <Tabs 
             defaultValue={activeTab || (categories[0]?.id || "")} 
             onValueChange={(value) => setActiveTab(value)}
             className="w-full"
           >
-            <div className="border-b border-border/30">
-              <TabsList className="w-full h-auto bg-muted/30 px-6 flex justify-start overflow-x-auto gap-1">
-                {categories.map((category) => (
-                  <TabsTrigger 
-                    key={category.id} 
-                    value={category.id}
-                    className="py-3 px-4 data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="flex-shrink-0">
-                        {renderIcon(category.icon, category.iconColor)}
+            {!isMobile && (
+              <div className="border-b border-border/30 overflow-auto">
+                <TabsList className="w-full h-auto bg-muted/30 px-6 flex justify-start overflow-x-auto gap-1">
+                  {categories.map((category) => (
+                    <TabsTrigger 
+                      key={category.id} 
+                      value={category.id}
+                      className="py-3 px-4 data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex-shrink-0">
+                          {renderIcon(category.icon, category.iconColor)}
+                        </div>
+                        <span className="font-medium">{category.title}</span>
                       </div>
-                      <span className="font-medium">{category.title}</span>
-                    </div>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            )}
             
-            <div className="p-6">
+            <div className="p-3 sm:p-6">
               {categories.map((category) => (
                 <TabsContent 
                   key={category.id} 
@@ -108,18 +165,19 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
                   className="mt-0 focus-visible:outline-none focus-visible:ring-0"
                 >
                   <div className="mb-4">
-                    <p className="text-muted-foreground">{category.description}</p>
+                    <p className="text-muted-foreground text-sm sm:text-base">{category.description}</p>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {category.examples.map((example) => (
                       <button 
                         key={example.id}
                         className={cn(
-                          "flex items-start gap-3 group w-full text-left p-4 rounded-lg",
+                          "flex items-start gap-3 group w-full text-left p-3 sm:p-4 rounded-lg",
                           "transition-all duration-200 ease-in-out",
                           "bg-accent/30 hover:bg-accent border border-border/30 hover:border-border/60",
-                          "focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-1"
+                          "focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-1",
+                          "active:scale-[0.98] touch-callout-none",
                         )}
                         onClick={() => onCategorySelect(example.title)}
                       >
