@@ -1,4 +1,3 @@
-
 import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
@@ -75,13 +74,14 @@ const SheetContent = React.forwardRef<
         ref={ref}
         className={cn(sheetVariants({ side }), className)}
         {...props}
+        // Don't stop default behavior but log events
         onPointerDownOutside={(e) => {
           console.log("[SheetContent] Pointer down outside detected");
           props.onPointerDownOutside?.(e);
         }}
+        // Don't prevent default behavior for interaction outside 
         onInteractOutside={(e) => {
           console.log("[SheetContent] Interact outside detected");
-          e.preventDefault();
           props.onInteractOutside?.(e);
         }}
         onEscapeKeyDown={(e) => {

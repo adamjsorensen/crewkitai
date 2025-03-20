@@ -25,7 +25,7 @@ interface ConversationDialogProps {
   onSelectConversation: (id: string) => void;
   onNewConversation: () => void;
   onDeleteConversation: (id: string) => void;
-  onPinConversation: (id: string, pinned: boolean) => void;
+  onPinConversation: (id: string) => void;
 }
 
 const ConversationDialog: React.FC<ConversationDialogProps> = ({
@@ -42,11 +42,13 @@ const ConversationDialog: React.FC<ConversationDialogProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   
   const handleSelectConversation = (id: string) => {
+    console.log("[ConversationDialog] Selecting conversation:", id);
     onSelectConversation(id);
     onOpenChange(false);
   };
   
   const handleNewConversation = () => {
+    console.log("[ConversationDialog] Creating new conversation");
     onNewConversation();
     onOpenChange(false);
   };
@@ -90,6 +92,8 @@ const ConversationDialog: React.FC<ConversationDialogProps> = ({
       </div>
     </>
   );
+  
+  console.log("[ConversationDialog] Rendering with isMobile:", isMobile, "open:", open);
   
   // For mobile, we use Sheet (slides up)
   if (isMobile) {

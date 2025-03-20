@@ -201,7 +201,12 @@ const AiCoach = () => {
         }}
         onPinConversation={(id) => {
           console.log("[AiCoach] Toggling pin for conversation:", id);
-          togglePinConversation(id);
+          // Fix: Pass the correct arguments to togglePinConversation
+          // We need to determine the current state and toggle it
+          const conversation = conversations.find(c => c.id === id);
+          if (conversation) {
+            togglePinConversation(id, !conversation.pinned);
+          }
         }}
       />
     </DashboardLayout>
