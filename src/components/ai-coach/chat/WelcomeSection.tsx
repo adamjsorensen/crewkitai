@@ -2,59 +2,61 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Brain, PaintBucket, Users, TrendingUp, MessageSquare } from 'lucide-react';
+import { MessageSquare, Loader2 } from 'lucide-react';
+import { useWelcomeContent } from '@/hooks/useWelcomeContent';
+import { Skeleton } from '@/components/ui/skeleton';
+import * as LucideIcons from 'lucide-react';
 
 interface WelcomeSectionProps {
   onCategorySelect: (category: string) => void;
 }
 
 const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => {
-  const categories = [
-    {
-      id: 'pricing',
-      title: 'Pricing & Bidding',
-      icon: <TrendingUp className="h-5 w-5 text-blue-500" />,
-      description: 'Job estimates, profit margins, competitive rates',
-      examples: [
-        "How do I price a 2,000 sq ft exterior job?",
-        "What should my markup be on materials?",
-        "How to create profitable estimates?"
-      ]
-    },
-    {
-      id: 'clients',
-      title: 'Client Management',
-      icon: <Users className="h-5 w-5 text-indigo-500" />,
-      description: 'Customer communication, satisfaction, retention',
-      examples: [
-        "What's the best way to handle a difficult client?",
-        "How can I increase my referral rate?",
-        "What should I include in my client contracts?"
-      ]
-    },
-    {
-      id: 'crew',
-      title: 'Crew Management',
-      icon: <PaintBucket className="h-5 w-5 text-orange-500" />,
-      description: 'Team leadership, training, efficiency',
-      examples: [
-        "How can I improve my crew's efficiency?",
-        "What's the best way to train new painters?",
-        "How do I handle employee conflicts?"
-      ]
-    },
-    {
-      id: 'marketing',
-      title: 'Marketing & Growth',
-      icon: <TrendingUp className="h-5 w-5 text-green-500" />,
-      description: 'Finding leads, advertising, business growth',
-      examples: [
-        "What marketing strategies work during slow seasons?",
-        "How can I improve my social media presence?",
-        "What's the most effective way to generate leads?"
-      ]
-    }
-  ];
+  const { categories, isLoading, error } = useWelcomeContent();
+  
+  // Dynamic icon component renderer
+  const renderIcon = (iconName: string, colorClass: string) => {
+    const IconComponent = (LucideIcons as any)[iconName] || LucideIcons.MessageSquare;
+    return <IconComponent className={`h-5 w-5 text-${colorClass}`} />;
+  };
+
+  if (isLoading) {
+    return (
+      <ScrollArea className="h-full px-2">
+        <div className="space-y-6 py-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="p-4 border-border/50">
+                <div className="flex space-x-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-full" />
+                    <div className="mt-3 space-y-1.5">
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-full" />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </ScrollArea>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+        <div className="text-destructive mb-2">Failed to load welcome content</div>
+        <p className="text-muted-foreground text-sm mb-4">
+          Please try refreshing the page or contact support if the issue persists.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <ScrollArea className="h-full px-2">
@@ -64,12 +66,12 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
             <Card 
               key={category.id}
               className="p-4 hover:shadow-md transition-all cursor-pointer border-border/50 hover:border-primary/30 hover:bg-accent/20"
-              onClick={() => onCategorySelect(category.examples[0])}
+              onClick={() => category.examples.length > 0 && onCategorySelect(category.examples[0].title)}
             >
               <div className="flex space-x-4">
                 <div className="flex-shrink-0 mt-1">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    {category.icon}
+                    {renderIcon(category.icon, category.iconColor)}
                   </div>
                 </div>
                 <div className="flex-1 space-y-1">
@@ -77,17 +79,17 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
                   <p className="text-sm text-muted-foreground">{category.description}</p>
                   
                   <div className="mt-3 space-y-1.5">
-                    {category.examples.map((example, i) => (
+                    {category.examples.map((example) => (
                       <button 
-                        key={i}
+                        key={example.id}
                         className="flex items-start gap-2 group cursor-pointer w-full text-left"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onCategorySelect(example);
+                          onCategorySelect(example.title);
                         }}
                       >
                         <MessageSquare className="h-3.5 w-3.5 text-primary mt-1 flex-shrink-0" />
-                        <p className="text-sm group-hover:text-primary transition-colors">{example}</p>
+                        <p className="text-sm group-hover:text-primary transition-colors">{example.title}</p>
                       </button>
                     ))}
                   </div>
