@@ -170,12 +170,12 @@ const DashboardSidebar = () => {
         <SidebarRail />
       </Sidebar>
       
-      {/* Move collapse button to bottom-left corner with proper spacing */}
-      <div className="fixed bottom-6 left-6 z-50 md:flex hidden">
+      {/* Position collapse button away from any sidebar elements */}
+      <div className="fixed bottom-16 left-6 z-50 md:flex hidden">
         <Button 
           variant="outline" 
           size="icon" 
-          className="rounded-full shadow-md" 
+          className="rounded-full shadow-md bg-background" 
           onClick={toggleSidebar}
         >
           {state === "collapsed" ? (
