@@ -68,8 +68,11 @@ const MessageList: React.FC<MessageListProps> = ({
     );
   }
 
-  // Show loading UI when transitioning from welcome to chat or during initial empty state
-  if ((messages.length === 0 || isTransitioning) && !isWelcomeScreen) {
+  // Show an empty state with loading indicator if we're transitioning from welcome to chat
+  // or if there are no messages yet
+  const isEmptyOrTransitioning = (messages.length === 0 || (isTransitioning && messages.length <= 1)) && !isWelcomeScreen;
+  
+  if (isEmptyOrTransitioning) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">

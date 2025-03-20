@@ -116,9 +116,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Log when welcome section should be shown
   useEffect(() => {
-    const showWelcome = isNewChat && !conversationId && messages.length <= 1 && !hasInteracted && !isTransitioning;
-    console.log("[ChatInterface] Welcome section visibility:", showWelcome);
-  }, [isNewChat, conversationId, messages.length, hasInteracted, isTransitioning]);
+    const showWelcome = isNewChat && !conversationId && !hasInteracted && messages.length <= 1;
+    console.log("[ChatInterface] Welcome section visibility:", showWelcome, "hasInteracted:", hasInteracted);
+  }, [isNewChat, conversationId, messages.length, hasInteracted]);
 
   if (isLoadingHistory) {
     console.log("[ChatInterface] Loading history...");
@@ -130,7 +130,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Determine whether to show welcome or conversation view
   // Show welcome section only when it's a new chat with no messages and user hasn't interacted
-  const showWelcome = isNewChat && !conversationId && messages.length <= 1 && !hasInteracted && !isTransitioning;
+  const showWelcome = isNewChat && !conversationId && !hasInteracted && messages.length <= 1;
 
   return (
     <div className={`flex flex-col h-full max-h-[85vh] relative overflow-hidden ${isMobile ? 'pt-2' : ''}`}>
