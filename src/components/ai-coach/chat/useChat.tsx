@@ -12,7 +12,6 @@ type Message = {
   imageUrl?: string;
 };
 
-// Function to fetch conversation history with pagination
 const fetchConversationHistory = async (conversationId: string | null, userId: string | undefined) => {
   if (!conversationId || !userId) {
     return [];
@@ -26,7 +25,6 @@ const fetchConversationHistory = async (conversationId: string | null, userId: s
     
   if (rootError) throw rootError;
 
-  // Limit to the most recent 50 messages for better performance
   const { data: messagesData, error: messagesError } = await supabase
     .from('ai_coach_conversations')
     .select('*')
@@ -36,7 +34,6 @@ const fetchConversationHistory = async (conversationId: string | null, userId: s
     
   if (messagesError) throw messagesError;
 
-  // Reverse to get them in chronological order
   const messagesReversed = messagesData?.reverse() || [];
   const allMessages = [rootData, ...messagesReversed];
   const chatMessages: Message[] = [];
@@ -84,17 +81,15 @@ export const useChat = (
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Fetch conversation history with improved caching
   const { data: historyMessages = [], isLoading: isLoadingHistory } = useQuery({
     queryKey: ['conversationHistory', conversationId],
     queryFn: () => fetchConversationHistory(conversationId, user?.id),
     enabled: !isNewChat && !!conversationId && !!user,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep unused data in cache for 10 minutes
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
-  
-  // Set up the messages based on new chat status or history
+
   useEffect(() => {
     if (isNewChat) {
       setMessages([{
@@ -106,7 +101,6 @@ export const useChat = (
     } else if (!isLoadingHistory && historyMessages.length > 0) {
       setMessages(historyMessages);
     } else if (!isLoadingHistory && historyMessages.length === 0 && !isNewChat && conversationId) {
-      // Fallback if we couldn't load the history
       setMessages([{
         id: 'welcome',
         role: 'assistant',
@@ -116,7 +110,6 @@ export const useChat = (
     }
   }, [isNewChat, historyMessages, isLoadingHistory, conversationId]);
 
-  // Scroll to bottom when messages change - with debounce
   useEffect(() => {
     if (!isLoading && !isLoadingHistory) {
       const timer = setTimeout(() => {
@@ -126,7 +119,6 @@ export const useChat = (
     }
   }, [messages, isLoading, isLoadingHistory]);
 
-  // Handle scroll for the scroll button - optimized with debounce
   useEffect(() => {
     const handleScroll = () => {
       if (!messagesContainerRef.current) return;
@@ -153,14 +145,12 @@ export const useChat = (
     }
   }, []);
 
-  // More efficient scroll to bottom
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: 'smooth'
     });
   }, []);
 
-  // Image handling functions - optimized
   const handleImageClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
@@ -186,14 +176,12 @@ export const useChat = (
         return;
       }
 
-      // Create a resized version of the image if it's too large
       if (file.size > 1 * 1024 * 1024) {
         const img = new Image();
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
         img.onload = () => {
-          // Calculate new dimensions
           const maxDimension = 1200;
           let width = img.width;
           let height = img.height;
@@ -211,7 +199,6 @@ export const useChat = (
           
           ctx?.drawImage(img, 0, 0, width, height);
           
-          // Convert to blob and create a new file
           canvas.toBlob((blob) => {
             if (blob) {
               const optimizedFile = new File([blob], file.name, {
@@ -235,7 +222,7 @@ export const useChat = (
 
   const removeImage = useCallback(() => {
     if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl); // Clean up the URL
+      URL.revokeObjectURL(imagePreviewUrl);
     }
     setImageFile(null);
     setImagePreviewUrl(null);
@@ -244,7 +231,6 @@ export const useChat = (
     }
   }, [imagePreviewUrl]);
 
-  // Upload image function - now with progress tracking
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
       setIsUploading(true);
@@ -252,7 +238,6 @@ export const useChat = (
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
       const filePath = `${user?.id}/${fileName}`;
 
-      // Upload with simpler error handling
       const { data, error } = await supabase.storage
         .from('chat_images')
         .upload(filePath, file);
@@ -279,7 +264,6 @@ export const useChat = (
     }
   };
 
-  // Send message mutation with optimistic updates
   const sendMessageMutation = useMutation({
     mutationFn: async ({ 
       userMessage, 
@@ -290,7 +274,6 @@ export const useChat = (
     }) => {
       if (!user) throw new Error("No user logged in");
 
-      // Only send the last 5 messages for context to reduce payload size
       const conversationContext = messages
         .filter(msg => msg.id !== 'welcome')
         .slice(-5)
@@ -329,12 +312,10 @@ export const useChat = (
       };
       
       setMessages(prev => [...prev, aiResponse]);
-      setIsThinkMode(false); // Reset think mode after sending
-      
-      // Handle conversation management in Supabase
+      setIsThinkMode(false);
+
       try {
         if (!conversationId) {
-          // Create new conversation
           const title = userMessage.length > 30 ? userMessage.substring(0, 30) + '...' : userMessage;
           const { data: rootData, error: rootError } = await supabase
             .from('ai_coach_conversations')
@@ -351,14 +332,12 @@ export const useChat = (
           
           if (rootError) throw rootError;
           
-          // Update the conversations cache
           queryClient.invalidateQueries({ queryKey: ['conversations', user.id] });
           
           if (onConversationCreated && rootData?.id) {
             onConversationCreated(rootData.id);
           }
         } else {
-          // Add to existing conversation
           await supabase
             .from('ai_coach_conversations')
             .insert({
@@ -369,7 +348,6 @@ export const useChat = (
               image_url: imageUrl
             });
           
-          // Update the conversation history cache
           queryClient.invalidateQueries({ queryKey: ['conversationHistory', conversationId] });
         }
       } catch (error) {
@@ -390,7 +368,6 @@ export const useChat = (
     }
   });
 
-  // Handle sending a message - optimized
   const handleSendMessage = useCallback(async () => {
     if ((!input.trim() && !imageFile) || isLoading || !user) return;
     
@@ -411,7 +388,6 @@ export const useChat = (
       imageUrl: imageUrl || undefined
     };
     
-    // Optimistic update
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     removeImage();
@@ -438,7 +414,6 @@ export const useChat = (
       inputRef.current.focus();
     }
     
-    // Small delay to ensure state updates before sending
     setTimeout(() => {
       handleSendMessage();
     }, 100);
@@ -516,13 +491,19 @@ export const useChat = (
     }) => {
       if (!user) throw new Error("No user logged in");
 
-      const messageIndex = messages.findIndex(msg => msg.id === messageId);
-      if (messageIndex <= 0) throw new Error("Invalid message to regenerate");
+      const assistantMessageIndex = messages.findIndex(msg => msg.id === messageId);
+      if (assistantMessageIndex <= 0) throw new Error("Invalid message to regenerate");
 
-      // Get context before this message
+      const userMessageIndex = assistantMessageIndex - 1;
+      while (userMessageIndex >= 0 && messages[userMessageIndex].role !== 'user') {
+        userMessageIndex--;
+      }
+
+      if (userMessageIndex < 0) throw new Error("No user message found to regenerate response");
+
       const conversationContext = messages
         .filter(msg => msg.id !== 'welcome')
-        .slice(0, messageIndex - 1)
+        .slice(0, userMessageIndex)
         .slice(-5)
         .map(msg => ({
           role: msg.role === 'user' ? 'user' : 'assistant',
@@ -542,35 +523,44 @@ export const useChat = (
 
       return { 
         response: data.response, 
-        messageId 
+        messageId,
+        userMessageIndex,
+        assistantMessageIndex 
       };
     },
-    onSuccess: async ({ response, messageId }) => {
+    onSuccess: async ({ response, messageId, userMessageIndex, assistantMessageIndex }) => {
       if (!user) return;
 
       const aiResponse: Message = {
-        id: `assistant-${Date.now()}`,
+        id: `assistant-regenerated-${Date.now()}`,
         role: 'assistant',
         content: response,
         timestamp: new Date()
       };
       
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        newMessages.splice(assistantMessageIndex, 1);
+        newMessages.splice(assistantMessageIndex, 0, aiResponse);
+        return newMessages;
+      });
       
-      // Update in Supabase if needed
       if (conversationId) {
-        const dbIdMatch = messageId.match(/assistant-(.+)/);
-        if (dbIdMatch && dbIdMatch[1]) {
-          const dbId = dbIdMatch[1];
-          await supabase
-            .from('ai_coach_conversations')
-            .update({ ai_response: response })
-            .eq('id', dbId);
-          
-          // Update the conversation history cache
-          queryClient.invalidateQueries({ 
-            queryKey: ['conversationHistory', conversationId] 
-          });
+        try {
+          const dbIdMatch = messageId.match(/assistant-(.+)/);
+          if (dbIdMatch && dbIdMatch[1]) {
+            const dbId = dbIdMatch[1];
+            await supabase
+              .from('ai_coach_conversations')
+              .update({ ai_response: response })
+              .eq('id', dbId);
+            
+            queryClient.invalidateQueries({ 
+              queryKey: ['conversationHistory', conversationId] 
+            });
+          }
+        } catch (error) {
+          console.error('Error updating regenerated message in database:', error);
         }
       }
 
@@ -584,7 +574,7 @@ export const useChat = (
       setError(error instanceof Error ? error.message : 'Failed to regenerate response');
       toast({
         title: "Error",
-        description: "Failed to regenerate the response. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to regenerate the response. Please try again.",
         variant: "destructive"
       });
     },
@@ -597,20 +587,31 @@ export const useChat = (
     if (isLoading) return;
     
     const messageIndex = messages.findIndex(msg => msg.id === messageId);
-    if (messageIndex <= 0) return;
+    if (messageIndex <= 0 || messages[messageIndex].role !== 'assistant') {
+      toast({
+        title: "Error",
+        description: "Invalid message to regenerate",
+        variant: "destructive"
+      });
+      return;
+    }
     
-    // Find the corresponding user message
     let userMessageIndex = messageIndex - 1;
     while (userMessageIndex >= 0 && messages[userMessageIndex].role !== 'user') {
       userMessageIndex--;
     }
     
-    if (userMessageIndex < 0) return;
+    if (userMessageIndex < 0) {
+      toast({
+        title: "Error",
+        description: "No user message found to regenerate from",
+        variant: "destructive"
+      });
+      return;
+    }
     
     const userMessage = messages[userMessageIndex];
     
-    // Remove the assistant message we're regenerating
-    setMessages(prev => prev.filter((_, index) => index !== messageIndex));
     setIsLoading(true);
     setError(null);
     

@@ -38,6 +38,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isVoted, setIsVoted] = useState<'up' | 'down' | null>(null);
@@ -113,8 +114,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
   };
 
   const handleRegenerate = () => {
-    if (onRegenerate) {
+    if (onRegenerate && isAssistant) {
+      setIsRegenerating(true);
       onRegenerate(message.id);
+      
+      // Reset regenerating state after a short delay
+      setTimeout(() => {
+        setIsRegenerating(false);
+      }, 500); // Short delay to show the regenerating state
     }
   };
 
@@ -356,8 +363,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
                     className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background transition-colors"
                     aria-label="Regenerate response"
                     onClick={handleRegenerate}
+                    disabled={isRegenerating || !isAssistant}
                   >
-                    <RefreshCw className="h-3.5 w-3.5" />
+                    {isRegenerating ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
                   </Toggle>
                   
                   <DropdownMenu>
@@ -394,8 +406,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
                         className="h-8 w-8 p-0 rounded-full border-none bg-background/50 hover:bg-background hover:text-primary transition-colors"
                         aria-label="Regenerate response"
                         onClick={handleRegenerate}
+                        disabled={isRegenerating || !isAssistant}
                       >
-                        <RefreshCw className="h-3.5 w-3.5" />
+                        {isRegenerating ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
                       </Toggle>
                     </TooltipTrigger>
                     <TooltipContent>
