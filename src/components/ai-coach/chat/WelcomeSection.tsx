@@ -62,6 +62,8 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
     <ScrollArea className="h-full px-2">
       <div className="space-y-6 py-4 mb-6">
         <Card className="p-4 border-border/50">
+          <h2 className="text-3xl font-extrabold tracking-tight text-foreground mb-6">How can I help with your painting business today?</h2>
+          
           <Tabs 
             defaultValue={activeTab || (categories[0]?.id || "")} 
             onValueChange={(value) => setActiveTab(value)}
