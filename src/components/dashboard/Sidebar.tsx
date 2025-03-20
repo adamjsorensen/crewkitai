@@ -64,7 +64,8 @@ const DashboardSidebar = () => {
     { name: "Admin", icon: Shield, path: "/dashboard/admin/ai-settings" },
   ];
 
-  const SidebarContent = () => (
+  // Renamed the function to SidebarContentItems to avoid conflict with the imported component
+  const SidebarContentItems = () => (
     <>
       <SidebarHeader>
         <div className="flex items-center gap-2 p-4">
@@ -146,7 +147,7 @@ const DashboardSidebar = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] p-0">
-              <SidebarContent />
+              <SidebarContentItems />
             </SheetContent>
           </Sheet>
         </div>
@@ -159,7 +160,7 @@ const DashboardSidebar = () => {
   return (
     <>
       <Sidebar className="border-r">
-        <SidebarContent />
+        <SidebarContentItems />
         <SidebarRail />
       </Sidebar>
       
