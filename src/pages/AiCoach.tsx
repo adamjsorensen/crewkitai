@@ -42,7 +42,17 @@ const AiCoach = () => {
       });
       navigate("/auth");
     }
-  }, [user, navigate, toast]);
+    
+    // Prevent body scrolling on mobile to fix the chat interface to bottom
+    if (isMobile) {
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      // Restore body scrolling when component unmounts
+      document.body.style.overflow = '';
+    };
+  }, [user, navigate, toast, isMobile]);
 
   const handleOpenDialog = () => {
     setDialogOpen(true);
@@ -56,7 +66,7 @@ const AiCoach = () => {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-4 h-full">
+      <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
         {!isMobile && (
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -121,7 +131,7 @@ const AiCoach = () => {
         
         {!isMobile && <Separator className="my-0" />}
         
-        <Card className={`p-0 overflow-hidden border-none shadow-md flex-1 bg-card/50 ${isMobile ? '-mx-4 rounded-none' : ''}`}>
+        <Card className={`p-0 overflow-hidden border-none shadow-md flex-1 ${isMobile ? '-mx-4 rounded-none' : ''}`}>
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-hidden">
               <Suspense fallback={
