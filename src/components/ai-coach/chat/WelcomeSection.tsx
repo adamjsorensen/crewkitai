@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Brain, PaintBucket, Users, TrendingUp, MessageSquare, Search, Zap, Clock, Fire } from 'lucide-react';
+import { Brain, PaintBucket, Users, TrendingUp, MessageSquare, Search, Zap, Clock, Flame } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 
@@ -149,7 +148,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
                               variant="outline" 
                               className="ml-2 bg-orange-500/10 text-orange-600 border-orange-200 text-[10px] h-4"
                             >
-                              <Fire className="h-2.5 w-2.5 mr-1" />
+                              <Flame className="h-2.5 w-2.5 mr-1" />
                               Trending
                             </Badge>
                           )}

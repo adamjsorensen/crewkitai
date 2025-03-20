@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { PaperAirplane, Image, AlignJustify, Brain } from 'lucide-react';
+import { Send, Image, AlignJustify, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Toggle } from '@/components/ui/toggle';
@@ -95,7 +94,7 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
           {isLoading || isUploading ? (
             <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
-            <PaperAirplane className="h-5 w-5" />
+            <Send className="h-5 w-5" />
           )}
         </Button>
       </div>
