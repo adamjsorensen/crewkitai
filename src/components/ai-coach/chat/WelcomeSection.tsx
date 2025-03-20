@@ -83,7 +83,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
       <Sheet open={showTabSheet} onOpenChange={setShowTabSheet}>
         <SheetContent 
           side="bottom" 
-          className="px-0 h-[70vh] z-[100] bg-background border-t border-border/30 shadow-lg"
+          className="px-0 h-[70vh] rounded-t-xl z-[100] bg-background border-t border-border/30 shadow-lg"
           onClick={(e) => e.stopPropagation()}
         >
           <SheetHeader className="px-4 mb-2">
