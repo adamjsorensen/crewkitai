@@ -373,27 +373,38 @@ export const useChat = (
     
     let imageUrl: string | null = null;
     
-    if (imageFile) {
-      imageUrl = await uploadImage(imageFile);
-      if (!imageUrl && !input.trim()) {
-        return;
-      }
-    }
-    
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: input.trim(),
       timestamp: new Date(),
-      imageUrl: imageUrl || undefined
     };
     
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    removeImage();
     
     setIsLoading(true);
     setError(null);
+    
+    if (imageFile) {
+      imageUrl = await uploadImage(imageFile);
+      if (imageUrl) {
+        setMessages(prev => {
+          const updated = [...prev];
+          if (updated.length > 0) {
+            const lastMsg = updated[updated.length - 1];
+            if (lastMsg.role === 'user' && lastMsg.id === userMessage.id) {
+              updated[updated.length - 1] = {
+                ...lastMsg,
+                imageUrl
+              };
+            }
+          }
+          return updated;
+        });
+      }
+      removeImage();
+    }
     
     sendMessageMutation.mutate({ 
       userMessage: input.trim(), 

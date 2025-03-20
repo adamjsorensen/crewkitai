@@ -6,7 +6,6 @@ import { AlertCircle, Loader2, ArrowDown } from 'lucide-react';
 import ChatMessage from '../ChatMessage';
 import TypingIndicator from '../TypingIndicator';
 import { PaintBucket } from 'lucide-react';
-import WelcomeSection from './WelcomeSection';
 import MessageSkeleton from './MessageSkeleton';
 import { useInView } from 'react-intersection-observer';
 
@@ -31,7 +30,6 @@ interface MessageListProps {
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   handleExampleClick: (question: string) => void;
   isMobile?: boolean;
-  isTransitioning?: boolean;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -46,10 +44,9 @@ const MessageList: React.FC<MessageListProps> = ({
   messagesEndRef,
   messagesContainerRef,
   handleExampleClick,
-  isMobile = false,
-  isTransitioning = false
+  isMobile = false
 }) => {
-  const isWelcomeScreen = messages.length === 1 && messages[0].id === 'welcome';
+  const isWelcomeMessage = messages.length === 1 && messages[0].id === 'welcome';
   const { ref: bottomInViewRef, inView: isBottomInView } = useInView({
     threshold: 0.1,
   });
@@ -68,17 +65,17 @@ const MessageList: React.FC<MessageListProps> = ({
     );
   }
 
-  // Show an empty state with loading indicator if we're transitioning from welcome to chat
-  // or if there are no messages yet
-  const isEmptyOrTransitioning = (messages.length === 0 || (isTransitioning && messages.length <= 1)) && !isWelcomeScreen;
+  // Show an empty state with loading indicator if there are no messages
+  // or if the only message is the welcome message
+  const showEmptyState = messages.length === 0 || (isWelcomeMessage && messages.length <= 1);
   
-  if (isEmptyOrTransitioning) {
+  if (showEmptyState) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">
-            {isTransitioning ? "Processing your message..." : "Starting conversation..."}
+            Starting conversation...
           </p>
         </div>
       </div>
@@ -93,47 +90,43 @@ const MessageList: React.FC<MessageListProps> = ({
         ref={messagesContainerRef} 
         className={`h-full px-3 sm:px-4 pt-4 overflow-y-auto`}
       >
-        {isWelcomeScreen ? (
-          <WelcomeSection onCategorySelect={handleExampleClick} />
-        ) : (
-          <div className="space-y-1 pb-4 max-w-3xl mx-auto">
-            {visibleMessages.map(message => (
-              <ChatMessage 
-                key={message.id} 
-                message={message} 
-                onRegenerate={handleRegenerateMessage}
-                isMobile={isMobile}
-              />
-            ))}
-            
-            {isLoading && (
-              <div className="flex items-start gap-3 animate-fade-in my-6">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
-                  <PaintBucket className="h-4 w-4 text-white" />
-                </div>
-                <div className="rounded-2xl p-4 bg-muted/70 shadow-sm">
-                  <TypingIndicator />
-                </div>
+        <div className="space-y-1 pb-4 max-w-3xl mx-auto">
+          {visibleMessages.map(message => (
+            <ChatMessage 
+              key={message.id} 
+              message={message} 
+              onRegenerate={handleRegenerateMessage}
+              isMobile={isMobile}
+            />
+          ))}
+          
+          {isLoading && (
+            <div className="flex items-start gap-3 animate-fade-in my-6">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
+                <PaintBucket className="h-4 w-4 text-white" />
               </div>
-            )}
-            
-            {error && (
-              <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md animate-fade-in my-4 max-w-md mx-auto">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-sm">{error}</span>
-                <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
-                  Retry
-                </Button>
+              <div className="rounded-2xl p-4 bg-muted/70 shadow-sm">
+                <TypingIndicator />
               </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-            <div ref={bottomInViewRef} className="h-1" />
-          </div>
-        )}
+            </div>
+          )}
+          
+          {error && (
+            <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md animate-fade-in my-4 max-w-md mx-auto">
+              <AlertCircle className="h-4 w-4" />
+              <span className="text-sm">{error}</span>
+              <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
+                Retry
+              </Button>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+          <div ref={bottomInViewRef} className="h-1" />
+        </div>
       </ScrollArea>
       
-      {showScrollButton && !isWelcomeScreen && !isBottomInView && (
+      {showScrollButton && !isBottomInView && (
         <Button
           variant="outline"
           size="icon"

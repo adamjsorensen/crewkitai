@@ -35,18 +35,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  // Track if a message has been sent
-  const [hasInteracted, setHasInteracted] = useState(false);
-  // Track if we're showing loading state while immediately transitioning
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  // Track if user has started a chat (replaces complex showWelcome logic)
+  const [hasStartedChat, setHasStartedChat] = useState(!isNewChat || !!conversationId);
   
   useEffect(() => {
-    console.log("[ChatInterface] Component mounted, isMobile:", isMobile);
+    console.log("[ChatInterface] Component mounted, isMobile:", isMobile, "hasStartedChat:", hasStartedChat);
+    
+    // Reset hasStartedChat when starting a new conversation
+    if (isNewChat && !conversationId) {
+      setHasStartedChat(false);
+    } else {
+      setHasStartedChat(true);
+    }
     
     return () => {
       console.log("[ChatInterface] Component unmounting");
     };
-  }, [isMobile]);
+  }, [isMobile, isNewChat, conversationId]);
   
   const {
     input,
@@ -76,49 +81,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     scrollToBottom
   } = useChat(conversationId, isNewChat, onConversationCreated);
 
-  // Wrap the send message handler to track interaction and show immediate loading
+  // Wrap the send message handler to also set hasStartedChat
   const handleSendMessage = () => {
     if (!input.trim() && !imageFile) return;
-    console.log("[ChatInterface] Message send initiated");
-    setHasInteracted(true);
-    setIsTransitioning(true);
+    console.log("[ChatInterface] Message send initiated, setting hasStartedChat to true");
+    setHasStartedChat(true);
     originalHandleSendMessage();
   };
 
-  // Wrap the example click handler to track interaction and show immediate loading
+  // Wrap the example click handler to also set hasStartedChat
   const handleExampleClick = (question: string) => {
-    console.log("[ChatInterface] Example clicked:", question);
-    setHasInteracted(true);
-    setIsTransitioning(true);
+    console.log("[ChatInterface] Example clicked, setting hasStartedChat to true");
+    setHasStartedChat(true);
     setInput(question);
     // Small delay to ensure state updates before sending
     setTimeout(() => {
       originalHandleExampleClick(question);
     }, 50);
   };
-
-  // Reset interaction state when starting a new chat
-  useEffect(() => {
-    if (isNewChat && !conversationId && messages.length <= 1) {
-      console.log("[ChatInterface] Resetting interaction state");
-      setHasInteracted(false);
-      setIsTransitioning(false);
-    }
-  }, [isNewChat, conversationId, messages.length]);
-
-  // Reset transitioning state once loading is complete
-  useEffect(() => {
-    if (!isLoading && isTransitioning) {
-      console.log("[ChatInterface] Resetting transitioning state");
-      setIsTransitioning(false);
-    }
-  }, [isLoading, isTransitioning]);
-
-  // Log when welcome section should be shown
-  useEffect(() => {
-    const showWelcome = isNewChat && !conversationId && !hasInteracted && messages.length <= 1;
-    console.log("[ChatInterface] Welcome section visibility:", showWelcome, "hasInteracted:", hasInteracted);
-  }, [isNewChat, conversationId, messages.length, hasInteracted]);
 
   if (isLoadingHistory) {
     console.log("[ChatInterface] Loading history...");
@@ -128,13 +108,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>;
   }
 
-  // Determine whether to show welcome or conversation view
-  // Show welcome section only when it's a new chat with no messages and user hasn't interacted
-  const showWelcome = isNewChat && !conversationId && !hasInteracted && messages.length <= 1;
+  console.log("[ChatInterface] Rendering with hasStartedChat:", hasStartedChat, "messages.length:", messages.length);
 
   return (
     <div className={`flex flex-col h-full max-h-[85vh] relative overflow-hidden ${isMobile ? 'pt-2' : ''}`}>
-      {showWelcome ? (
+      {!hasStartedChat ? (
         <Suspense fallback={<MessageSkeleton />}>
           <WelcomeSection onCategorySelect={handleExampleClick} />
         </Suspense>
@@ -143,7 +121,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <Suspense fallback={<MessageSkeleton />}>
             <MessageList 
               messages={messages}
-              isLoading={isLoading || isTransitioning}
+              isLoading={isLoading}
               isLoadingHistory={isLoadingHistory}
               error={error}
               handleRetry={handleRetry}
@@ -154,7 +132,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               messagesContainerRef={messagesContainerRef}
               handleExampleClick={handleExampleClick}
               isMobile={isMobile}
-              isTransitioning={isTransitioning}
             />
           </Suspense>
         </div>
