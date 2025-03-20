@@ -66,7 +66,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full max-h-[85vh] relative overflow-hidden">
+    <div className={`flex flex-col h-full max-h-[85vh] relative overflow-hidden ${isMobile ? 'pt-2' : ''}`}>
       <div className="flex-1 overflow-hidden">
         <MessageList 
           messages={messages}

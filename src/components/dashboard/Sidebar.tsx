@@ -1,15 +1,49 @@
 
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { PaintBucket, LayoutDashboard, FileText, BarChart4, Settings, LogOut, User, Sparkles, Shield } from "lucide-react";
+import {
+  Menu,
+  PaintBucket,
+  LayoutDashboard,
+  FileText,
+  BarChart4,
+  Settings,
+  LogOut,
+  User,
+  Sparkles,
+  Shield,
+  ChevronLeft,
+  ChevronRight
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarRail,
+  SidebarTrigger,
+  useSidebar
+} from "@/components/ui/sidebar";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
-const Sidebar = () => {
+const DashboardSidebar = () => {
   const location = useLocation();
   const { signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const { toggleSidebar, state } = useSidebar();
 
   const handleSignOut = async () => {
     await signOut();
@@ -30,73 +64,122 @@ const Sidebar = () => {
     { name: "Admin", icon: Shield, path: "/dashboard/admin/ai-settings" },
   ];
 
-  return (
-    <div className="h-screen bg-sidebar border-r border-border flex flex-col">
-      <div className="p-6 flex items-center gap-2 border-b border-border">
-        <PaintBucket className="h-6 w-6 text-primary" />
-        <span className="font-display text-lg font-semibold">CrewkitAI</span>
-      </div>
+  const SidebarContent = () => (
+    <>
+      <SidebarHeader>
+        <div className="flex items-center gap-2 p-4">
+          <PaintBucket className="h-6 w-6 text-primary" />
+          <span className="font-display text-lg font-semibold">CrewkitAI</span>
+        </div>
+      </SidebarHeader>
 
-      <nav className="flex-1 p-4">
-        <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.name}>
-              <Link
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                  location.pathname === item.path
-                    ? "bg-sidebar-accent text-primary"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-primary"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.name}
-              </Link>
-            </li>
-          ))}
-          
-          {/* Show admin menu items only to admin users */}
-          {isAdmin && (
-            <>
-              <li className="mt-6 mb-2">
-                <div className="px-3 text-xs font-semibold text-sidebar-foreground opacity-60 uppercase tracking-wider">
-                  Admin
-                </div>
-              </li>
-              
-              {adminItems.map((item) => (
-                <li key={item.name}>
-                  <Link
-                    to={item.path}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                      location.pathname.startsWith(item.path.split('/').slice(0, 3).join('/'))
-                        ? "bg-sidebar-accent text-primary"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-primary"
-                    )}
-                  >
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarMenu>
+            {navItems.map((item) => (
+              <SidebarMenuItem key={item.name}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === item.path}
+                  tooltip={item.name}
+                >
+                  <Link to={item.path}>
                     <item.icon className="h-5 w-5" />
-                    {item.name}
+                    <span>{item.name}</span>
                   </Link>
-                </li>
-              ))}
-            </>
-          )}
-        </ul>
-      </nav>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
 
-      <div className="p-4 border-t border-border">
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium w-full text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-primary transition-colors"
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarMenu>
+              {adminItems.map((item) => (
+                <SidebarMenuItem key={item.name}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname.startsWith(item.path.split('/').slice(0, 3).join('/'))}
+                    tooltip={item.name}
+                  >
+                    <Link to={item.path}>
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+      </SidebarContent>
+
+      <SidebarFooter>
+        <div className="p-4">
+          <SidebarMenuButton 
+            onClick={handleSignOut}
+            tooltip="Sign Out"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Sign Out</span>
+          </SidebarMenuButton>
+        </div>
+      </SidebarFooter>
+    </>
+  );
+
+  // On mobile, we use a Sheet component for the sidebar
+  if (isMobile) {
+    return (
+      <>
+        <div className="fixed top-0 left-0 z-40 w-full bg-background/95 backdrop-blur-sm border-b flex items-center justify-between p-3">
+          <div className="flex items-center gap-2">
+            <PaintBucket className="h-5 w-5 text-primary" />
+            <span className="font-display text-lg font-semibold">CrewkitAI</span>
+          </div>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle Menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[280px] p-0">
+              <SidebarContent />
+            </SheetContent>
+          </Sheet>
+        </div>
+        <div className="h-[60px]"></div> {/* Spacer for fixed header */}
+      </>
+    );
+  }
+
+  // On desktop, we use the sidebar component
+  return (
+    <>
+      <Sidebar className="border-r">
+        <SidebarContent />
+        <SidebarRail />
+      </Sidebar>
+      
+      {/* Collapsible sidebar toggle for desktop */}
+      <div className="fixed bottom-4 left-4 z-50 md:flex hidden">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="rounded-full shadow-md" 
+          onClick={toggleSidebar}
         >
-          <LogOut className="h-5 w-5" />
-          Sign Out
-        </button>
+          {state === "collapsed" ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </Button>
       </div>
-    </div>
+    </>
   );
 };
 
-export default Sidebar;
+export default DashboardSidebar;

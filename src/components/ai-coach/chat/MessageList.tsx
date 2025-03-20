@@ -51,7 +51,7 @@ const MessageList: React.FC<MessageListProps> = ({
       
       <ScrollArea 
         ref={messagesContainerRef} 
-        className="h-full px-3 sm:px-4 pt-4 overflow-y-auto"
+        className={`h-full px-3 sm:px-4 pt-4 overflow-y-auto`}
       >
         {isWelcomeScreen ? (
           <WelcomeSection onCategorySelect={handleExampleClick} />
