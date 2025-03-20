@@ -1,5 +1,5 @@
 
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useChat } from './chat/useChat';
@@ -8,6 +8,9 @@ import ChatMessageInput from './chat/ChatMessageInput';
 import ImagePreview from './chat/ImagePreview';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MessageSkeleton from './chat/MessageSkeleton';
+
+// Lazy load WelcomeSection for better initial load performance
+const WelcomeSection = lazy(() => import('./chat/WelcomeSection'));
 
 type Message = {
   id: string;
@@ -66,26 +69,35 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>;
   }
 
+  // Show welcome section when it's a new chat with no messages yet
+  const showWelcome = isNewChat && !conversationId && messages.length === 0;
+
   return (
     <div className={`flex flex-col h-full max-h-[85vh] relative overflow-hidden ${isMobile ? 'pt-2' : ''}`}>
-      <div className="flex-1 overflow-hidden">
+      {showWelcome ? (
         <Suspense fallback={<MessageSkeleton />}>
-          <MessageList 
-            messages={messages}
-            isLoading={isLoading}
-            isLoadingHistory={isLoadingHistory}
-            error={error}
-            handleRetry={handleRetry}
-            handleRegenerateMessage={handleRegenerateMessage}
-            showScrollButton={showScrollButton}
-            scrollToBottom={scrollToBottom}
-            messagesEndRef={messagesEndRef}
-            messagesContainerRef={messagesContainerRef}
-            handleExampleClick={handleExampleClick}
-            isMobile={isMobile}
-          />
+          <WelcomeSection onCategorySelect={handleExampleClick} />
         </Suspense>
-      </div>
+      ) : (
+        <div className="flex-1 overflow-hidden">
+          <Suspense fallback={<MessageSkeleton />}>
+            <MessageList 
+              messages={messages}
+              isLoading={isLoading}
+              isLoadingHistory={isLoadingHistory}
+              error={error}
+              handleRetry={handleRetry}
+              handleRegenerateMessage={handleRegenerateMessage}
+              showScrollButton={showScrollButton}
+              scrollToBottom={scrollToBottom}
+              messagesEndRef={messagesEndRef}
+              messagesContainerRef={messagesContainerRef}
+              handleExampleClick={handleExampleClick}
+              isMobile={isMobile}
+            />
+          </Suspense>
+        </div>
+      )}
       
       <div className={`sticky bottom-0 left-0 right-0 border-t px-3 sm:px-4 py-2 sm:py-3 bg-background/95 backdrop-blur-sm ${isMobile ? 'pb-safe' : ''}`}>
         <ImagePreview 

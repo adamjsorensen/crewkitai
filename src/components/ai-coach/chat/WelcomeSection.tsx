@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Sparkles, ChevronRight } from 'lucide-react';
+import { MessageSquare, Sparkles, ChevronRight, ChevronDown } from 'lucide-react';
 import { useWelcomeContent } from '@/hooks/useWelcomeContent';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as LucideIcons from 'lucide-react';
@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 
 interface WelcomeSectionProps {
   onCategorySelect: (category: string) => void;
@@ -63,19 +64,20 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
   // Find the active category
   const activeCategory = categories.find(cat => cat.id === activeTab) || categories[0];
 
-  // Mobile category selector
+  // Enhanced Mobile category selector
   const MobileCategorySelector = () => (
     <div className="px-4 py-2">
-      <button 
+      <Button 
         onClick={() => setShowTabSheet(true)}
         className="w-full flex items-center justify-between py-3 px-4 rounded-lg bg-accent/50 border border-border/40 text-left"
+        variant="outline"
       >
         <div className="flex items-center gap-2">
           {activeCategory && renderIcon(activeCategory.icon, activeCategory.iconColor)}
           <span className="font-medium">{activeCategory?.title}</span>
         </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-      </button>
+        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+      </Button>
       
       <Sheet open={showTabSheet} onOpenChange={setShowTabSheet}>
         <SheetContent side="bottom" className="h-[70vh] px-0">
@@ -85,14 +87,15 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
           <ScrollArea className="h-full">
             <div className="p-2 space-y-1">
               {categories.map((category) => (
-                <button
+                <Button
                   key={category.id}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-md text-left",
+                    "w-full flex items-center gap-3 p-3 justify-start h-auto rounded-md text-left",
                     activeTab === category.id 
                       ? "bg-primary/10 text-primary" 
                       : "hover:bg-accent"
                   )}
+                  variant="ghost"
                   onClick={() => {
                     setActiveTab(category.id);
                     setShowTabSheet(false);
@@ -103,7 +106,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
                     <div className="font-medium">{category.title}</div>
                     <p className="text-sm text-muted-foreground line-clamp-1">{category.description}</p>
                   </div>
-                </button>
+                </Button>
               ))}
             </div>
           </ScrollArea>
