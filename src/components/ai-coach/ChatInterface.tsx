@@ -6,9 +6,6 @@ import { useChat } from './chat/useChat';
 import MessageList from './chat/MessageList';
 import ChatMessageInput from './chat/ChatMessageInput';
 import ImagePreview from './chat/ImagePreview';
-import ProgressBar from './chat/ProgressBar';
-import ThinkModeIndicator from './chat/ThinkModeIndicator';
-import TypingFeedback from './chat/TypingFeedback';
 
 type Message = {
   id: string;
@@ -56,8 +53,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     handleExampleClick,
     handleRetry,
     handleRegenerateMessage,
-    handleFollowUpQuestion,
-    handleExplainFurther,
     scrollToBottom
   } = useChat(conversationId, isNewChat, onConversationCreated);
 
@@ -70,9 +65,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="flex flex-col h-full max-h-[85vh] relative overflow-hidden">
-      {/* Progress Bar */}
-      <ProgressBar isActive={isLoading} />
-      
       <div className="flex-1 overflow-hidden">
         <MessageList 
           messages={messages}
@@ -80,8 +72,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           error={error}
           handleRetry={handleRetry}
           handleRegenerateMessage={handleRegenerateMessage}
-          handleFollowUpQuestion={handleFollowUpQuestion}
-          handleExplainFurther={handleExplainFurther}
           showScrollButton={showScrollButton}
           scrollToBottom={scrollToBottom}
           messagesEndRef={messagesEndRef}
@@ -90,9 +80,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         />
       </div>
       
-      <div className="sticky bottom-0 left-0 right-0 border-t px-4 py-3 bg-background/95 backdrop-blur-sm relative">
-        <ThinkModeIndicator isActive={isThinkMode} />
-        
+      <div className="sticky bottom-0 left-0 right-0 border-t px-4 py-3 bg-background/95 backdrop-blur-sm">
         <ImagePreview 
           imagePreviewUrl={imagePreviewUrl} 
           removeImage={removeImage} 
@@ -112,15 +100,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           user={user}
           inputRef={inputRef}
         />
-        
-        {input.length > 0 && (
-          <div className="px-1">
-            <TypingFeedback 
-              currentLength={input.length} 
-              maxLength={4000}
-            />
-          </div>
-        )}
       </div>
       
       <input

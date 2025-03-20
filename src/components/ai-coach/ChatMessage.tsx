@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { PaintBucket, User, RefreshCw, Copy, Share2, ThumbsUp, ThumbsDown, Loader2, ZoomIn, MoreHorizontal, BookmarkIcon, CheckCircle2, PinIcon, HelpCircle, ArrowRight } from 'lucide-react';
+import { PaintBucket, User, RefreshCw, Copy, Share2, ThumbsUp, ThumbsDown, Loader2, ZoomIn, MoreHorizontal, BookmarkIcon, CheckCircle2, PinIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -17,8 +18,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import SuggestedQuestions from './chat/SuggestedQuestions';
 
 type Message = {
   id: string;
@@ -31,16 +30,9 @@ type Message = {
 interface ChatMessageProps {
   message: Message;
   onRegenerate?: (messageId: string) => void;
-  onFollowUpQuestion?: (question: string) => void;
-  onExplainFurther?: (messageId: string) => void;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ 
-  message, 
-  onRegenerate,
-  onFollowUpQuestion,
-  onExplainFurther
-}) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate }) => {
   const isAssistant = message.role === 'assistant';
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
@@ -48,40 +40,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isVoted, setIsVoted] = useState<'up' | 'down' | null>(null);
-
-  const suggestedQuestions = isAssistant ? generateFollowUpQuestions(message.content) : [];
-
-  function generateFollowUpQuestions(content: string): string[] {
-    const questions: string[] = [];
-    
-    if (content.toLowerCase().includes('pricing') || content.toLowerCase().includes('estimate')) {
-      questions.push("What factors affect pricing the most?");
-      questions.push("How do I explain my pricing to clients?");
-    }
-    
-    if (content.toLowerCase().includes('client') || content.toLowerCase().includes('customer')) {
-      questions.push("How to handle client payment issues?");
-      questions.push("What's the best way to get client testimonials?");
-    }
-    
-    if (content.toLowerCase().includes('crew') || content.toLowerCase().includes('team') || content.toLowerCase().includes('employee')) {
-      questions.push("How to motivate my painting crew?");
-      questions.push("What's a fair pay structure for painters?");
-    }
-    
-    if (content.toLowerCase().includes('marketing') || content.toLowerCase().includes('lead')) {
-      questions.push("What should be on my painting business website?");
-      questions.push("Is door-to-door marketing effective for painters?");
-    }
-    
-    if (questions.length === 0) {
-      questions.push("Can you explain that in more detail?");
-      questions.push("How can I implement this in my business?");
-      questions.push("What are common mistakes to avoid?");
-    }
-    
-    return questions.slice(0, 3);
-  }
   
   const handleCopy = async () => {
     try {
@@ -154,21 +112,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
-  const handleExplainFurther = () => {
-    if (onExplainFurther) {
-      onExplainFurther(message.id);
-    }
-  };
-
-  const handleFollowUpQuestion = (question: string) => {
-    if (onFollowUpQuestion) {
-      onFollowUpQuestion(question);
-    }
-  };
-
+  // Attempts to extract key points from assistant messages
   const getKeyPoints = (content: string): string[] | null => {
     if (!isAssistant) return null;
     
+    // Look for lists in the content
     const listMatch = content.match(/(\n[0-9]+\.\s.+){2,}/g) || 
                       content.match(/(\n\*\s.+){2,}/g) ||
                       content.match(/(\n-\s.+){2,}/g);
@@ -178,7 +126,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         .split('\n')
         .filter(item => item.trim())
         .map(item => item.replace(/^[0-9]+\.\s|\*\s|-\s/, '').trim())
-        .slice(0, 3);
+        .slice(0, 3); // Limit to 3 points
     }
     
     return null;
@@ -271,6 +219,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
         </div>
         
+        {/* Key Points Section for assistant messages */}
         {isAssistant && keyPoints && (
           <Card className="mt-3 p-3 bg-primary/5 border-primary/10">
             <div className="flex items-center gap-1.5 mb-1.5">
@@ -288,25 +237,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               ))}
             </ul>
           </Card>
-        )}
-        
-        {isAssistant && suggestedQuestions.length > 0 && (
-          <SuggestedQuestions 
-            questions={suggestedQuestions} 
-            onQuestionClick={handleFollowUpQuestion}
-          />
-        )}
-        
-        {isAssistant && onExplainFurther && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExplainFurther}
-            className="mt-3 bg-background/80 text-xs h-8 border-primary/20 text-primary hover:bg-primary/10"
-          >
-            <HelpCircle className="h-3 w-3 mr-1.5" />
-            Explain this further
-          </Button>
         )}
         
         <div 
@@ -460,6 +390,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         </div>
       )}
 
+      {/* Image Dialog for fullscreen viewing */}
       <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none">
           <div className="relative">

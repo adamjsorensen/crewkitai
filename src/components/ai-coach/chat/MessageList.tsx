@@ -7,7 +7,6 @@ import ChatMessage from '../ChatMessage';
 import TypingIndicator from '../TypingIndicator';
 import { PaintBucket } from 'lucide-react';
 import WelcomeSection from './WelcomeSection';
-import SkeletonLoader from './SkeletonLoader';
 
 type Message = {
   id: string;
@@ -23,8 +22,6 @@ interface MessageListProps {
   error: string | null;
   handleRetry: () => void;
   handleRegenerateMessage: (messageId: string) => void;
-  handleFollowUpQuestion?: (question: string) => void;
-  handleExplainFurther?: (messageId: string) => void;
   showScrollButton: boolean;
   scrollToBottom: () => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
@@ -38,8 +35,6 @@ const MessageList: React.FC<MessageListProps> = ({
   error,
   handleRetry,
   handleRegenerateMessage,
-  handleFollowUpQuestion,
-  handleExplainFurther,
   showScrollButton,
   scrollToBottom,
   messagesEndRef,
@@ -64,14 +59,19 @@ const MessageList: React.FC<MessageListProps> = ({
               <ChatMessage 
                 key={message.id} 
                 message={message} 
-                onRegenerate={handleRegenerateMessage}
-                onFollowUpQuestion={handleFollowUpQuestion}
-                onExplainFurther={handleExplainFurther}
+                onRegenerate={handleRegenerateMessage} 
               />
             ))}
             
             {isLoading && (
-              <SkeletonLoader />
+              <div className="flex items-start gap-3 animate-fade-in my-6">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
+                  <PaintBucket className="h-4 w-4 text-white" />
+                </div>
+                <div className="rounded-2xl p-4 bg-muted/70 shadow-sm">
+                  <TypingIndicator />
+                </div>
+              </div>
             )}
             
             {error && (
