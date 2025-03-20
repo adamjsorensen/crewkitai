@@ -2,15 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Sparkles, ChevronRight, ChevronDown } from 'lucide-react';
+import { MessageSquare, Sparkles, ChevronRight } from 'lucide-react';
 import { useWelcomeContent } from '@/hooks/useWelcomeContent';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as LucideIcons from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
+import MobileCategoryDrawer from './MobileCategoryDrawer';
 
 interface WelcomeSectionProps {
   onCategorySelect: (category: string) => void;
@@ -19,19 +18,13 @@ interface WelcomeSectionProps {
 const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => {
   const { categories, isLoading, error } = useWelcomeContent();
   const [activeTab, setActiveTab] = useState<string | null>(null);
-  const [showTabSheet, setShowTabSheet] = useState(false);
   const isMobile = useIsMobile();
   
-  // Enhanced logging for debugging sheet state
+  // Log component lifecycle
   useEffect(() => {
     console.log("[WelcomeSection] Component mounted");
     return () => console.log("[WelcomeSection] Component unmounted");
   }, []);
-  
-  // Add logging for sheet state changes
-  useEffect(() => {
-    console.log("[WelcomeSection] Sheet state changed:", showTabSheet);
-  }, [showTabSheet]);
   
   // Dynamic icon component renderer
   const renderIcon = (iconName: string, colorClass: string) => {
@@ -75,72 +68,6 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
   // Find the active category
   const activeCategory = categories.find(cat => cat.id === activeTab) || categories[0];
 
-  // Improved mobile category selector with proper handling
-  const MobileCategorySelector = () => (
-    <div className="px-4 py-2">
-      <Button 
-        onClick={() => {
-          console.log("[WelcomeSection] Category button clicked, setting sheet to:", !showTabSheet);
-          setShowTabSheet(true); // Always set to true on button click for predictability
-        }}
-        className="w-full flex items-center justify-between py-3 px-4 rounded-lg bg-accent/50 border border-border/40 text-left"
-        variant="outline"
-        type="button"
-      >
-        <div className="flex items-center gap-2">
-          {activeCategory && renderIcon(activeCategory.icon, activeCategory.iconColor)}
-          <span className="font-medium">{activeCategory?.title}</span>
-        </div>
-        <ChevronDown className="h-5 w-5 text-muted-foreground" />
-      </Button>
-      
-      {/* Sheet component for mobile categories */}
-      <Sheet 
-        open={showTabSheet} 
-        onOpenChange={(open) => {
-          console.log("[WelcomeSection] Sheet state changing via Sheet component to:", open);
-          setShowTabSheet(open);
-        }}
-      >
-        <SheetContent 
-          side="bottom" 
-          className="px-0 h-[70vh] rounded-t-xl z-[100] bg-background border-t border-border/30 shadow-lg"
-        >
-          <SheetHeader className="px-4 mb-2">
-            <SheetTitle>Choose a category</SheetTitle>
-          </SheetHeader>
-          <ScrollArea className="h-full pb-safe">
-            <div className="p-2 space-y-1">
-              {categories.map((category) => (
-                <Button
-                  key={category.id}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-3 justify-start h-auto rounded-md text-left",
-                    activeTab === category.id 
-                      ? "bg-primary/10 text-primary" 
-                      : "hover:bg-accent"
-                  )}
-                  variant="ghost"
-                  onClick={() => {
-                    console.log("[WelcomeSection] Category selected:", category.id);
-                    setActiveTab(category.id);
-                    setShowTabSheet(false); // Close sheet when category selected
-                  }}
-                >
-                  {renderIcon(category.icon, category.iconColor)}
-                  <div>
-                    <div className="font-medium">{category.title}</div>
-                    <p className="text-sm text-muted-foreground line-clamp-1">{category.description}</p>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-
   return (
     <ScrollArea className="h-full px-2 pt-2">
       <div className="py-4 mb-6 max-w-4xl mx-auto">
@@ -158,7 +85,14 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
             </p>
           </div>
           
-          {isMobile && <MobileCategorySelector />}
+          {isMobile && activeCategory && (
+            <MobileCategoryDrawer
+              categories={categories}
+              activeCategory={activeCategory}
+              onCategorySelect={(category) => setActiveTab(category.id)}
+              onExampleSelect={onCategorySelect}
+            />
+          )}
           
           <Tabs 
             value={activeTab || (categories[0]?.id || "")} 
