@@ -1,5 +1,6 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,89 +13,77 @@ type Conversation = {
   pinned: boolean;
 };
 
+// Function to fetch conversations - separated for reusability
+const fetchConversations = async (userId: string | undefined) => {
+  if (!userId) return [];
+
+  const { data, error } = await supabase
+    .from('ai_coach_conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('is_root', true)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Transform data to conversation format
+  return data.map(conv => ({
+    id: conv.id,
+    title: conv.title || 'Untitled conversation',
+    lastMessage: conv.user_message.substring(0, 60) + (conv.user_message.length > 60 ? '...' : ''),
+    timestamp: new Date(conv.created_at),
+    pinned: conv.pinned || false
+  }));
+};
+
 export const useConversations = () => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [isNewChat, setIsNewChat] = useState(true); // Track if we're in a new chat state
-  const [isLoading, setIsLoading] = useState(true);
+  const [isNewChat, setIsNewChat] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  // Fetch conversations
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchConversations = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch root conversations (is_root = true)
-        const { data, error } = await supabase
-          .from('ai_coach_conversations')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_root', true)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        // Transform data to our conversation format
-        const formattedConversations: Conversation[] = data.map(conv => ({
-          id: conv.id,
-          title: conv.title || 'Untitled conversation',
-          lastMessage: conv.user_message.substring(0, 60) + (conv.user_message.length > 60 ? '...' : ''),
-          timestamp: new Date(conv.created_at),
-          pinned: conv.pinned || false
-        }));
-
-        setConversations(formattedConversations);
-        
-        // Important: Don't auto-select the first conversation here anymore
-        // This was causing the issue with the New Chat button
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load conversations',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchConversations();
-  }, [user, toast]);
+  // Fetch conversations with caching
+  const { data: conversations = [], isLoading } = useQuery({
+    queryKey: ['conversations', user?.id],
+    queryFn: () => fetchConversations(user?.id),
+    staleTime: 1 * 60 * 1000, // Consider data fresh for 1 minute
+    enabled: !!user, // Only run the query if we have a user
+  });
 
   // Create a new conversation
   const createNewConversation = () => {
     setSelectedConversationId(null);
-    setIsNewChat(true); // Set the new chat state to true
+    setIsNewChat(true);
   };
 
   // Select a conversation
   const selectConversation = (id: string) => {
     setSelectedConversationId(id);
-    setIsNewChat(false); // We're viewing an existing conversation now
+    setIsNewChat(false);
   };
 
   // Delete a conversation
-  const deleteConversation = async (id: string) => {
-    try {
-      // Delete the conversation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('ai_coach_conversations')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-
-      // Update local state
-      setConversations(prevConversations => 
-        prevConversations.filter(conv => conv.id !== id)
+      return id;
+    },
+    onSuccess: (deletedId) => {
+      // Update the cache by removing the deleted conversation
+      queryClient.setQueryData(
+        ['conversations', user?.id],
+        (oldData: Conversation[] | undefined) => 
+          oldData ? oldData.filter(conv => conv.id !== deletedId) : []
       );
 
       // If the deleted conversation was selected, clear selection and set new chat state
-      if (selectedConversationId === id) {
+      if (selectedConversationId === deletedId) {
         setSelectedConversationId(null);
         setIsNewChat(true);
       }
@@ -103,7 +92,8 @@ export const useConversations = () => {
         title: 'Conversation deleted',
         description: 'The conversation has been permanently removed',
       });
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error deleting conversation:', error);
       toast({
         title: 'Error',
@@ -111,24 +101,33 @@ export const useConversations = () => {
         variant: 'destructive',
       });
     }
+  });
+
+  const deleteConversation = (id: string) => {
+    if (confirm("Are you sure you want to delete this conversation?")) {
+      deleteMutation.mutate(id);
+    }
   };
 
   // Pin/unpin a conversation
-  const togglePinConversation = async (id: string, pinned: boolean) => {
-    try {
-      // Update the conversation in the database
+  const pinMutation = useMutation({
+    mutationFn: async ({ id, pinned }: { id: string, pinned: boolean }) => {
       const { error } = await supabase
         .from('ai_coach_conversations')
         .update({ pinned })
         .eq('id', id);
 
       if (error) throw error;
-
-      // Update local state
-      setConversations(prevConversations => 
-        prevConversations.map(conv => 
-          conv.id === id ? { ...conv, pinned } : conv
-        )
+      return { id, pinned };
+    },
+    onSuccess: ({ id, pinned }) => {
+      // Update the cache by modifying the pinned status of the conversation
+      queryClient.setQueryData(
+        ['conversations', user?.id],
+        (oldData: Conversation[] | undefined) => 
+          oldData ? oldData.map(conv => 
+            conv.id === id ? { ...conv, pinned } : conv
+          ) : []
       );
 
       toast({
@@ -137,7 +136,8 @@ export const useConversations = () => {
           ? 'The conversation has been pinned to the top' 
           : 'The conversation has been unpinned',
       });
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error updating conversation:', error);
       toast({
         title: 'Error',
@@ -145,16 +145,30 @@ export const useConversations = () => {
         variant: 'destructive',
       });
     }
+  });
+
+  const togglePinConversation = (id: string, pinned: boolean) => {
+    pinMutation.mutate({ id, pinned });
   };
 
   return {
     conversations,
     selectedConversationId,
-    isNewChat, // Expose the new chat state
+    isNewChat,
     isLoading,
     createNewConversation,
     selectConversation,
     deleteConversation,
     togglePinConversation
   };
+};
+
+// Export for potential prefetching
+export const prefetchConversations = async (queryClient: any, userId: string | undefined) => {
+  if (userId) {
+    await queryClient.prefetchQuery({
+      queryKey: ['conversations', userId],
+      queryFn: () => fetchConversations(userId)
+    });
+  }
 };
