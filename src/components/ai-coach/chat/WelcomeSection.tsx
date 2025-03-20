@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import { useWelcomeContent } from '@/hooks/useWelcomeContent';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as LucideIcons from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface WelcomeSectionProps {
   onCategorySelect: (category: string) => void;
@@ -13,6 +14,7 @@ interface WelcomeSectionProps {
 
 const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => {
   const { categories, isLoading, error } = useWelcomeContent();
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   
   // Dynamic icon component renderer
   const renderIcon = (iconName: string, colorClass: string) => {
@@ -20,26 +22,21 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
     return <IconComponent className={`h-5 w-5 text-${colorClass}`} />;
   };
 
+  React.useEffect(() => {
+    // Set the first category as active by default once loaded
+    if (categories.length > 0 && !activeTab) {
+      setActiveTab(categories[0].id);
+    }
+  }, [categories, activeTab]);
+
   if (isLoading) {
     return (
       <ScrollArea className="h-full px-2">
         <div className="space-y-6 py-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Skeleton className="h-10 w-full mb-4" />
+          <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="p-4 border-border/50">
-                <div className="flex space-x-4">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-full" />
-                    <div className="mt-3 space-y-1.5">
-                      <Skeleton className="h-3 w-full" />
-                      <Skeleton className="h-3 w-full" />
-                      <Skeleton className="h-3 w-full" />
-                    </div>
-                  </div>
-                </div>
-              </Card>
+              <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
         </div>
@@ -58,46 +55,61 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
     );
   }
 
+  // Find the active category
+  const activeCategory = categories.find(cat => cat.id === activeTab) || categories[0];
+
   return (
     <ScrollArea className="h-full px-2">
       <div className="space-y-6 py-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {categories.map((category) => (
-            <Card 
-              key={category.id}
-              className="p-4 hover:shadow-md transition-all cursor-pointer border-border/50 hover:border-primary/30 hover:bg-accent/20"
-              onClick={() => category.examples.length > 0 && onCategorySelect(category.examples[0].title)}
-            >
-              <div className="flex space-x-4">
-                <div className="flex-shrink-0 mt-1">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    {renderIcon(category.icon, category.iconColor)}
+        <Card className="p-4 border-border/50">
+          <Tabs 
+            defaultValue={activeTab || (categories[0]?.id || "")} 
+            onValueChange={(value) => setActiveTab(value)}
+            className="w-full"
+          >
+            <TabsList className="w-full mb-4 bg-background border border-border/30 overflow-x-auto flex-wrap">
+              {categories.map((category) => (
+                <TabsTrigger 
+                  key={category.id} 
+                  value={category.id}
+                  className="flex items-center gap-2 py-2"
+                >
+                  <div className="flex-shrink-0">
+                    <div className="h-5 w-5 rounded-full flex items-center justify-center">
+                      {renderIcon(category.icon, category.iconColor)}
+                    </div>
                   </div>
-                </div>
-                <div className="flex-1 space-y-1">
-                  <h3 className="font-medium">{category.title}</h3>
+                  <span>{category.title}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            {categories.map((category) => (
+              <TabsContent 
+                key={category.id} 
+                value={category.id}
+                className="mt-0"
+              >
+                <div className="mb-3">
                   <p className="text-sm text-muted-foreground">{category.description}</p>
-                  
-                  <div className="mt-3 space-y-1.5">
-                    {category.examples.map((example) => (
-                      <button 
-                        key={example.id}
-                        className="flex items-start gap-2 group cursor-pointer w-full text-left"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onCategorySelect(example.title);
-                        }}
-                      >
-                        <MessageSquare className="h-3.5 w-3.5 text-primary mt-1 flex-shrink-0" />
-                        <p className="text-sm group-hover:text-primary transition-colors">{example.title}</p>
-                      </button>
-                    ))}
-                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+                
+                <div className="space-y-1.5">
+                  {category.examples.map((example) => (
+                    <button 
+                      key={example.id}
+                      className="flex items-start gap-2 group cursor-pointer w-full text-left p-3 rounded-md hover:bg-accent/50 transition-colors"
+                      onClick={() => onCategorySelect(example.title)}
+                    >
+                      <MessageSquare className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <p className="text-sm group-hover:text-primary transition-colors">{example.title}</p>
+                    </button>
+                  ))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </Card>
       </div>
     </ScrollArea>
   );
