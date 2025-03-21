@@ -99,23 +99,52 @@ export const useChat = (
 
   // Auto-scroll when messages change
   useEffect(() => {
-    if (!isLoading && !isLoadingHistory) {
+    console.log("[useChat] Messages changed, scrolling to bottom...");
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  // Additional scroll for when loading completes
+  useEffect(() => {
+    if (!isLoading) {
+      console.log("[useChat] Loading completed, scrolling to bottom...");
       const timer = setTimeout(() => {
         scrollToBottom();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [messages, isLoading, isLoadingHistory, scrollToBottom]);
+  }, [isLoading, scrollToBottom]);
 
-  // Wrapper functions
+  // Wrapper functions with optimized handling
   const handleImageClick = useCallback(() => {
     handleImageClickBase(fileInputRef);
   }, [handleImageClickBase]);
 
   const handleSendMessage = useCallback(() => {
-    sendMessage(input);
+    if (!input.trim() && !imageFile) return;
+    
+    // Immediately add user message to the UI
+    const userMessageId = `user-${Date.now()}`;
+    const userMessage: Message = {
+      id: userMessageId,
+      role: 'user',
+      content: input,
+      timestamp: new Date(),
+      imageUrl: imagePreviewUrl || undefined
+    };
+    
+    // Update messages state immediately to show user input
+    setMessages(prev => [...prev, userMessage]);
+    
+    // Clear input and start loading state
     setInput('');
-  }, [sendMessage, input]);
+    setIsLoading(true);
+    
+    // Scroll to bottom immediately after adding user message
+    setTimeout(() => scrollToBottom(), 50);
+    
+    // Process the message in the background
+    sendMessage(input);
+  }, [sendMessage, input, imageFile, imagePreviewUrl, scrollToBottom]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -130,11 +159,28 @@ export const useChat = (
       inputRef.current.focus();
     }
     
-    setTimeout(() => {
-      sendMessage(question);
-      setInput('');
-    }, 100);
-  }, [sendMessage]);
+    // Immediately add the question to the UI
+    const userMessageId = `user-${Date.now()}`;
+    const userMessage: Message = {
+      id: userMessageId,
+      role: 'user',
+      content: question,
+      timestamp: new Date()
+    };
+    
+    // Update messages state immediately
+    setMessages(prev => [...prev, userMessage]);
+    
+    // Clear input and start loading state
+    setInput('');
+    setIsLoading(true);
+    
+    // Scroll to bottom immediately
+    setTimeout(() => scrollToBottom(), 50);
+    
+    // Process the message in the background
+    sendMessage(question);
+  }, [sendMessage, scrollToBottom]);
 
   const handleRetry = useCallback(() => {
     const lastContent = baseHandleRetry();

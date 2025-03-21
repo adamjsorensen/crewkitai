@@ -11,7 +11,7 @@ export const useScrollManagement = () => {
       if (!messagesContainerRef.current) return;
       
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
       setShowScrollButton(!isNearBottom);
     };
     
@@ -33,9 +33,12 @@ export const useScrollManagement = () => {
   }, []);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: 'smooth'
-    });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end',
+      });
+    }
   }, []);
 
   return {

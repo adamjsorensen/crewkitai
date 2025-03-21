@@ -111,13 +111,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   console.log("[ChatInterface] Rendering with hasStartedChat:", hasStartedChat, "messages.length:", messages.length);
 
   return (
-    <div className={`flex flex-col h-full max-h-[85vh] relative overflow-hidden ${isMobile ? 'pt-2' : ''}`}>
+    <div className="flex flex-col h-full max-h-[85vh] relative">
       {!hasStartedChat ? (
         <Suspense fallback={<MessageSkeleton />}>
           <WelcomeSection onCategorySelect={handleExampleClick} />
         </Suspense>
       ) : (
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden flex flex-col">
           <Suspense fallback={<MessageSkeleton />}>
             <MessageList 
               messages={messages}
@@ -137,7 +137,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       )}
       
-      <div className={`sticky bottom-0 left-0 right-0 border-t px-3 sm:px-4 py-2 sm:py-3 bg-background/95 backdrop-blur-sm ${isMobile ? 'pb-safe' : ''}`}>
+      <div className={`sticky bottom-0 left-0 right-0 border-t px-3 sm:px-4 py-2 sm:py-3 bg-background/95 backdrop-blur-sm mt-auto ${isMobile ? 'pb-safe' : ''}`}>
         <ImagePreview 
           imagePreviewUrl={imagePreviewUrl} 
           removeImage={removeImage} 

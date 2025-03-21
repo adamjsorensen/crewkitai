@@ -42,7 +42,7 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
   const textareaRef = inputRef || defaultInputRef;
 
   return (
-    <>
+    <div className="w-full">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center">
           <Button
@@ -140,7 +140,7 @@ const ChatMessageInput: React.FC<ChatMessageInputProps> = ({
           </p>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

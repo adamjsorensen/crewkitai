@@ -56,6 +56,13 @@ const MessageList: React.FC<MessageListProps> = ({
     ? messages.slice(Math.max(0, messages.length - 15))
     : messages;
 
+  useEffect(() => {
+    // Ensure scroll to bottom on initial render and when messages change
+    if (messages.length > 0) {
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [messages, scrollToBottom]);
+
   if (isLoadingHistory) {
     return (
       <div className="h-full px-3 sm:px-4 pt-4">
@@ -83,12 +90,12 @@ const MessageList: React.FC<MessageListProps> = ({
   }
 
   return (
-    <div className="h-full overflow-hidden">
+    <div className="h-full flex-1 flex flex-col overflow-hidden">
       <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent h-6 pointer-events-none" />
       
       <ScrollArea 
         ref={messagesContainerRef} 
-        className={`h-full px-3 sm:px-4 pt-4 overflow-y-auto`}
+        className="h-full px-3 sm:px-4 pt-4 overflow-y-auto flex-1"
       >
         <div className="space-y-1 pb-4 max-w-3xl mx-auto">
           {visibleMessages.map(message => (
@@ -130,7 +137,7 @@ const MessageList: React.FC<MessageListProps> = ({
         <Button
           variant="outline"
           size="icon"
-          className={`absolute bottom-28 right-4 sm:right-8 rounded-full shadow-md bg-background z-10 border border-border/50 ${isMobile ? 'h-10 w-10' : ''}`}
+          className={`fixed bottom-24 right-4 sm:right-8 rounded-full shadow-md bg-background z-10 border border-border/50 ${isMobile ? 'h-10 w-10' : ''}`}
           onClick={scrollToBottom}
         >
           <ArrowDown className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
