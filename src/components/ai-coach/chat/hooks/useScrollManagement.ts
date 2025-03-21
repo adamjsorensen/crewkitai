@@ -15,29 +15,24 @@ export const useScrollManagement = () => {
       setShowScrollButton(!isNearBottom);
     };
     
-    const debounceScroll = () => {
-      let timeout: NodeJS.Timeout;
-      return () => {
-        clearTimeout(timeout);
-        timeout = setTimeout(handleScroll, 100);
-      };
-    };
-    
-    const debouncedHandle = debounceScroll();
-    
+    // Remove debounce for more responsive scroll button
     const container = messagesContainerRef.current;
     if (container) {
-      container.addEventListener('scroll', debouncedHandle);
-      return () => container.removeEventListener('scroll', debouncedHandle);
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
     }
   }, []);
 
+  // Enhanced scrollToBottom with more reliability
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'end',
-      });
+      // Force layout calculation before scrolling
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+        });
+      }, 50);
     }
   }, []);
 

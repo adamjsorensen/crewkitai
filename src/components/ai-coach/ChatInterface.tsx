@@ -117,7 +117,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <WelcomeSection onCategorySelect={handleExampleClick} />
         </Suspense>
       ) : (
-        <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col relative">
           <Suspense fallback={<MessageSkeleton />}>
             <MessageList 
               messages={messages}
@@ -137,7 +137,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       )}
       
-      <div className={`sticky bottom-0 left-0 right-0 border-t px-3 sm:px-4 py-2 sm:py-3 bg-background/95 backdrop-blur-sm mt-auto ${isMobile ? 'pb-safe' : ''}`}>
+      <div className="sticky bottom-0 left-0 right-0 border-t px-3 sm:px-4 py-2 sm:py-3 bg-background/95 backdrop-blur-sm z-10 mt-auto">
         <ImagePreview 
           imagePreviewUrl={imagePreviewUrl} 
           removeImage={removeImage} 

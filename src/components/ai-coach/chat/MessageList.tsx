@@ -90,14 +90,14 @@ const MessageList: React.FC<MessageListProps> = ({
   }
 
   return (
-    <div className="h-full flex-1 flex flex-col overflow-hidden">
+    <div className="h-full flex-1 flex flex-col overflow-hidden relative">
       <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent h-6 pointer-events-none" />
       
       <ScrollArea 
         ref={messagesContainerRef} 
-        className="h-full px-3 sm:px-4 pt-4 overflow-y-auto flex-1"
+        className="h-full px-3 sm:px-4 pt-4 pb-2 overflow-y-auto flex-1"
       >
-        <div className="space-y-1 pb-4 max-w-3xl mx-auto">
+        <div className="space-y-1 pb-16 max-w-3xl mx-auto"> {/* Added more bottom padding to ensure space for input */}
           {visibleMessages.map(message => (
             <ChatMessage 
               key={message.id} 
@@ -137,7 +137,7 @@ const MessageList: React.FC<MessageListProps> = ({
         <Button
           variant="outline"
           size="icon"
-          className={`fixed bottom-24 right-4 sm:right-8 rounded-full shadow-md bg-background z-10 border border-border/50 ${isMobile ? 'h-10 w-10' : ''}`}
+          className={`fixed bottom-28 right-4 sm:right-8 rounded-full shadow-md bg-background z-20 border border-border/50 ${isMobile ? 'h-10 w-10' : ''}`}
           onClick={scrollToBottom}
         >
           <ArrowDown className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
