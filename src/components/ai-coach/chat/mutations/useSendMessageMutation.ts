@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -110,48 +109,28 @@ export const useSendMessageMutation = () => {
           throw new Error("Invalid response structure received from server");
         }
 
-        // Generate a consistent, deterministic ID for the assistant message
-        const assistantMessageId = `assistant-${Date.now()}`;
-        
-        // Create the new assistant message
-        const assistantMessage: Message = {
-          id: assistantMessageId,
-          role: 'assistant' as const,
-          content: data.response,
-          timestamp: new Date(),
-          suggestedFollowUps: data.suggestedFollowUps || []
-        };
-        
-        console.log("[useSendMessageMutation] Created new assistant message:", assistantMessageId);
-        
-        // Use a synchronized state update to replace the placeholder
+        // Instead of removing placeholder and adding new message,
+        // we'll update the placeholder in-place
         setMessages(prev => {
-          // Log the current messages state before update
-          console.log("[useSendMessageMutation] Current messages before update:", 
-            prev.map(m => ({ id: m.id, role: m.role, isPlaceholder: !!m.isPlaceholder })));
-          
-          // Find if placeholder exists
-          const hasPlaceholder = prev.some(m => m.id === currentPlaceholderId);
-          
-          if (!hasPlaceholder) {
-            console.warn("[useSendMessageMutation] Placeholder not found in messages array!");
-          }
-          
-          // Create a new array without the placeholder
-          const filteredMessages = prev.filter(m => m.id !== currentPlaceholderId);
-          
-          // Return the new state with the assistant message added
-          const newMessages = [...filteredMessages, assistantMessage];
-          
-          console.log("[useSendMessageMutation] New messages array:", 
-            newMessages.map(m => ({ id: m.id, role: m.role })));
-          
-          return newMessages;
+          return prev.map(message => {
+            // If this is our placeholder message, transform it into the real message
+            if (message.id === currentPlaceholderId) {
+              console.log(`[useSendMessageMutation] Transforming placeholder ${currentPlaceholderId} into real message`);
+              return {
+                ...message,
+                content: data.response,
+                isPlaceholder: false, // Remove placeholder flag
+                suggestedFollowUps: data.suggestedFollowUps || [],
+                timestamp: new Date() // Update timestamp to current time
+              };
+            }
+            // Return all other messages unchanged
+            return message;
+          });
         });
         
-        console.log("[useSendMessageMutation] Updated messages array with new assistant message", {
-          assistantMessageId: assistantMessage.id,
-          placeholderReplaced: currentPlaceholderId
+        console.log("[useSendMessageMutation] Transformed placeholder into real message", {
+          placeholderId: currentPlaceholderId
         });
         
         setIsThinkMode(false);
@@ -159,26 +138,26 @@ export const useSendMessageMutation = () => {
         return { 
           response: data.response, 
           suggestedFollowUps: data.suggestedFollowUps || [],
-          assistantMessageId: assistantMessage.id
+          assistantMessageId: currentPlaceholderId // Return the same ID since we kept it
         };
       } catch (error) {
         console.error('[useSendMessageMutation] Error:', error);
         
-        // Create an error message to replace the placeholder
-        const errorMessage: Message = {
-          id: `error-${Date.now()}`,
-          role: 'assistant' as const,
-          content: "I'm sorry, I couldn't process your request. Please try again.",
-          timestamp: new Date(),
-          isError: true
-        };
-        
-        console.log("[useSendMessageMutation] Replacing placeholder with error message:", errorMessage.id);
-        
-        // Update messages in a single operation
+        // Update the placeholder to show an error instead of replacing it
         setMessages(prev => {
-          const filteredMessages = prev.filter(m => m.id !== currentPlaceholderId);
-          return [...filteredMessages, errorMessage];
+          return prev.map(message => {
+            if (message.id === currentPlaceholderId) {
+              console.log(`[useSendMessageMutation] Transforming placeholder ${currentPlaceholderId} into error message`);
+              return {
+                ...message,
+                content: "I'm sorry, I couldn't process your request. Please try again.",
+                isPlaceholder: false,
+                isError: true,
+                timestamp: new Date()
+              };
+            }
+            return message;
+          });
         });
         
         throw error;
