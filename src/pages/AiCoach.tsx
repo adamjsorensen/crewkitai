@@ -9,10 +9,9 @@ import { useConversations } from '@/hooks/useConversations';
 import ChatInterface from '@/components/ai-coach/ChatInterface';
 import ConversationDialog from '@/components/ai-coach/ConversationDialog';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, HistoryIcon, PaintBucket, Brain } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const AiCoach = () => {
   console.log("[AiCoach] Component rendered");
@@ -23,6 +22,7 @@ const AiCoach = () => {
   const isMobile = useIsMobile();
   
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [mountChatInterface, setMountChatInterface] = useState(true);
   
   useEffect(() => {
     console.log("[AiCoach] isMobile state:", isMobile);
@@ -42,6 +42,9 @@ const AiCoach = () => {
   useEffect(() => {
     console.log("[AiCoach] Selected conversation ID:", selectedConversationId);
     console.log("[AiCoach] Is new chat:", isNewChat);
+    
+    // Ensure ChatInterface is mounted whenever conversation state changes
+    setMountChatInterface(true);
   }, [selectedConversationId, isNewChat]);
 
   useEffect(() => {
@@ -74,7 +77,12 @@ const AiCoach = () => {
 
   const handleNewConversation = () => {
     console.log("[AiCoach] Creating new conversation");
-    createNewConversation();
+    // Unmount and remount ChatInterface to ensure clean state
+    setMountChatInterface(false);
+    setTimeout(() => {
+      createNewConversation();
+      setMountChatInterface(true);
+    }, 0);
   };
   
   const handleBackToWelcome = () => {
@@ -83,14 +91,9 @@ const AiCoach = () => {
     createNewConversation();
   };
 
-  const showWelcomeHeader = isNewChat && !selectedConversationId;
-
   return (
     <DashboardLayout>
       <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden max-h-[calc(100vh-4rem)]" style={{ height: 'calc(100vh - 4rem)' }}>
-        
-        {/* Mobile header and separator removed */}
-        
         <Card className={`p-0 overflow-hidden border-none shadow-md flex-1 ${isMobile ? '-mx-4 rounded-none' : ''}`}>
           <div className="flex flex-col h-full max-h-full">
             <div className="flex-1 overflow-hidden">
@@ -100,19 +103,22 @@ const AiCoach = () => {
                   <Skeleton className="h-24 w-full" />
                 </div>
               }>
-                <ChatInterface 
-                  conversationId={selectedConversationId}
-                  isNewChat={isNewChat}
-                  onConversationCreated={(id) => {
-                    console.log("[AiCoach] Conversation created with ID:", id);
-                    if (id) {
-                      selectConversation(id);
-                    }
-                  }}
-                  onNewChat={createNewConversation}
-                  onHistoryClick={handleOpenDialog}
-                  onBackToWelcome={handleBackToWelcome}
-                />
+                {mountChatInterface && (
+                  <ChatInterface 
+                    key={`chat-${isNewChat ? 'new' : selectedConversationId}`}
+                    conversationId={selectedConversationId}
+                    isNewChat={isNewChat}
+                    onConversationCreated={(id) => {
+                      console.log("[AiCoach] Conversation created with ID:", id);
+                      if (id) {
+                        selectConversation(id);
+                      }
+                    }}
+                    onNewChat={createNewConversation}
+                    onHistoryClick={handleOpenDialog}
+                    onBackToWelcome={handleBackToWelcome}
+                  />
+                )}
               </Suspense>
             </div>
           </div>
@@ -149,8 +155,6 @@ const AiCoach = () => {
         }}
         onPinConversation={(id) => {
           console.log("[AiCoach] Toggling pin for conversation:", id);
-          // Fix: Pass the correct arguments to togglePinConversation
-          // We need to determine the current state and toggle it
           const conversation = conversations.find(c => c.id === id);
           if (conversation) {
             togglePinConversation(id, !conversation.pinned);

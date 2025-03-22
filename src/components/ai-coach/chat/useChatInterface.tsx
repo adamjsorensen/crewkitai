@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useChat } from './useChat';
 
 interface UseChatInterfaceProps {
@@ -17,11 +17,20 @@ export const useChatInterface = ({
   onNewChat,
   onBackToWelcome
 }: UseChatInterfaceProps) => {
-  // Track if user has started a chat
+  // Track if user has started a chat - this is the key state for UI transitions
   const [hasStartedChat, setHasStartedChat] = useState(() => {
     return !isNewChat || !!conversationId;
   });
+  
+  // Use a ref to track state changes without triggering re-renders
+  const hasStartedChatRef = useRef(hasStartedChat);
+  
+  // Update the ref when the state changes
+  useEffect(() => {
+    hasStartedChatRef.current = hasStartedChat;
+  }, [hasStartedChat]);
 
+  // Initialize the chat hook
   const chatHook = useChat(conversationId, isNewChat, onConversationCreated);
   
   const {
@@ -56,6 +65,7 @@ export const useChatInterface = ({
   // Update hasStartedChat when props change
   useEffect(() => {
     if (conversationId && !hasStartedChat) {
+      console.log("[useChatInterface] Setting hasStartedChat to true due to conversationId change");
       setHasStartedChat(true);
     }
   }, [conversationId, hasStartedChat]);
@@ -64,8 +74,13 @@ export const useChatInterface = ({
   const handleSendMessage = useCallback(() => {
     if (!input.trim() && !imageFile) return;
     
+    console.log("[useChatInterface] handleSendMessage called, UI state:", 
+      hasStartedChatRef.current ? "already in chat UI" : "transitioning to chat UI");
+    
     // IMMEDIATELY show the chat UI without any async operations
-    setHasStartedChat(true);
+    if (!hasStartedChatRef.current) {
+      setHasStartedChat(true);
+    }
     
     // First add the user message to the UI immediately for instant feedback
     if (input.trim()) {
@@ -74,25 +89,32 @@ export const useChatInterface = ({
     
     // Then proceed with the actual message sending as a separate operation
     // This ensures the UI updates first before any API calls
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       originalHandleSendMessage();
-    });
-  }, [originalHandleSendMessage, input, imageFile, prepareUserMessageUI, setHasStartedChat]);
+    }, 0);
+  }, [originalHandleSendMessage, input, imageFile, prepareUserMessageUI]);
 
   // Handle example click - immediately transition then fill input
   const handleExampleClick = useCallback((question: string) => {
+    console.log("[useChatInterface] handleExampleClick called with:", question);
+    console.log("[useChatInterface] UI state before:", 
+      hasStartedChatRef.current ? "already in chat UI" : "transitioning to chat UI");
+    
     // First switch to chat UI, no delay or async operations
-    setHasStartedChat(true);
+    if (!hasStartedChatRef.current) {
+      setHasStartedChat(true);
+    }
     
     // Then populate the input after the UI has switched
-    requestAnimationFrame(() => {
+    setTimeout(() => {
+      console.log("[useChatInterface] Setting input and focusing after UI transition");
       originalHandleExampleClick(question);
       // Focus the input after filling it
       if (inputRef.current) {
         inputRef.current.focus();
       }
-    });
-  }, [originalHandleExampleClick, inputRef, setHasStartedChat]);
+    }, 10);
+  }, [originalHandleExampleClick, inputRef]);
 
   const handleBackToWelcome = useCallback(() => {
     // Reset input and clear any ongoing operations

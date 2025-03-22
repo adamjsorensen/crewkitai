@@ -37,6 +37,7 @@ const MessageList: React.FC<MessageListProps> = ({
   isMobile
 }) => {
   const [showExamples, setShowExamples] = useState(false);
+  const [isRendered, setIsRendered] = useState(false);
   
   // Example questions that might appear after a user sends a message
   const exampleQuestions = [
@@ -45,6 +46,11 @@ const MessageList: React.FC<MessageListProps> = ({
     "How do I estimate a kitchen cabinet painting job?",
     "What marketing strategies work best for painters?"
   ];
+  
+  // Mark component as rendered after first mount
+  useEffect(() => {
+    setIsRendered(true);
+  }, []);
   
   useEffect(() => {
     if (messages.length >= 2) {
@@ -118,7 +124,7 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         )}
         
-        {showExamples && (
+        {showExamples && isRendered && (
           <ChatExampleQuestions 
             questions={exampleQuestions} 
             onQuestionClick={handleExampleClick} 
@@ -142,4 +148,4 @@ const MessageList: React.FC<MessageListProps> = ({
   );
 };
 
-export default MessageList;
+export default React.memo(MessageList);

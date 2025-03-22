@@ -34,6 +34,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = memo(({
   
   const {
     hasStartedChat,
+    setHasStartedChat,
     handleBackToWelcome,
     handleNewChatClick,
     handleSendMessage,
@@ -69,7 +70,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = memo(({
     onBackToWelcome
   });
 
-  // Both chat UI and welcome UI are preloaded
+  // Preload both UI states on initial render to prevent delays
+  const welcomeUI = (
+    <Suspense fallback={<MessageSkeleton />}>
+      <WelcomeSection 
+        onCategorySelect={(question) => {
+          console.log("[ChatInterface] Example clicked, transitioning to chat UI immediately");
+          // First transition to chat UI
+          setHasStartedChat(true);
+          // Then handle the example after UI transition
+          setTimeout(() => handleExampleClick(question), 0);
+        }} 
+        onNewChat={onNewChat}
+        onHistoryClick={onHistoryClick}
+      />
+    </Suspense>
+  );
+
   const chatUI = (
     <div className="flex-1 overflow-hidden flex flex-col relative">
       <ChatHeader 
@@ -88,25 +105,32 @@ const ChatInterface: React.FC<ChatInterfaceProps> = memo(({
         scrollToBottom={scrollToBottom}
         messagesEndRef={messagesEndRef}
         messagesContainerRef={messagesContainerRef}
-        handleExampleClick={handleExampleClick}
+        handleExampleClick={(question) => {
+          // Handle example clicks within chat view
+          handleExampleClick(question);
+        }}
         isMobile={isMobile}
       />
     </div>
   );
 
-  const welcomeUI = (
-    <Suspense fallback={<MessageSkeleton />}>
-      <WelcomeSection 
-        onCategorySelect={handleExampleClick} 
-        onNewChat={onNewChat}
-        onHistoryClick={onHistoryClick}
-      />
-    </Suspense>
-  );
+  // Custom send message handler that guarantees UI transition before API call
+  const handleSendWithUITransition = () => {
+    if (!input.trim() && !imageFile) return;
+    
+    console.log("[ChatInterface] Message send initiated, transitioning to chat UI immediately");
+    // First, ensure we're in chat UI mode
+    setHasStartedChat(true);
+    
+    // Then handle the message sending in the next event loop tick
+    setTimeout(() => {
+      handleSendMessage();
+    }, 0);
+  };
 
   return (
     <div className="flex flex-col h-full max-h-[85vh] relative">
-      {/* Simply switch between the two UI states without loading anything */}
+      {/* Simply switch between the two UI states */}
       {hasStartedChat ? chatUI : welcomeUI}
       
       <ChatInputArea 
@@ -117,11 +141,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = memo(({
         imageFile={imageFile}
         imagePreviewUrl={imagePreviewUrl}
         removeImage={removeImage}
-        handleSendMessage={handleSendMessage}
+        handleSendMessage={handleSendWithUITransition}
         handleImageClick={handleImageClick}
         isThinkMode={isThinkMode}
         setIsThinkMode={setIsThinkMode}
-        handleKeyDown={handleKeyDown}
+        handleKeyDown={(e) => {
+          // Ensure Enter key also triggers the UI transition
+          if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isUploading) {
+            e.preventDefault();
+            handleSendWithUITransition();
+          } else {
+            handleKeyDown(e);
+          }
+        }}
         user={user}
         inputRef={inputRef}
         isMobile={isMobile}

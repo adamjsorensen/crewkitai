@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Message } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '@supabase/supabase-js';
@@ -37,6 +37,9 @@ export const useMessageHandler = ({
   uploadImage,
   removeImage
 }: UseMessageHandlerProps) => {
+  // Track if we're in the process of adding UI elements
+  const [isAddingToUI, setIsAddingToUI] = useState(false);
+  
   const { handleSendMessage: sendMessageTraditional } = useSendMessage({
     user,
     messages,
@@ -77,48 +80,53 @@ export const useMessageHandler = ({
   });
 
   const fillInputWithExample = useCallback((question: string) => {
+    console.log("[useMessageHandler] Filling input with example:", question);
     setInput(question);
   }, [setInput]);
 
-  // Modified: Split the functionality to prepare UI immediately
+  // Immediately add user message to UI without waiting for API response
   const prepareUserMessageUI = useCallback((input: string) => {
-    if (!input.trim()) return null;
+    if (!input.trim() || isAddingToUI) return null;
     
-    const userMessageId = `user-${Date.now()}`;
-    const userMessage: Message = {
-      id: userMessageId,
-      role: 'user',
-      content: input,
-      timestamp: new Date()
-    };
+    console.log("[useMessageHandler] Preparing user message UI for:", input.substring(0, 30));
+    setIsAddingToUI(true);
     
-    // Add user message to UI immediately
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    scrollToBottom();
-    
-    return userMessage;
+    try {
+      const userMessageId = `user-${Date.now()}`;
+      const userMessage: Message = {
+        id: userMessageId,
+        role: 'user',
+        content: input,
+        timestamp: new Date()
+      };
+      
+      // Add user message to UI immediately
+      setMessages(prev => [...prev, userMessage]);
+      setInput('');
+      
+      // Scroll to show the new message
+      setTimeout(scrollToBottom, 0);
+      
+      return userMessage;
+    } finally {
+      setIsAddingToUI(false);
+    }
   }, [setMessages, setInput, scrollToBottom]);
 
-  // Modified to use the UI preparation separately from the API call
+  // Send message with UI updates decoupled from API call
   const handleSendMessage = useCallback(async (input: string, shouldUseThinkMode: boolean = false) => {
     if (!input.trim()) return;
     
-    // Create and display user message immediately for UI responsiveness
-    const userMessage = prepareUserMessageUI(input);
-    if (!userMessage) return;
-    
-    // Set loading state for response - this doesn't block the UI transition
-    setIsLoading(true);
+    console.log("[useMessageHandler] handleSendMessage called with:", input.substring(0, 30));
     
     try {
-      // Proceed with API call after UI is ready
+      // Send message - prepareUserMessageUI will be called separately for better UI responsiveness
       await sendMessageTraditional(input, null, shouldUseThinkMode);
     } catch (error) {
-      console.error('Error in handleSendMessage:', error);
+      console.error('[useMessageHandler] Error in handleSendMessage:', error);
       setError('Failed to send message. Please try again.');
     }
-  }, [prepareUserMessageUI, sendMessageTraditional, setIsLoading, setError]);
+  }, [sendMessageTraditional, setError]);
 
   const handleRetry = useCallback(() => {
     const lastContent = baseHandleRetry();
