@@ -20,13 +20,27 @@ const supabaseAdmin = SUPABASE_URL && SUPABASE_ANON_KEY
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
+// Interface to better type our AI settings
+interface AISettings {
+  systemPrompt: string;
+  temperature: number;
+  maxTokens: number;
+  models: {
+    default: string;
+    think?: string;
+  };
+}
+
 // Load AI settings from database
-async function loadAISettings() {
+async function loadAISettings(): Promise<AISettings> {
   if (!supabaseAdmin) return { 
     systemPrompt: "You are an AI assistant for painting professionals. Provide helpful, specific advice about painting businesses.", 
     temperature: 0.7, 
     maxTokens: 1000,
-    model: "gpt-4o-mini" 
+    models: { 
+      default: "gpt-4o-mini",
+      think: "gpt-4o"
+    }
   };
 
   try {
@@ -37,11 +51,14 @@ async function loadAISettings() {
     
     if (error) throw error;
     
-    const settings = {
+    const settings: AISettings = {
       systemPrompt: "You are an AI assistant for painting professionals. Provide helpful, specific advice about painting businesses.",
       temperature: 0.7,
       maxTokens: 1000,
-      model: "gpt-4o-mini"
+      models: {
+        default: "gpt-4o-mini",
+        think: "gpt-4o"
+      }
     };
     
     if (data) {
@@ -54,10 +71,18 @@ async function loadAISettings() {
           settings.maxTokens = parseInt(setting.value) || 1000;
         } else if (setting.name === 'ai_coach_models') {
           try {
-            const models = typeof setting.value === 'string' 
+            // Parse the models configuration
+            let modelsConfig = typeof setting.value === 'string' 
               ? JSON.parse(setting.value) 
               : setting.value;
-            settings.model = models.default || "gpt-4o-mini";
+            
+            // Ensure we have both default and think models
+            settings.models = {
+              default: modelsConfig.default || "gpt-4o-mini",
+              think: modelsConfig.think || "gpt-4o"
+            };
+            
+            console.log('[ai-coach] Loaded models configuration:', JSON.stringify(settings.models));
           } catch (e) {
             console.error("Error parsing models JSON:", e);
           }
@@ -72,22 +97,28 @@ async function loadAISettings() {
       systemPrompt: "You are an AI assistant for painting professionals. Provide helpful, specific advice about painting businesses.", 
       temperature: 0.7, 
       maxTokens: 1000,
-      model: "gpt-4o-mini" 
+      models: { 
+        default: "gpt-4o-mini",
+        think: "gpt-4o"
+      }
     };
   }
 }
 
 // Function to call OpenAI API
-async function callOpenAI(message, settings, isThinkMode = false) {
+async function callOpenAI(message: string, settings: AISettings, isThinkMode = false) {
   if (!OPENAI_API_KEY) {
     throw new Error("OpenAI API key not configured");
   }
   
   try {
-    // Use a more focused model if in think mode
-    const model = isThinkMode && settings.model === "gpt-4o-mini" 
-      ? "gpt-4o" 
-      : settings.model;
+    // Use the appropriate model based on think mode
+    const model = isThinkMode 
+      ? settings.models.think || settings.models.default // Use think model if available, otherwise fall back to default
+      : settings.models.default;
+    
+    // Log which model we're using
+    console.log(`[ai-coach] Using model: ${model}${isThinkMode ? ' (Think Mode)' : ''}`);
     
     const systemPrompt = isThinkMode 
       ? `${settings.systemPrompt}\n\nTake your time to think deeply about this question. Consider multiple angles and provide a comprehensive response.` 
@@ -200,7 +231,7 @@ serve(async (req) => {
     if (req.method === 'GET') {
       console.log('[ai-coach] Handling GET request (health check)');
       return new Response(
-        JSON.stringify({ status: 'ok', version: '21-enhanced' }),
+        JSON.stringify({ status: 'ok', version: '22-models-fix' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200
@@ -223,14 +254,23 @@ serve(async (req) => {
       try {
         // Load AI settings
         const settings = await loadAISettings();
-        console.log('[ai-coach] Loaded AI settings:', JSON.stringify(settings).substring(0, 100) + '...');
+        console.log('[ai-coach] Loaded AI settings:', JSON.stringify({
+          systemPromptLength: settings.systemPrompt.length,
+          temperature: settings.temperature,
+          maxTokens: settings.maxTokens,
+          models: settings.models
+        }));
         
         // Get AI response from OpenAI
         let aiResponse;
         try {
           console.log('[ai-coach] Calling OpenAI API');
           const openAIResult = await callOpenAI(message, settings, isThinkMode);
-          console.log('[ai-coach] OpenAI API response received, tokens used:', openAIResult.usage?.total_tokens || 'unknown');
+          console.log('[ai-coach] OpenAI API response received:', {
+            model: openAIResult.model,
+            tokens: openAIResult.usage?.total_tokens || 'unknown',
+            responseLength: openAIResult.response.length
+          });
           
           aiResponse = openAIResult.response;
         } catch (openAIError) {
@@ -250,7 +290,7 @@ serve(async (req) => {
           timestamp: new Date().toISOString()
         };
         
-        console.log('[ai-coach] Sending response');
+        console.log('[ai-coach] Sending response of length:', aiResponse.length);
         
         return new Response(
           JSON.stringify(responseData),
