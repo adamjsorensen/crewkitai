@@ -1,6 +1,5 @@
 
-import { useCallback, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { useCallback, useEffect, useRef } from 'react';
 import { useChatCore } from './hooks/useChatCore';
 import { useMessageHandler } from './hooks/useMessageHandler';
 import { useImageHandling } from './hooks/useImageHandling';
@@ -31,6 +30,24 @@ export const useChat = (
     user
   } = useChatCore(conversationId, isNewChat, onConversationCreated);
   
+  // Track previous message count to detect changes
+  const prevMessageCountRef = useRef(messages.length);
+  
+  // Debug message state changes
+  useEffect(() => {
+    if (prevMessageCountRef.current !== messages.length) {
+      console.log('[useChat] Messages count changed from', prevMessageCountRef.current, 'to', messages.length);
+      prevMessageCountRef.current = messages.length;
+    }
+    
+    console.log('[useChat] Messages updated:', {
+      count: messages.length,
+      lastMessageId: messages.length > 0 ? messages[messages.length - 1].id : 'none',
+      hasPlaceholder: messages.some(m => m.isPlaceholder),
+      messageIds: messages.map(m => m.id)
+    });
+  }, [messages]);
+  
   // Log initial state
   useEffect(() => {
     console.log('[useChat] Initialized with:', {
@@ -41,15 +58,6 @@ export const useChat = (
       isThinkMode
     });
   }, [conversationId, isNewChat, messages.length, isLoading, isThinkMode]);
-  
-  // Monitor messages state changes
-  useEffect(() => {
-    console.log('[useChat] Messages updated:', {
-      count: messages.length,
-      lastMessageId: messages.length > 0 ? messages[messages.length - 1].id : 'none',
-      hasPlaceholder: messages.some(m => m.isPlaceholder)
-    });
-  }, [messages]);
   
   const {
     showScrollButton,
@@ -97,22 +105,21 @@ export const useChat = (
     removeImage
   });
   
-  // Scroll to bottom when messages change, but avoid scrolling on initial render
+  // Force scroll to bottom when messages change or loading state changes
   useEffect(() => {
-    // Only scroll if we have actual messages (beyond the welcome message)
-    const hasRealMessages = messages.some(m => m.id !== 'welcome');
-    if (hasRealMessages) {
+    // Only scroll if we have actual messages
+    if (messages.length > 0) {
       console.log('[useChat] Scrolling to bottom due to messages change');
       scrollToBottom();
     }
-  }, [messages, scrollToBottom]);
+  }, [messages, isLoading, scrollToBottom]);
   
   const handleImageClick = useCallback(() => {
     console.log('[useChat] Image click handler triggered');
     handleImageClickBase(fileInputRef);
   }, [handleImageClickBase, fileInputRef]);
   
-  // Modified: Handle message sending with image processing if needed
+  // Enhanced message sending with debugging
   const handleSendMessage = useCallback(async () => {
     if (!input.trim() && !imageFile) {
       console.log('[useChat] No input or image to send');
@@ -122,10 +129,17 @@ export const useChat = (
     console.log('[useChat] handleSendMessage triggered:', {
       hasInput: !!input.trim(),
       hasImage: !!imageFile,
-      thinkMode: isThinkMode
+      thinkMode: isThinkMode,
+      currentMessagesCount: messages.length
     });
     
     try {
+      // First add user message to UI for immediate feedback
+      if (input.trim()) {
+        const userMessage = prepareUserMessageUI(input);
+        console.log('[useChat] User message added to UI:', userMessage?.id);
+      }
+      
       // Set loading state after UI has been updated
       setIsLoading(true);
       
@@ -153,9 +167,18 @@ export const useChat = (
       await handleSendMessageBase(input, isThinkMode);
       const endTime = performance.now();
       console.log(`[useChat] Message sent and processed in ${(endTime - startTime).toFixed(0)}ms`);
+      
+      // Clear input after successful send
+      setInput('');
     } catch (error) {
       console.error('[useChat] Error sending message:', error);
       setError('Failed to send message. Please try again.');
+    } finally {
+      // Ensure we always scroll to bottom
+      setTimeout(() => {
+        scrollToBottom();
+        console.log('[useChat] Scrolled to bottom after send operation');
+      }, 100);
     }
   }, [
     handleSendMessageBase,
@@ -164,14 +187,16 @@ export const useChat = (
     imageFile, 
     uploadImage, 
     removeImage, 
-    user,
     setInput,
     setIsLoading,
     setError,
-    isThinkMode
+    isThinkMode,
+    messages.length,
+    prepareUserMessageUI,
+    scrollToBottom
   ]);
   
-  // Handle example click - only populates the input
+  // Handle example click
   const handleExampleClick = useCallback((question: string) => {
     console.log('[useChat] Example click handler with:', question);
     fillInputWithExample(question);

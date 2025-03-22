@@ -82,8 +82,18 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
     content, 
     timestamp, 
     imageUrl, 
-    isSaved = false
+    isSaved = false,
+    isError = false
   } = message;
+  
+  // Add debug log when the ChatMessage component renders
+  console.log(`[ChatMessage] Rendering message:`, {
+    id,
+    role,
+    contentLength: content.length,
+    isError,
+    timestamp: timestamp.toString()
+  });
   
   const isAssistant = role === 'assistant';
   
@@ -111,7 +121,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
         className={cn(
           "rounded-2xl p-4 max-w-[85%] break-words shadow-sm",
           isAssistant 
-            ? "bg-muted/70 text-foreground" 
+            ? isError 
+              ? "bg-red-50 text-red-800" 
+              : "bg-muted/70 text-foreground" 
             : "bg-primary/90 text-primary-foreground ml-auto"
         )}
       >

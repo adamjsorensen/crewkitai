@@ -87,7 +87,7 @@ export const useSendMessageMutation = () => {
           responseTime: `${apiTime.toFixed(0)}ms`,
           responseLength: data?.response?.length || 0,
           suggestedFollowUps: data?.suggestedFollowUps?.length || 0,
-          data: data // Log the full response structure
+          data
         });
 
         // Check response structure validity
@@ -96,56 +96,54 @@ export const useSendMessageMutation = () => {
           throw new Error("Invalid response structure received from server");
         }
 
-        console.log("[useSendMessageMutation] Replacing placeholder with actual response for:", placeholderId);
+        // FIXED: Create a new message and add it as a separate state update rather than replacing
+        const assistantMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant' as const,
+          content: data.response,
+          timestamp: new Date(),
+          suggestedFollowUps: data.suggestedFollowUps || []
+        };
         
-        // Replace placeholder with actual response
-        setMessages(prev => {
-          const updatedMessages = prev.map(msg => {
-            if (msg.id === placeholderId) {
-              return {
-                id: `assistant-${Date.now()}`,
-                role: 'assistant' as const, // Explicit type assertion
-                content: data.response,
-                timestamp: new Date(),
-                suggestedFollowUps: data.suggestedFollowUps || []
-              };
-            }
-            return msg;
-          });
-          
-          console.log("[useSendMessageMutation] Messages after update:", {
-            previousCount: prev.length,
-            newCount: updatedMessages.length,
-            placeholderReplaced: prev.length === updatedMessages.length,
-            lastMessage: updatedMessages[updatedMessages.length - 1]
-          });
-          
-          return updatedMessages;
-        });
+        console.log("[useSendMessageMutation] Created new assistant message:", assistantMessage.id);
+        
+        // First remove the placeholder
+        setMessages(prev => prev.filter(msg => msg.id !== placeholderId));
+        
+        // Then add the new message in a separate state update
+        setTimeout(() => {
+          console.log("[useSendMessageMutation] Adding actual assistant message:", assistantMessage.id);
+          setMessages(prev => [...prev, assistantMessage]);
+        }, 50);
         
         setIsThinkMode(false);
         
         return { 
           response: data.response, 
-          suggestedFollowUps: data.suggestedFollowUps || []
+          suggestedFollowUps: data.suggestedFollowUps || [],
+          assistantMessageId: assistantMessage.id
         };
       } catch (error) {
         console.error('[useSendMessageMutation] Error:', error);
         
-        // Show error in UI by replacing placeholder
-        console.log("[useSendMessageMutation] Replacing placeholder with error message");
-        setMessages(prev => prev.map(msg => {
-          if (msg.id === placeholderId) {
-            return {
-              id: `error-${Date.now()}`,
-              role: 'assistant' as const, // Explicit type assertion
-              content: "I'm sorry, I couldn't process your request. Please try again.",
-              timestamp: new Date(),
-              isError: true
-            };
-          }
-          return msg;
-        }));
+        // Show error in UI by replacing placeholder with error message
+        const errorMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: 'assistant' as const,
+          content: "I'm sorry, I couldn't process your request. Please try again.",
+          timestamp: new Date(),
+          isError: true
+        };
+        
+        console.log("[useSendMessageMutation] Replacing placeholder with error message:", errorMessage.id);
+        
+        // First remove the placeholder
+        setMessages(prev => prev.filter(msg => msg.id !== placeholderId));
+        
+        // Then add the error message in a separate state update
+        setTimeout(() => {
+          setMessages(prev => [...prev, errorMessage]);
+        }, 50);
         
         throw error;
       }
