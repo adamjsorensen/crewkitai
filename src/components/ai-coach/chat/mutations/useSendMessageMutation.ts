@@ -68,6 +68,13 @@ export const useSendMessageMutation = () => {
 
       if (error) throw new Error(error.message);
 
+      console.log("[useSendMessageMutation] Response from edge function:", {
+        responseLength: data.response?.length,
+        hasSuggestedFollowUps: !!data.suggestedFollowUps,
+        followUpsCount: data.suggestedFollowUps?.length || 0,
+        followUps: data.suggestedFollowUps
+      });
+
       // Replace placeholder with actual response, now including suggested follow-ups
       setMessages(prev => prev.map(msg => {
         if (msg.id === placeholderId) {

@@ -52,6 +52,27 @@ const MessageList: React.FC<MessageListProps> = ({
     .filter(m => m.role === 'assistant' && !m.isPlaceholder && m.suggestedFollowUps && m.suggestedFollowUps.length > 0)
     .pop();
   
+  // Add debug logging
+  useEffect(() => {
+    if (messages.length > 0) {
+      console.log('[MessageList] Messages updated, count:', messages.length);
+      console.log('[MessageList] Last message:', messages[messages.length - 1]);
+      
+      const suggestionsCount = messages.filter(m => 
+        m.role === 'assistant' && 
+        !m.isPlaceholder && 
+        m.suggestedFollowUps && 
+        m.suggestedFollowUps.length > 0
+      ).length;
+      
+      console.log(`[MessageList] Found ${suggestionsCount} messages with suggested follow-ups`);
+      if (lastAiMessageWithSuggestions) {
+        console.log('[MessageList] Last message with suggestions:', lastAiMessageWithSuggestions);
+        console.log('[MessageList] Suggestions:', lastAiMessageWithSuggestions.suggestedFollowUps);
+      }
+    }
+  }, [messages, lastAiMessageWithSuggestions]);
+  
   // Mark component as rendered after first mount
   useEffect(() => {
     setIsRendered(true);
