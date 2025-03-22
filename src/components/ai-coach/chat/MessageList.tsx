@@ -64,51 +64,30 @@ const MessageList: React.FC<MessageListProps> = ({
     if (messages.length > 0) {
       console.log('[MessageList] Messages updated, count:', messages.length);
       
-      // Log the structure of all messages
-      messages.forEach((msg, idx) => {
-        console.log(`[MessageList] Message ${idx}:`, {
-          id: msg.id,
-          role: msg.role,
-          isPlaceholder: !!msg.isPlaceholder,
-          isError: !!msg.isError,
-          contentLength: msg.content.length,
-          contentStart: msg.content.substring(0, 30),
-          hasSuggestions: !!(msg.suggestedFollowUps && msg.suggestedFollowUps.length > 0),
-          timestamp: msg.timestamp
-        });
-      });
+      // Log message types and counts
+      const userCount = messages.filter(m => m.role === 'user').length;
+      const assistantCount = messages.filter(m => m.role === 'assistant' && !m.isPlaceholder).length;
+      const placeholderCount = messages.filter(m => m.isPlaceholder).length;
       
-      // Log the last message in more detail
+      console.log(`[MessageList] Message breakdown: ${userCount} user, ${assistantCount} assistant, ${placeholderCount} placeholders`);
+      
+      // Log details of the last message for debugging
       if (messages.length > 0) {
         const lastMsg = messages[messages.length - 1];
-        console.log('[MessageList] Last message:', lastMsg);
-      }
-      
-      const placeholderCount = messages.filter(m => m.isPlaceholder).length;
-      console.log(`[MessageList] Found ${placeholderCount} placeholder messages`);
-      
-      const assistantCount = messages.filter(m => m.role === 'assistant' && !m.isPlaceholder).length;
-      console.log(`[MessageList] Found ${assistantCount} non-placeholder assistant messages`);
-      
-      const suggestionsCount = messages.filter(m => 
-        m.role === 'assistant' && 
-        !m.isPlaceholder && 
-        m.suggestedFollowUps && 
-        m.suggestedFollowUps.length > 0
-      ).length;
-      
-      console.log(`[MessageList] Found ${suggestionsCount} messages with suggested follow-ups`);
-      if (lastAiMessageWithSuggestions) {
-        console.log('[MessageList] Last message with suggestions:', lastAiMessageWithSuggestions);
-        console.log('[MessageList] Suggestions:', lastAiMessageWithSuggestions.suggestedFollowUps);
+        console.log('[MessageList] Last message:', {
+          id: lastMsg.id, 
+          role: lastMsg.role,
+          isPlaceholder: !!lastMsg.isPlaceholder,
+          contentLength: lastMsg.content.length
+        });
       }
     }
-  }, [messages, lastAiMessageWithSuggestions]);
+  }, [messages]);
   
   // Mark component as rendered after first mount
   useEffect(() => {
     setIsRendered(true);
-    console.log('[MessageList] Component rendered');
+    console.log('[MessageList] Component marked as rendered');
   }, []);
   
   useEffect(() => {
@@ -119,11 +98,9 @@ const MessageList: React.FC<MessageListProps> = ({
       
       if (userMessages.length > 0 && assistantMessages.length > 0) {
         setShowExamples(true);
-        console.log('[MessageList] Setting showExamples to true');
       }
     } else {
       setShowExamples(false);
-      console.log('[MessageList] Setting showExamples to false');
     }
   }, [messages]);
 
@@ -139,18 +116,11 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         )}
         
-        {messages.map((message, index) => {
-          // Log each render of a message with its properties for debugging
-          console.log(`[MessageList] Rendering message ${index}:`, {
-            id: message.id,
-            role: message.role,
-            isPlaceholder: !!message.isPlaceholder,
-            contentLength: message.content.length
-          });
-          
-          // Check if this is a placeholder message that should show typing indicator
+        {/* Render actual messages */}
+        {messages.map((message) => {
+          // Special rendering for placeholder messages
           if (message.isPlaceholder && message.role === 'assistant') {
-            console.log('[MessageList] Rendering placeholder for:', message.id);
+            console.log('[MessageList] Rendering placeholder for message:', message.id);
             return (
               <div key={message.id} className="flex items-start space-x-3">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
@@ -164,6 +134,7 @@ const MessageList: React.FC<MessageListProps> = ({
           }
           
           // Regular message rendering
+          console.log('[MessageList] Rendering regular message:', message.id);
           return (
             <ChatMessage
               key={message.id}

@@ -1,3 +1,4 @@
+
 import { useCallback, useState } from 'react';
 import { Message } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -88,7 +89,7 @@ export const useMessageHandler = ({
   const prepareUserMessageUI = useCallback((input: string) => {
     if (!input.trim() || isAddingToUI) return null;
     
-    console.log("[useMessageHandler] Preparing user message UI for:", input.substring(0, 30));
+    console.log("[useMessageHandler] Preparing user message UI for:", input);
     setIsAddingToUI(true);
     
     try {
@@ -105,7 +106,7 @@ export const useMessageHandler = ({
       setInput('');
       
       // Scroll to show the new message
-      setTimeout(scrollToBottom, 0);
+      setTimeout(scrollToBottom, 10);
       
       return userMessage;
     } finally {
@@ -117,16 +118,28 @@ export const useMessageHandler = ({
   const handleSendMessage = useCallback(async (input: string, shouldUseThinkMode: boolean = false) => {
     if (!input.trim()) return;
     
-    console.log("[useMessageHandler] handleSendMessage called with:", input.substring(0, 30));
+    console.log("[useMessageHandler] handleSendMessage called with:", input);
     
     try {
-      // Send message - prepareUserMessageUI will be called separately for better UI responsiveness
+      // First add the user message to UI
+      const userMessage = prepareUserMessageUI(input);
+      
+      if (!userMessage) {
+        console.log("[useMessageHandler] Failed to create user message UI");
+        return;
+      }
+      
+      console.log("[useMessageHandler] User message added, now sending to API");
+      
+      // Then send the message to the API
       await sendMessageTraditional(input, null, shouldUseThinkMode);
+      
+      console.log("[useMessageHandler] API call completed");
     } catch (error) {
       console.error('[useMessageHandler] Error in handleSendMessage:', error);
       setError('Failed to send message. Please try again.');
     }
-  }, [sendMessageTraditional, setError]);
+  }, [sendMessageTraditional, setError, prepareUserMessageUI]);
 
   const handleRetry = useCallback(() => {
     const lastContent = baseHandleRetry();

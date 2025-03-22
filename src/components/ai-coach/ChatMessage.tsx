@@ -76,6 +76,12 @@ const MessageAvatar = memo(({ isAssistant }: { isAssistant: boolean }) => (
 MessageAvatar.displayName = 'MessageAvatar';
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobile = false }) => {
+  // Safety check - log and handle possibly invalid messages
+  if (!message || !message.content) {
+    console.error("[ChatMessage] Received invalid message:", message);
+    return null;
+  }
+  
   const { 
     id, 
     role, 
@@ -91,8 +97,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
     id,
     role,
     contentLength: content.length,
+    hasImage: !!imageUrl,
     isError,
-    timestamp: timestamp.toString()
+    isSaved
   });
   
   const isAssistant = role === 'assistant';
@@ -114,6 +121,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
         "flex gap-3 max-w-full animate-fade-in my-6 first:mt-2",
         isAssistant ? "items-start" : "items-start justify-end"
       )}
+      data-message-id={id}
+      data-message-role={role}
     >
       {isAssistant && <MessageAvatar isAssistant={true} />}
       
@@ -127,7 +136,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
             : "bg-primary/90 text-primary-foreground ml-auto"
         )}
       >
-        <MessageImagePreview imageUrl={imageUrl ?? ''} />
+        {imageUrl && <MessageImagePreview imageUrl={imageUrl} />}
         
         <div className="text-sm">
           <MessageContent 

@@ -96,7 +96,7 @@ export const useSendMessageMutation = () => {
           throw new Error("Invalid response structure received from server");
         }
 
-        // FIXED: Create a new message and add it as a separate state update rather than replacing
+        // SIMPLIFIED: Create the new assistant message
         const assistantMessage: Message = {
           id: `assistant-${Date.now()}`,
           role: 'assistant' as const,
@@ -107,14 +107,19 @@ export const useSendMessageMutation = () => {
         
         console.log("[useSendMessageMutation] Created new assistant message:", assistantMessage.id);
         
-        // First remove the placeholder
-        setMessages(prev => prev.filter(msg => msg.id !== placeholderId));
+        // CRITICAL FIX: Use a single state update to replace the placeholder with the actual message
+        // This avoids the race condition where the placeholder could be removed without adding the response
+        setMessages(prev => {
+          // Create a new array without the placeholder
+          const filteredMessages = prev.filter(msg => msg.id !== placeholderId);
+          // Then add the new assistant message
+          return [...filteredMessages, assistantMessage];
+        });
         
-        // Then add the new message in a separate state update
-        setTimeout(() => {
-          console.log("[useSendMessageMutation] Adding actual assistant message:", assistantMessage.id);
-          setMessages(prev => [...prev, assistantMessage]);
-        }, 50);
+        console.log("[useSendMessageMutation] Updated messages array with new assistant message", {
+          assistantMessageId: assistantMessage.id,
+          totalMessages: messages.length + 1
+        });
         
         setIsThinkMode(false);
         
@@ -126,7 +131,7 @@ export const useSendMessageMutation = () => {
       } catch (error) {
         console.error('[useSendMessageMutation] Error:', error);
         
-        // Show error in UI by replacing placeholder with error message
+        // SIMPLIFIED: Use single state update for error case too
         const errorMessage: Message = {
           id: `error-${Date.now()}`,
           role: 'assistant' as const,
@@ -137,13 +142,11 @@ export const useSendMessageMutation = () => {
         
         console.log("[useSendMessageMutation] Replacing placeholder with error message:", errorMessage.id);
         
-        // First remove the placeholder
-        setMessages(prev => prev.filter(msg => msg.id !== placeholderId));
-        
-        // Then add the error message in a separate state update
-        setTimeout(() => {
-          setMessages(prev => [...prev, errorMessage]);
-        }, 50);
+        // Update messages in a single operation
+        setMessages(prev => {
+          const filteredMessages = prev.filter(msg => msg.id !== placeholderId);
+          return [...filteredMessages, errorMessage];
+        });
         
         throw error;
       }
