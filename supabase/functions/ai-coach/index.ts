@@ -114,8 +114,11 @@ serve(async (req) => {
       );
     }
 
-    // Get system prompt from settings
-    const systemPrompt = settings.ai_coach_system_prompt || "You are an AI Coach specializing in the painting industry...";
+    // Get system prompt from settings and enhance it to include follow-up suggestion requirement
+    let systemPrompt = settings.ai_coach_system_prompt || "You are an AI Coach specializing in the painting industry...";
+    
+    // Add the follow-up suggestion requirement to the system prompt
+    systemPrompt += "\n\nAt the end of your response, include a section with exactly 4 suggested follow-up questions that the user might want to ask next. Format this section with the exact header '### SUGGESTED_FOLLOW_UPS' followed by the numbered questions, each on a new line. Make sure these questions are relevant to the context of the conversation and would help the user continue exploring the topic in depth. For example:\n\n### SUGGESTED_FOLLOW_UPS\n1. How much should I charge for a 1,500 sq ft interior painting job?\n2. What's the best way to handle difficult clients who keep changing project requirements?\n3. Which marketing strategies provide the best ROI for painting businesses?\n4. How can I scale my one-person painting business to a crew?";
     
     // Prepare messages for OpenAI API
     const messages = [
@@ -350,14 +353,52 @@ serve(async (req) => {
     
     const aiResponse = data.choices[0].message.content;
     
+    // Extract follow-up suggestions from the AI response
+    const suggestedFollowUps: string[] = [];
+    const followUpRegex = /### SUGGESTED_FOLLOW_UPS\s+([\s\S]+?)(?=\n\n|$)/;
+    const followUpMatch = aiResponse.match(followUpRegex);
+    
+    let cleanedResponse = aiResponse;
+    
+    if (followUpMatch && followUpMatch[1]) {
+      console.log('Found suggested follow-ups section');
+      
+      // Extract the suggestions
+      const followUpSection = followUpMatch[1];
+      const questions = followUpSection.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.match(/^\d+\.\s+.+/))
+        .map(line => line.replace(/^\d+\.\s+/, '').trim());
+      
+      // Take only 4 suggestions
+      questions.slice(0, 4).forEach(question => {
+        if (question) suggestedFollowUps.push(question);
+      });
+      
+      // Remove the follow-up section from the response to display to the user
+      cleanedResponse = aiResponse.replace(followUpRegex, '').trim();
+      
+      console.log(`Extracted ${suggestedFollowUps.length} follow-up suggestions`);
+    } else {
+      console.log('No suggested follow-ups section found, will use default suggestions');
+      // Default suggestions if none were provided
+      suggestedFollowUps.push(
+        "How much should I charge for a typical painting job?",
+        "What are the best marketing strategies for painting businesses?",
+        "How can I improve my crew's efficiency?",
+        "What equipment is worth investing in for a painting business?"
+      );
+    }
+    
     // Calculate response quality metrics
-    const responseLength = aiResponse ? aiResponse.length : 0;
-    const hasImageReference = aiResponse && (aiResponse.toLowerCase().includes('image') || aiResponse.toLowerCase().includes('picture'));
+    const responseLength = cleanedResponse ? cleanedResponse.length : 0;
+    const hasImageReference = cleanedResponse && (cleanedResponse.toLowerCase().includes('image') || cleanedResponse.toLowerCase().includes('picture'));
     
     console.log('Response quality metrics:', {
       length: responseLength,
       hasImageReference,
-      imageWasProvided: !!imageUrl
+      imageWasProvided: !!imageUrl,
+      followUpCount: suggestedFollowUps.length
     });
 
     // Store conversation in database if needed
@@ -415,7 +456,8 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        response: aiResponse,
+        response: cleanedResponse,
+        suggestedFollowUps,
         model: data.model,
         usage: data.usage,
         imageProcessed: !!imageUrl,

@@ -68,14 +68,15 @@ export const useSendMessageMutation = () => {
 
       if (error) throw new Error(error.message);
 
-      // Replace placeholder with actual response
+      // Replace placeholder with actual response, now including suggested follow-ups
       setMessages(prev => prev.map(msg => {
         if (msg.id === placeholderId) {
           return {
             id: `assistant-${Date.now()}`,
             role: 'assistant',
             content: data.response,
-            timestamp: new Date()
+            timestamp: new Date(),
+            suggestedFollowUps: data.suggestedFollowUps || []
           };
         }
         return msg;
@@ -107,7 +108,11 @@ export const useSendMessageMutation = () => {
           onConversationCreated(rootData.id);
         }
 
-        return { response: data.response, newConversationId: rootData?.id };
+        return { 
+          response: data.response, 
+          newConversationId: rootData?.id,
+          suggestedFollowUps: data.suggestedFollowUps || []
+        };
       } else {
         await supabase
           .from('ai_coach_conversations')
@@ -121,7 +126,10 @@ export const useSendMessageMutation = () => {
         
         queryClient.invalidateQueries({ queryKey: ['conversationHistory', conversationId] });
         
-        return { response: data.response };
+        return { 
+          response: data.response,
+          suggestedFollowUps: data.suggestedFollowUps || []
+        };
       }
     },
     onError: (error) => {

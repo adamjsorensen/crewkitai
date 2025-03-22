@@ -39,13 +39,18 @@ const MessageList: React.FC<MessageListProps> = ({
   const [showExamples, setShowExamples] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
   
-  // Example questions that might appear after a user sends a message
-  const exampleQuestions = [
+  // Example questions that might appear if no suggested follow-ups are available
+  const defaultExampleQuestions = [
     "How can I charge more for my painting services?",
     "What's the best way to handle difficult clients?",
     "How do I estimate a kitchen cabinet painting job?",
     "What marketing strategies work best for painters?"
   ];
+  
+  // Track the last AI message with suggestions
+  const lastAiMessageWithSuggestions = messages
+    .filter(m => m.role === 'assistant' && !m.isPlaceholder && m.suggestedFollowUps && m.suggestedFollowUps.length > 0)
+    .pop();
   
   // Mark component as rendered after first mount
   useEffect(() => {
@@ -124,11 +129,24 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         )}
         
-        {showExamples && isRendered && (
-          <ChatExampleQuestions 
-            questions={exampleQuestions} 
-            onQuestionClick={handleExampleClick} 
-          />
+        {/* Show suggested follow-ups if available, otherwise show standard examples */}
+        {showExamples && isRendered && !isLoading && (
+          <>
+            {lastAiMessageWithSuggestions && lastAiMessageWithSuggestions.suggestedFollowUps && 
+              lastAiMessageWithSuggestions.suggestedFollowUps.length > 0 ? (
+              <ChatExampleQuestions 
+                questions={lastAiMessageWithSuggestions.suggestedFollowUps} 
+                onQuestionClick={handleExampleClick}
+                isSuggested={true}
+              />
+            ) : (
+              <ChatExampleQuestions 
+                questions={defaultExampleQuestions} 
+                onQuestionClick={handleExampleClick}
+                isSuggested={false}
+              />
+            )}
+          </>
         )}
         
         <div ref={messagesEndRef} />
