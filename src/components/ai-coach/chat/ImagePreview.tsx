@@ -17,12 +17,20 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ imagePreviewUrl, removeImag
         <img 
           src={imagePreviewUrl} 
           alt="Upload preview" 
-          className="h-20 w-auto rounded-md object-cover border border-border/40"
+          className="h-24 w-auto max-w-[200px] rounded-md object-cover border border-border/40"
+          onError={(e) => {
+            // Add fallback for image loading errors
+            const target = e.target as HTMLImageElement;
+            target.onerror = null;
+            target.src = '/placeholder.svg';
+            target.classList.add('bg-muted');
+            console.error('Image preview failed to load:', imagePreviewUrl);
+          }}
         />
         <Button 
           variant="destructive" 
           size="icon" 
-          className="absolute -top-2 -right-2 h-5 w-5 rounded-full" 
+          className="absolute -top-2 -right-2 h-5 w-5 rounded-full shadow-md" 
           onClick={removeImage}
         >
           <X className="h-3 w-3" />
