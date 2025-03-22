@@ -1,4 +1,3 @@
-
 import { useCallback, useState } from 'react';
 import { Message } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -40,6 +39,7 @@ export const useMessageHandler = ({
   // Track if we're in the process of adding UI elements
   const [isAddingToUI, setIsAddingToUI] = useState(false);
   
+  // Use our refactored send message hook
   const { handleSendMessage: sendMessageTraditional } = useSendMessage({
     user,
     messages,
