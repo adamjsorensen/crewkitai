@@ -67,7 +67,7 @@ export const useSendMessageMutation = () => {
       // Add the placeholder in a synchronous update
       setMessages(prev => [...prev, placeholderMessage]);
       
-      // Verify the placeholder was added
+      // Debug: Verify the placeholder was added
       console.log("[useSendMessageMutation] Placeholder added, now calling edge function");
 
       try {
@@ -100,22 +100,51 @@ export const useSendMessageMutation = () => {
           responseTime: `${apiTime.toFixed(0)}ms`,
           responseLength: data?.response?.length || 0,
           suggestedFollowUps: data?.suggestedFollowUps?.length || 0,
-          data
+          data: JSON.stringify(data).substring(0, 200) + "..."
         });
 
         // Check response structure validity
         if (!data || typeof data.response !== 'string') {
           console.error("[useSendMessageMutation] Invalid response structure:", data);
-          throw new Error("Invalid response structure received from server");
+          throw new Error("Invalid response format received from server");
         }
 
+        // CRITICAL SECTION: Update the placeholder message to real message
+        console.log("[useSendMessageMutation] Before transformation, placeholder ID:", currentPlaceholderId);
+        
+        // Debug: Check current messages before update
+        console.log("[useSendMessageMutation] Current messages before update:", 
+          messages.map(m => ({ 
+            id: m.id, 
+            role: m.role, 
+            isPlaceholder: m.isPlaceholder,
+            contentLength: m.content.length 
+          }))
+        );
+        
         // Instead of removing placeholder and adding new message,
         // we'll update the placeholder in-place
         setMessages(prev => {
-          return prev.map(message => {
+          const updatedMessages = prev.map(message => {
             // If this is our placeholder message, transform it into the real message
             if (message.id === currentPlaceholderId) {
-              console.log(`[useSendMessageMutation] Transforming placeholder ${currentPlaceholderId} into real message`);
+              console.log(`[useSendMessageMutation] Transforming placeholder ${currentPlaceholderId} into real message:`, {
+                before: {
+                  isPlaceholder: message.isPlaceholder,
+                  contentLength: message.content.length,
+                  hasProps: {
+                    suggestedFollowUps: !!message.suggestedFollowUps,
+                  }
+                },
+                after: {
+                  isPlaceholder: false,
+                  contentLength: data.response.length,
+                  hasProps: {
+                    suggestedFollowUps: !!(data.suggestedFollowUps || []).length,
+                  }
+                }
+              });
+              
               return {
                 ...message,
                 content: data.response,
@@ -127,6 +156,19 @@ export const useSendMessageMutation = () => {
             // Return all other messages unchanged
             return message;
           });
+          
+          // Debug: Verify message transformation
+          console.log("[useSendMessageMutation] After transformation, messages:", 
+            updatedMessages.map(m => ({ 
+              id: m.id, 
+              role: m.role, 
+              isPlaceholder: m.isPlaceholder,
+              contentLength: m.content.length,
+              hasSuggestions: !!(m.suggestedFollowUps && m.suggestedFollowUps.length > 0)
+            }))
+          );
+          
+          return updatedMessages;
         });
         
         console.log("[useSendMessageMutation] Transformed placeholder into real message", {

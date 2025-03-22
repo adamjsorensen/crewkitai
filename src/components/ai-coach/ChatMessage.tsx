@@ -97,6 +97,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
     id,
     role,
     contentLength: content.length,
+    contentStart: content.substring(0, 30) + "...",
     hasImage: !!imageUrl,
     isError,
     isSaved

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ArrowDown, PaintBucket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -75,7 +76,9 @@ const MessageList: React.FC<MessageListProps> = ({
         id: m.id,
         role: m.role,
         isPlaceholder: !!m.isPlaceholder,
-        contentStart: m.content.substring(0, 30)
+        contentStart: m.content.substring(0, 30) + "...",
+        contentLength: m.content.length,
+        hasSuggestions: !!(m.suggestedFollowUps && m.suggestedFollowUps.length > 0)
       })));
       
       // Log details of the last message for debugging
@@ -85,8 +88,10 @@ const MessageList: React.FC<MessageListProps> = ({
           id: lastMsg.id, 
           role: lastMsg.role,
           isPlaceholder: !!lastMsg.isPlaceholder,
+          isError: !!lastMsg.isError,
           contentLength: lastMsg.content.length,
-          content: lastMsg.content.substring(0, 50) + '...'
+          content: lastMsg.content.substring(0, 50) + '...',
+          hasSuggestions: !!(lastMsg.suggestedFollowUps && lastMsg.suggestedFollowUps.length > 0)
         });
       }
     }
@@ -148,7 +153,13 @@ const MessageList: React.FC<MessageListProps> = ({
           }
           
           // Regular message rendering
-          console.log('[MessageList] Rendering regular message:', message.id);
+          console.log('[MessageList] Rendering regular message:', message.id, {
+            role: message.role,
+            isPlaceholder: !!message.isPlaceholder,
+            contentLength: message.content.length,
+            hasSuggestions: !!(message.suggestedFollowUps && message.suggestedFollowUps.length > 0)
+          });
+          
           return (
             <ChatMessage
               key={message.id}
