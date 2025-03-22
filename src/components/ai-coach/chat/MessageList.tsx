@@ -37,8 +37,6 @@ const MessageList: React.FC<MessageListProps> = ({
   isMobile
 }) => {
   const [showExamples, setShowExamples] = useState(false);
-  const [isRendered, setIsRendered] = useState(false);
-  const [renderCount, setRenderCount] = useState(0);
   
   // Example questions that might appear if no suggested follow-ups are available
   const defaultExampleQuestions = [
@@ -53,59 +51,19 @@ const MessageList: React.FC<MessageListProps> = ({
     .filter(m => m.role === 'assistant' && !m.isPlaceholder && m.suggestedFollowUps && m.suggestedFollowUps.length > 0)
     .pop();
   
-  // Track render counts to help debug re-rendering issues
+  // Debug logging
   useEffect(() => {
-    setRenderCount(prev => prev + 1);
-    console.log(`[MessageList] Component rendered ${renderCount + 1} times`);
-  }, []);
-  
-  // Add enhanced debug logging
-  useEffect(() => {
-    if (messages.length > 0) {
-      console.log('[MessageList] Messages updated, count:', messages.length);
-      
-      // Log message types and counts
-      const userCount = messages.filter(m => m.role === 'user').length;
-      const assistantCount = messages.filter(m => m.role === 'assistant' && !m.isPlaceholder).length;
-      const placeholderCount = messages.filter(m => m.isPlaceholder).length;
-      
-      console.log(`[MessageList] Message breakdown: ${userCount} user, ${assistantCount} assistant, ${placeholderCount} placeholders`);
-      
-      // More detailed message logging with clear indicators
-      console.log('[MessageList] All messages:', messages.map(m => ({
-        id: m.id,
-        role: m.role,
-        isPlaceholder: !!m.isPlaceholder,
-        contentStart: m.content.substring(0, 30) + "...",
-        contentLength: m.content.length,
-        hasSuggestions: !!(m.suggestedFollowUps && m.suggestedFollowUps.length > 0)
-      })));
-      
-      // Log details of the last message for debugging
-      if (messages.length > 0) {
-        const lastMsg = messages[messages.length - 1];
-        console.log('[MessageList] Last message:', {
-          id: lastMsg.id, 
-          role: lastMsg.role,
-          isPlaceholder: !!lastMsg.isPlaceholder,
-          isError: !!lastMsg.isError,
-          contentLength: lastMsg.content.length,
-          content: lastMsg.content.substring(0, 50) + '...',
-          hasSuggestions: !!(lastMsg.suggestedFollowUps && lastMsg.suggestedFollowUps.length > 0)
-        });
-      }
-    }
+    console.log('[MessageList] Messages updated, count:', messages.length);
+    console.log('[MessageList] Message breakdown:', {
+      user: messages.filter(m => m.role === 'user').length,
+      assistant: messages.filter(m => m.role === 'assistant' && !m.isPlaceholder).length,
+      placeholders: messages.filter(m => m.isPlaceholder).length
+    });
   }, [messages]);
   
-  // Mark component as rendered after first mount
-  useEffect(() => {
-    setIsRendered(true);
-    console.log('[MessageList] Component marked as rendered');
-  }, []);
-  
+  // Show example questions after receiving responses
   useEffect(() => {
     if (messages.length >= 2) {
-      // Only show examples after the AI has responded
       const userMessages = messages.filter(m => m.role === 'user');
       const assistantMessages = messages.filter(m => m.role === 'assistant' && !m.isPlaceholder && m.id !== 'welcome');
       
@@ -119,9 +77,12 @@ const MessageList: React.FC<MessageListProps> = ({
 
   // Force scroll on messages change
   useEffect(() => {
-    console.log('[MessageList] Messages changed, scrolling to bottom');
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  // Create separate lists for regular messages and placeholders
+  const regularMessages = messages.filter(message => !message.isPlaceholder);
+  const placeholderMessages = messages.filter(message => message.isPlaceholder);
 
   return (
     <div
@@ -135,40 +96,30 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         )}
         
-        {/* Regular messages (excluding placeholders - handled separately) */}
-        {messages.filter(message => !message.isPlaceholder).map((message) => {
-          console.log('[MessageList] Rendering regular message:', message.id, {
-            role: message.role,
-            contentLength: message.content.length
-          });
-          
-          return (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              onRegenerate={() => handleRegenerateMessage(message.id)}
-              isMobile={isMobile}
-            />
-          );
-        })}
+        {/* Render all regular non-placeholder messages */}
+        {regularMessages.map((message) => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            onRegenerate={() => handleRegenerateMessage(message.id)}
+            isMobile={isMobile}
+          />
+        ))}
         
-        {/* Placeholder messages - show typing indicators */}
-        {messages.filter(message => message.isPlaceholder).map((message) => {
-          console.log('[MessageList] Rendering placeholder typing indicator for:', message.id);
-          return (
-            <div key={message.id} className="flex items-start space-x-3 animate-fade-in">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <PaintBucket className="h-4 w-4 text-primary" />
-              </div>
-              <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
-                <TypingIndicator />
-              </div>
+        {/* Render typing indicators for placeholder messages */}
+        {placeholderMessages.map((message) => (
+          <div key={message.id} className="flex items-start space-x-3 animate-fade-in">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <PaintBucket className="h-4 w-4 text-primary" />
             </div>
-          );
-        })}
+            <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
+              <TypingIndicator />
+            </div>
+          </div>
+        ))}
         
-        {/* AI Typing indicator when loading but no placeholder is present */}
-        {isLoading && !messages.some(m => m.isPlaceholder) && (
+        {/* Show loading indicator if loading but no placeholder exists */}
+        {isLoading && !placeholderMessages.length && (
           <div className="flex items-start space-x-3 animate-fade-in">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
               <PaintBucket className="h-4 w-4 text-primary" />
@@ -193,11 +144,10 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         )}
         
-        {/* Show suggested follow-ups if available, otherwise show standard examples */}
-        {showExamples && isRendered && !isLoading && (
+        {/* Show suggested follow-ups or default examples */}
+        {showExamples && !isLoading && (
           <>
-            {lastAiMessageWithSuggestions && lastAiMessageWithSuggestions.suggestedFollowUps && 
-              lastAiMessageWithSuggestions.suggestedFollowUps.length > 0 ? (
+            {lastAiMessageWithSuggestions && lastAiMessageWithSuggestions.suggestedFollowUps?.length > 0 ? (
               <ChatExampleQuestions 
                 questions={lastAiMessageWithSuggestions.suggestedFollowUps} 
                 onQuestionClick={handleExampleClick}

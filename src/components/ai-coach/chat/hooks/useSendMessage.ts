@@ -37,6 +37,7 @@ export const useSendMessage = ({
     removeImage
   });
   
+  // Use the message mutation
   const sendMessageMutation = useSendMessageMutation();
 
   const handleSendMessage = useCallback(async (input: string, imageFile: File | null, isThinkMode: boolean) => {
@@ -64,16 +65,13 @@ export const useSendMessage = ({
         if (!imageUrl) {
           throw new Error('Failed to upload image');
         }
-        console.log('[useSendMessage] Image uploaded successfully:', imageUrl.substring(0, 50) + '...');
+        console.log('[useSendMessage] Image uploaded successfully');
       }
       
-      console.log('[useSendMessage] Calling sendMessageMutation with:', {
-        userMessage: input.trim().substring(0, 30) + '...',
-        hasImage: !!imageUrl,
-        isThinkMode
-      });
+      console.log('[useSendMessage] Calling sendMessageMutation');
       
-      // Send the message through the mutation and directly return the result
+      // We've simplified the approach here - we don't add the user message to UI
+      // in this hook anymore, that's now done in the mutation
       const result = await sendMessageMutation.mutateAsync({
         userMessage: input.trim(),
         imageUrl,
@@ -86,20 +84,16 @@ export const useSendMessage = ({
         onConversationCreated
       });
       
-      console.log('[useSendMessage] Mutation completed successfully:', {
-        responseLength: result.response.length,
-        suggestedFollowUps: result.suggestedFollowUps?.length || 0,
-        assistantMessageId: result.assistantMessageId
-      });
+      console.log('[useSendMessage] Mutation completed successfully');
       
       return result;
     } catch (error) {
       console.error('[useSendMessage] Error in handleSendMessage:', error);
       setError(error instanceof Error ? error.message : 'Failed to send message');
-      throw error; // Re-throw to allow caller to handle
+      throw error;
     } finally {
       setIsLoading(false);
-      console.log('[useSendMessage] Message sending process finished, loading state cleared');
+      console.log('[useSendMessage] Message sending process finished');
     }
   }, [
     user,

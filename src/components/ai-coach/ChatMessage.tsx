@@ -17,7 +17,7 @@ interface ChatMessageProps {
   isMobile?: boolean;
 }
 
-// Function to extract key points - moved outside component to avoid recreating every render
+// Function to extract key points
 const getKeyPoints = (content: string, isAssistant: boolean, isMobile: boolean): string[] | null => {
   if (!isAssistant || isMobile) return null;
   
@@ -37,7 +37,7 @@ const getKeyPoints = (content: string, isAssistant: boolean, isMobile: boolean):
   return null;
 };
 
-// Timestamp component to avoid re-rendering the whole message when only the relative time changes
+// Timestamp component
 const MessageTimestamp = memo(({ timestamp, isAssistant, isSaved }: { 
   timestamp: Date, 
   isAssistant: boolean,
@@ -61,7 +61,7 @@ const MessageTimestamp = memo(({ timestamp, isAssistant, isSaved }: {
 ));
 MessageTimestamp.displayName = 'MessageTimestamp';
 
-// Avatar component to optimize renders
+// Avatar component
 const MessageAvatar = memo(({ isAssistant }: { isAssistant: boolean }) => (
   isAssistant ? (
     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
@@ -76,9 +76,9 @@ const MessageAvatar = memo(({ isAssistant }: { isAssistant: boolean }) => (
 MessageAvatar.displayName = 'MessageAvatar';
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobile = false }) => {
-  // Safety check - log and handle possibly invalid messages
+  // Validate message
   if (!message || !message.content) {
-    console.error("[ChatMessage] Received invalid message:", message);
+    console.error("[ChatMessage] Invalid message:", message);
     return null;
   }
   
@@ -93,33 +93,28 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
     isPlaceholder = false
   } = message;
   
-  // Improved logging with more detailed message state
   console.log(`[ChatMessage] Rendering message:`, {
     id,
     role,
     contentLength: content.length,
-    contentStart: content.substring(0, 30) + "...",
     isPlaceholder,
-    hasImage: !!imageUrl,
-    isError,
-    isSaved,
-    timestamp: timestamp ? new Date(timestamp).toISOString() : 'none'
+    hasImage: !!imageUrl
   });
   
-  // Additional validation to ensure we don't render placeholder messages
+  // Skip placeholder messages - these are handled separately in MessageList
   if (isPlaceholder) {
-    console.log(`[ChatMessage] Skipping render of placeholder message:`, { id, role });
+    console.log(`[ChatMessage] Skipping placeholder message:`, { id, role });
     return null;
   }
   
   const isAssistant = role === 'assistant';
   
-  // Use memoization to avoid recalculating key points on every render
+  // Calculate key points
   const keyPoints = useMemo(() => {
     return getKeyPoints(content, isAssistant, isMobile);
   }, [content, isAssistant, isMobile]);
   
-  // Memoize the regenerate handler to maintain stable reference
+  // Regenerate handler
   const handleRegenerateMessage = useMemo(() => {
     if (!onRegenerate || !isAssistant) return undefined;
     return () => onRegenerate(id);
@@ -155,7 +150,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
           />
         </div>
         
-        {/* Key Points Section for assistant messages - not shown on mobile */}
         {keyPoints && <KeyPoints points={keyPoints} />}
         
         <MessageTimestamp 
@@ -177,19 +171,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
   );
 };
 
-// Use React.memo with a custom equality function
+// Use React.memo with equality function
 const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
-  // Compare important properties to determine if re-render is needed
   return (
     prevProps.message.id === nextProps.message.id &&
     prevProps.message.content === nextProps.message.content &&
-    (prevProps.message.isSaved === nextProps.message.isSaved) &&
-    (prevProps.message.isPlaceholder === nextProps.message.isPlaceholder) &&
+    prevProps.message.isSaved === nextProps.message.isSaved &&
+    prevProps.message.isPlaceholder === nextProps.message.isPlaceholder &&
     prevProps.isMobile === nextProps.isMobile
   );
 };
 
-// Use memo with custom equality function for better performance
 const MemoizedChatMessage = memo(ChatMessage, areEqual);
 MemoizedChatMessage.displayName = 'ChatMessage';
 
