@@ -65,7 +65,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = memo(({
     conversationId,
     isNewChat,
     onConversationCreated,
-    onNewChat
+    onNewChat,
+    onBackToWelcome
   });
 
   return (

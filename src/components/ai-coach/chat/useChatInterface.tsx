@@ -7,13 +7,15 @@ interface UseChatInterfaceProps {
   isNewChat?: boolean;
   onConversationCreated?: (id: string) => void;
   onNewChat?: () => void;
+  onBackToWelcome?: () => void;
 }
 
 export const useChatInterface = ({
   conversationId = null,
   isNewChat = true,
   onConversationCreated,
-  onNewChat
+  onNewChat,
+  onBackToWelcome
 }: UseChatInterfaceProps) => {
   // Track if user has started a chat (replaces complex showWelcome logic)
   const [hasStartedChat, setHasStartedChat] = useState(() => {
@@ -91,8 +93,16 @@ export const useChatInterface = ({
   }, [originalHandleExampleClick, hasStartedChat, setHasStartedChat, setInput]);
 
   const handleBackToWelcome = useCallback(() => {
+    // Reset input and clear any ongoing operations
+    setInput("");
+    removeImage();
     setHasStartedChat(false);
-  }, []);
+    
+    // If external handler provided, call it
+    if (onBackToWelcome) {
+      onBackToWelcome();
+    }
+  }, [removeImage, onBackToWelcome, setInput]);
 
   const handleNewChatClick = useCallback(() => {
     setInput("");

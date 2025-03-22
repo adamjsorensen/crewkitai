@@ -76,6 +76,12 @@ const AiCoach = () => {
     console.log("[AiCoach] Creating new conversation");
     createNewConversation();
   };
+  
+  const handleBackToWelcome = () => {
+    console.log("[AiCoach] Navigating back to welcome screen");
+    // Use createNewConversation to reset the state and show the welcome screen
+    createNewConversation();
+  };
 
   const showWelcomeHeader = isNewChat && !selectedConversationId;
 
@@ -105,6 +111,7 @@ const AiCoach = () => {
                   }}
                   onNewChat={createNewConversation}
                   onHistoryClick={handleOpenDialog}
+                  onBackToWelcome={handleBackToWelcome}
                 />
               </Suspense>
             </div>
