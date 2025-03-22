@@ -7,6 +7,7 @@ export interface Message {
   imageUrl?: string;
   isPlaceholder?: boolean;
   isSaved?: boolean;
+  isError?: boolean;
   suggestedFollowUps?: string[];
 }
 

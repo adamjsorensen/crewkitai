@@ -104,7 +104,7 @@ export const useSendMessageMutation = () => {
             if (msg.id === placeholderId) {
               return {
                 id: `assistant-${Date.now()}`,
-                role: 'assistant',
+                role: 'assistant' as const, // Explicit type assertion
                 content: data.response,
                 timestamp: new Date(),
                 suggestedFollowUps: data.suggestedFollowUps || []
@@ -138,7 +138,7 @@ export const useSendMessageMutation = () => {
           if (msg.id === placeholderId) {
             return {
               id: `error-${Date.now()}`,
-              role: 'assistant',
+              role: 'assistant' as const, // Explicit type assertion
               content: "I'm sorry, I couldn't process your request. Please try again.",
               timestamp: new Date(),
               isError: true
