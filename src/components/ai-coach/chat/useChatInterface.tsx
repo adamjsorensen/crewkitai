@@ -71,8 +71,10 @@ export const useChatInterface = ({
     if (!input.trim() && !imageFile) return;
     
     // IMMEDIATELY set hasStartedChat to true when sending a message
+    // This ensures we switch to the chat view right away
     setHasStartedChat(true);
     
+    // Then proceed with sending the message
     originalHandleSendMessage();
   }, [originalHandleSendMessage, input, imageFile, setHasStartedChat]);
 
