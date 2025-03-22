@@ -45,7 +45,8 @@ export const useSendMessageMutation = () => {
         messageLength: userMessage.length,
         hasImage: !!imageUrl,
         conversationId,
-        initialMessagesCount: messages.length
+        initialMessagesCount: messages.length,
+        messagesPreview: messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: !!m.isPlaceholder }))
       });
 
       // Generate a unique ID for user message and assistant message
@@ -118,67 +119,60 @@ export const useSendMessageMutation = () => {
           responseFirstChars: data?.response?.substring(0, 50) + "..."
         });
 
-        // Create a completely new array to trigger React's state update detection
-        console.log("[useSendMessageMutation] Before replacing placeholder message. Current messages state:", 
-          messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: m.isPlaceholder })));
-
-        // Now replace the placeholder with the real message in a completely new array
+        // Critical fix: Create a completely new array with the placeholder replaced
         setMessages(prevMessages => {
-          // Important debugging for state transformation
+          console.log("[useSendMessageMutation] Before replacing placeholder. Current state:", 
+              prevMessages.map(m => ({ id: m.id, role: m.role, isPlaceholder: !!m.isPlaceholder })));
+          
           const placeholderIndex = prevMessages.findIndex(msg => msg.id === assistantMessageId);
-          console.log(`[useSendMessageMutation] Attempting to replace placeholder at index ${placeholderIndex}`, {
-            totalMessages: prevMessages.length,
-            messagesIds: prevMessages.map(m => m.id),
-            hasPlaceholder: prevMessages.some(m => m.isPlaceholder && m.id === assistantMessageId)
-          });
           
           if (placeholderIndex === -1) {
-            console.warn("[useSendMessageMutation] ⚠️ Could not find placeholder message to replace!");
-            // Add the message anyway at the end
-            return [...prevMessages, {
+            console.error("[useSendMessageMutation] CRITICAL ERROR: Could not find placeholder to replace!");
+            // Add as new message since we can't find the placeholder
+            return [
+              ...prevMessages,
+              {
+                id: assistantMessageId,
+                role: 'assistant',
+                content: data.response,
+                timestamp: new Date(),
+                suggestedFollowUps: data.suggestedFollowUps || [],
+                isPlaceholder: false
+              }
+            ];
+          }
+          
+          // Create a completely new array to ensure React detects the change
+          const updatedMessages = [
+            ...prevMessages.slice(0, placeholderIndex),
+            {
               id: assistantMessageId,
-              role: 'assistant' as const,
+              role: 'assistant',
               content: data.response,
               timestamp: new Date(),
               suggestedFollowUps: data.suggestedFollowUps || [],
               isPlaceholder: false,
               isError: false,
               isSaved: false
-            } as Message];
-          }
+            },
+            ...prevMessages.slice(placeholderIndex + 1)
+          ];
           
-          const newMessages = prevMessages.map(message => {
-            if (message.id === assistantMessageId) {
-              console.log("[useSendMessageMutation] Found placeholder message, replacing with:", {
-                id: assistantMessageId,
-                oldContent: message.content?.substring(0, 20) + "...",
-                newContent: data.response.substring(0, 20) + "...",
-                wasPlaceholder: message.isPlaceholder
-              });
-              
-              // Create a completely new message object with all properties explicitly set
-              // and ensure the role is strictly typed as 'assistant'
-              return {
-                id: assistantMessageId, // Keep the same ID for continuity
-                role: 'assistant' as const, // Explicitly type as 'assistant'
-                content: data.response,
-                timestamp: new Date(),
-                suggestedFollowUps: data.suggestedFollowUps || [],
-                isPlaceholder: false, // No longer a placeholder
-                isError: false,
-                isSaved: false
-              } as Message; // Explicitly cast to Message type
-            }
-            return message; // Leave other messages unchanged
+          console.log("[useSendMessageMutation] After replacement:", {
+            originalLength: prevMessages.length,
+            newLength: updatedMessages.length,
+            replacedMessageId: assistantMessageId,
+            placeholderFound: placeholderIndex !== -1,
+            contentPreview: data.response.substring(0, 30) + "...",
+            messagesPreview: updatedMessages.map(m => ({ 
+              id: m.id, 
+              role: m.role, 
+              isPlaceholder: !!m.isPlaceholder,
+              contentLength: m.content?.length || 0 
+            }))
           });
           
-          console.log("[useSendMessageMutation] After replacement, message count:", {
-            newCount: newMessages.length,
-            hasPlaceholder: newMessages.some(m => m.isPlaceholder),
-            lastMessage: newMessages[newMessages.length - 1].id,
-            placeholderContent: newMessages.find(m => m.id === assistantMessageId)?.content?.substring(0, 20) + "..."
-          });
-          return newMessages;
+          return updatedMessages;
         });
         
         console.log("[useSendMessageMutation] Message updated successfully");
@@ -194,14 +188,11 @@ export const useSendMessageMutation = () => {
         
         // Log all messages before updating
         console.log('[useSendMessageMutation] Messages before error state update:', 
-          messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: m.isPlaceholder })));
+          messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: !!m.isPlaceholder })));
         
-        // Update the placeholder to show an error message
+        // Update the placeholder to show an error message with a new array reference
         setMessages(prev => {
-          const hasPlaceholder = prev.some(m => m.id === assistantMessageId && m.isPlaceholder);
-          console.log(`[useSendMessageMutation] Updating message to error state. Has placeholder: ${hasPlaceholder}`);
-          
-          return prev.map(message => {
+          const updatedMessages = prev.map(message => {
             if (message.id === assistantMessageId) {
               console.log(`[useSendMessageMutation] Updating message ${message.id} to error state`);
               return {
@@ -210,10 +201,12 @@ export const useSendMessageMutation = () => {
                 isPlaceholder: false,
                 isError: true,
                 timestamp: new Date()
-              } as Message; // Explicitly cast to Message type
+              };
             }
             return message;
           });
+          
+          return updatedMessages;
         });
         
         throw error;

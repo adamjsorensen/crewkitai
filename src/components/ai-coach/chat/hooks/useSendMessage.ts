@@ -54,8 +54,8 @@ export const useSendMessage = ({
       messagesContentPreview: messages.map(m => ({ 
         id: m.id, 
         role: m.role, 
-        contentLength: m.content?.length,
-        isPlaceholder: m.isPlaceholder
+        isPlaceholder: !!m.isPlaceholder,
+        contentLength: m.content?.length || 0
       }))
     });
     
@@ -82,7 +82,7 @@ export const useSendMessage = ({
         messages.map(m => ({ 
           id: m.id, 
           role: m.role, 
-          isPlaceholder: m.isPlaceholder,
+          isPlaceholder: !!m.isPlaceholder,
           contentLength: m.content?.length || 0
         })));
       
@@ -109,7 +109,7 @@ export const useSendMessage = ({
         messages: messages.map(m => ({ 
           id: m.id, 
           role: m.role, 
-          isPlaceholder: m.isPlaceholder,
+          isPlaceholder: !!m.isPlaceholder,
           contentLength: m.content?.length || 0 
         }))
       });
@@ -120,6 +120,19 @@ export const useSendMessage = ({
         suggestedFollowUps: result.suggestedFollowUps.length,
         responsePreview: result.response.substring(0, 50) + "..."
       });
+      
+      // Force state update to make sure the message list refreshes
+      // This is a safety measure to ensure the UI catches the changes
+      setTimeout(() => {
+        setMessages(currentMessages => {
+          console.log('[useSendMessage] Forcing message state refresh', {
+            messageCount: currentMessages.length,
+            hasPlaceholders: currentMessages.some(m => m.isPlaceholder),
+          });
+          // Return a new array reference to force React to update
+          return [...currentMessages];
+        });
+      }, 50);
       
       return result;
     } catch (error) {
@@ -133,7 +146,7 @@ export const useSendMessage = ({
         messagesState: messages.map(m => ({ 
           id: m.id, 
           role: m.role, 
-          isPlaceholder: m.isPlaceholder,
+          isPlaceholder: !!m.isPlaceholder,
           contentLength: m.content?.length || 0
         }))
       });

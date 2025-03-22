@@ -38,6 +38,7 @@ const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const [showExamples, setShowExamples] = useState(false);
   const renderCountRef = useRef(0);
+  const prevMessagesRef = useRef<Message[]>([]);
   
   // Example questions that might appear if no suggested follow-ups are available
   const defaultExampleQuestions = [
@@ -56,6 +57,29 @@ const MessageList: React.FC<MessageListProps> = ({
   useEffect(() => {
     renderCountRef.current += 1;
     console.log(`[MessageList] RENDERED (count: ${renderCountRef.current})`);
+    
+    // Log message diff to help debug
+    if (prevMessagesRef.current.length !== messages.length) {
+      console.log('[MessageList] Message count changed:', {
+        prev: prevMessagesRef.current.length,
+        current: messages.length,
+        added: messages.length - prevMessagesRef.current.length
+      });
+    }
+    
+    const placeholdersChanged = 
+      prevMessagesRef.current.some(m => m.isPlaceholder) !== messages.some(m => m.isPlaceholder);
+    
+    if (placeholdersChanged) {
+      console.log('[MessageList] Placeholder status changed:', {
+        prevHadPlaceholders: prevMessagesRef.current.some(m => m.isPlaceholder),
+        currentHasPlaceholders: messages.some(m => m.isPlaceholder),
+        placeholders: messages.filter(m => m.isPlaceholder).map(m => m.id)
+      });
+    }
+    
+    // Update ref
+    prevMessagesRef.current = [...messages];
   });
   
   // Debug logging for messages changes
@@ -68,7 +92,7 @@ const MessageList: React.FC<MessageListProps> = ({
       messageIds: messages.map(m => ({ 
         id: m.id, 
         role: m.role,
-        isPlaceholder: m.isPlaceholder,
+        isPlaceholder: !!m.isPlaceholder,
         contentLength: m.content?.length || 0,
         contentPreview: m.content?.substring(0, 20) + "..." || ""
       }))
@@ -104,7 +128,7 @@ const MessageList: React.FC<MessageListProps> = ({
       console.log('[MessageList] Found placeholder messages:', 
         placeholderMessages.map(m => ({ 
           id: m.id, 
-          content: m.content.substring(0, 20) + "...",
+          content: m.content?.substring(0, 20) + "...",
           timestamp: m.timestamp?.toString()
         })));
     }
@@ -126,12 +150,14 @@ const MessageList: React.FC<MessageListProps> = ({
         {regularMessages.map((message) => {
           console.log(`[MessageList] Rendering regular message ${message.id}`, {
             role: message.role,
-            isPlaceholder: message.isPlaceholder,
-            contentLength: message.content.length
+            isPlaceholder: !!message.isPlaceholder,
+            contentLength: message.content?.length || 0,
+            key: `${message.id}-${message.content?.length || 0}-${Date.now()}`
           });
+          
           return (
             <ChatMessage
-              key={`${message.id}-${message.content.length}-${Date.now()}`} // Force re-render by including timestamp
+              key={`${message.id}-${message.content?.length || 0}-${Date.now()}`} // Force re-render by including length and timestamp
               message={message}
               onRegenerate={() => handleRegenerateMessage(message.id)}
               isMobile={isMobile}
@@ -146,7 +172,7 @@ const MessageList: React.FC<MessageListProps> = ({
             content: message.content
           });
           return (
-            <div key={message.id} className="flex items-start space-x-3 animate-fade-in">
+            <div key={`placeholder-${message.id}-${Date.now()}`} className="flex items-start space-x-3 animate-fade-in">
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                 <PaintBucket className="h-4 w-4 text-primary" />
               </div>
