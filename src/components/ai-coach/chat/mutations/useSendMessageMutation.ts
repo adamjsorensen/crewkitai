@@ -126,16 +126,17 @@ export const useSendMessageMutation = () => {
               });
               
               // Create a completely new message object with all properties explicitly set
+              // and ensure the role is strictly typed as 'assistant'
               return {
                 id: assistantMessageId, // Keep the same ID for continuity
-                role: 'assistant',
+                role: 'assistant' as const, // Explicitly type as 'assistant'
                 content: data.response,
                 timestamp: new Date(),
                 suggestedFollowUps: data.suggestedFollowUps || [],
                 isPlaceholder: false, // No longer a placeholder
                 isError: false,
                 isSaved: false
-              };
+              } as Message; // Explicitly cast to Message type
             }
             return message; // Leave other messages unchanged
           });
@@ -165,7 +166,7 @@ export const useSendMessageMutation = () => {
                 isPlaceholder: false,
                 isError: true,
                 timestamp: new Date()
-              };
+              } as Message; // Explicitly cast to Message type
             }
             return message;
           });
