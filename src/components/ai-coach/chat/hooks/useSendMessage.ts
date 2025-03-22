@@ -45,6 +45,12 @@ export const useSendMessage = ({
       return null;
     }
     
+    console.log('[useSendMessage] Starting send message process', {
+      inputLength: input.length,
+      hasImage: !!imageFile,
+      isThinkMode
+    });
+    
     setIsLoading(true);
     setError(null);
     
@@ -53,10 +59,12 @@ export const useSendMessage = ({
       let imageUrl: string | null = null;
       
       if (imageFile) {
+        console.log('[useSendMessage] Uploading image');
         imageUrl = await handleImageUpload(imageFile);
         if (!imageUrl) {
           throw new Error('Failed to upload image');
         }
+        console.log('[useSendMessage] Image uploaded successfully:', imageUrl.substring(0, 50) + '...');
       }
       
       console.log('[useSendMessage] Calling sendMessageMutation with:', {
@@ -78,7 +86,7 @@ export const useSendMessage = ({
         onConversationCreated
       });
       
-      console.log('[useSendMessage] Mutation result:', {
+      console.log('[useSendMessage] Mutation completed successfully:', {
         responseLength: result.response.length,
         suggestedFollowUps: result.suggestedFollowUps?.length || 0,
         assistantMessageId: result.assistantMessageId
@@ -91,6 +99,7 @@ export const useSendMessage = ({
       throw error; // Re-throw to allow caller to handle
     } finally {
       setIsLoading(false);
+      console.log('[useSendMessage] Message sending process finished, loading state cleared');
     }
   }, [
     user,

@@ -89,19 +89,28 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
     timestamp, 
     imageUrl, 
     isSaved = false,
-    isError = false
+    isError = false,
+    isPlaceholder = false
   } = message;
   
-  // Add debug log when the ChatMessage component renders
+  // Improved logging with more detailed message state
   console.log(`[ChatMessage] Rendering message:`, {
     id,
     role,
     contentLength: content.length,
     contentStart: content.substring(0, 30) + "...",
+    isPlaceholder,
     hasImage: !!imageUrl,
     isError,
-    isSaved
+    isSaved,
+    timestamp: timestamp ? new Date(timestamp).toISOString() : 'none'
   });
+  
+  // Additional validation to ensure we don't render placeholder messages
+  if (isPlaceholder) {
+    console.log(`[ChatMessage] Skipping render of placeholder message:`, { id, role });
+    return null;
+  }
   
   const isAssistant = role === 'assistant';
   
@@ -175,6 +184,7 @@ const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
     prevProps.message.id === nextProps.message.id &&
     prevProps.message.content === nextProps.message.content &&
     (prevProps.message.isSaved === nextProps.message.isSaved) &&
+    (prevProps.message.isPlaceholder === nextProps.message.isPlaceholder) &&
     prevProps.isMobile === nextProps.isMobile
   );
 };

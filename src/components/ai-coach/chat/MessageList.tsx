@@ -71,7 +71,7 @@ const MessageList: React.FC<MessageListProps> = ({
       
       console.log(`[MessageList] Message breakdown: ${userCount} user, ${assistantCount} assistant, ${placeholderCount} placeholders`);
       
-      // Debug: Log all messages in the array
+      // More detailed message logging with clear indicators
       console.log('[MessageList] All messages:', messages.map(m => ({
         id: m.id,
         role: m.role,
@@ -135,29 +135,11 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         )}
         
-        {/* Render actual messages */}
-        {messages.map((message) => {
-          // Special rendering for placeholder messages
-          if (message.isPlaceholder && message.role === 'assistant') {
-            console.log('[MessageList] Rendering placeholder for message:', message.id);
-            return (
-              <div key={message.id} className="flex items-start space-x-3 animate-fade-in">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <PaintBucket className="h-4 w-4 text-primary" />
-                </div>
-                <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
-                  <TypingIndicator />
-                </div>
-              </div>
-            );
-          }
-          
-          // Regular message rendering
+        {/* Regular messages (excluding placeholders - handled separately) */}
+        {messages.filter(message => !message.isPlaceholder).map((message) => {
           console.log('[MessageList] Rendering regular message:', message.id, {
             role: message.role,
-            isPlaceholder: !!message.isPlaceholder,
-            contentLength: message.content.length,
-            hasSuggestions: !!(message.suggestedFollowUps && message.suggestedFollowUps.length > 0)
+            contentLength: message.content.length
           });
           
           return (
@@ -167,6 +149,21 @@ const MessageList: React.FC<MessageListProps> = ({
               onRegenerate={() => handleRegenerateMessage(message.id)}
               isMobile={isMobile}
             />
+          );
+        })}
+        
+        {/* Placeholder messages - show typing indicators */}
+        {messages.filter(message => message.isPlaceholder).map((message) => {
+          console.log('[MessageList] Rendering placeholder typing indicator for:', message.id);
+          return (
+            <div key={message.id} className="flex items-start space-x-3 animate-fade-in">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <PaintBucket className="h-4 w-4 text-primary" />
+              </div>
+              <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
+                <TypingIndicator />
+              </div>
+            </div>
           );
         })}
         
