@@ -126,7 +126,7 @@ const MessageList: React.FC<MessageListProps> = memo(({
   // Use memoized visible messages
   const visibleMessages = useVisibleMessages(messages, isMobile);
 
-  // Determine if we should show the empty state
+  // Determine if we should show the empty state - moved outside component body
   const showEmptyState = useMemo(() => {
     const isWelcomeMessage = messages.length === 1 && messages[0].id === 'welcome';
     return messages.length === 0 || (isWelcomeMessage && messages.length <= 1);
@@ -139,16 +139,8 @@ const MessageList: React.FC<MessageListProps> = memo(({
     }
   }, [messages, scrollToBottom, isLoadingHistory]);
 
-  // Conditional rendering with early returns for better performance
-  if (isLoadingHistory) {
-    return <LoadingState />;
-  }
-
-  if (showEmptyState) {
-    return <EmptyState />;
-  }
-
-  // Memoize the message components
+  // IMPORTANT: Always create messageComponents regardless of conditional rendering
+  // This ensures hooks are always called in the same order
   const messageComponents = useMemo(() => (
     visibleMessages.map(message => (
       <ChatMessage 
@@ -159,6 +151,15 @@ const MessageList: React.FC<MessageListProps> = memo(({
       />
     ))
   ), [visibleMessages, handleRegenerateMessage, isMobile]);
+
+  // Conditional rendering with early returns for better performance
+  if (isLoadingHistory) {
+    return <LoadingState />;
+  }
+
+  if (showEmptyState) {
+    return <EmptyState />;
+  }
 
   return (
     <div className="h-full flex-1 flex flex-col overflow-hidden relative">
