@@ -57,7 +57,8 @@ const MessageList: React.FC<MessageListProps> = ({
     console.log('[MessageList] Message breakdown:', {
       user: messages.filter(m => m.role === 'user').length,
       assistant: messages.filter(m => m.role === 'assistant' && !m.isPlaceholder).length,
-      placeholders: messages.filter(m => m.isPlaceholder).length
+      placeholders: messages.filter(m => m.isPlaceholder).length,
+      messageIds: messages.map(m => ({ id: m.id, isPlaceholder: m.isPlaceholder }))
     });
   }, [messages]);
   
@@ -83,6 +84,14 @@ const MessageList: React.FC<MessageListProps> = ({
   // Create separate lists for regular messages and placeholders
   const regularMessages = messages.filter(message => !message.isPlaceholder);
   const placeholderMessages = messages.filter(message => message.isPlaceholder);
+  
+  // Log when placeholder messages are detected
+  useEffect(() => {
+    if (placeholderMessages.length > 0) {
+      console.log('[MessageList] Found placeholder messages:', 
+        placeholderMessages.map(m => ({ id: m.id, content: m.content.substring(0, 20) })));
+    }
+  }, [placeholderMessages]);
 
   return (
     <div
@@ -99,7 +108,7 @@ const MessageList: React.FC<MessageListProps> = ({
         {/* Render all regular non-placeholder messages */}
         {regularMessages.map((message) => (
           <ChatMessage
-            key={message.id}
+            key={`${message.id}-${message.content.length}`} // Force re-render when content changes
             message={message}
             onRegenerate={() => handleRegenerateMessage(message.id)}
             isMobile={isMobile}

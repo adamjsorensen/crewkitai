@@ -49,7 +49,8 @@ export const useSendMessage = ({
     console.log('[useSendMessage] Starting send message process', {
       inputLength: input.length,
       hasImage: !!imageFile,
-      isThinkMode
+      isThinkMode,
+      currentMessageCount: messages.length
     });
     
     setIsLoading(true);
@@ -70,6 +71,10 @@ export const useSendMessage = ({
       
       console.log('[useSendMessage] Calling sendMessageMutation');
       
+      // We need to capture the message state before mutation to track changes
+      console.log('[useSendMessage] Message state before mutation:', 
+        messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: m.isPlaceholder })));
+      
       // We've simplified the approach here - we don't add the user message to UI
       // in this hook anymore, that's now done in the mutation
       const result = await sendMessageMutation.mutateAsync({
@@ -84,7 +89,15 @@ export const useSendMessage = ({
         onConversationCreated
       });
       
-      console.log('[useSendMessage] Mutation completed successfully');
+      // Check the message state after mutation
+      console.log('[useSendMessage] Message state after mutation:', 
+        messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: m.isPlaceholder })));
+      
+      console.log('[useSendMessage] Mutation completed successfully', {
+        responseId: result.assistantMessageId,
+        responseLength: result.response.length,
+        suggestedFollowUps: result.suggestedFollowUps.length
+      });
       
       return result;
     } catch (error) {
@@ -93,7 +106,7 @@ export const useSendMessage = ({
       throw error;
     } finally {
       setIsLoading(false);
-      console.log('[useSendMessage] Message sending process finished');
+      console.log('[useSendMessage] Message sending process finished, final message count:', messages.length);
     }
   }, [
     user,

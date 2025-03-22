@@ -1,5 +1,5 @@
 
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { PaintBucket, User, BookmarkIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -76,6 +76,17 @@ const MessageAvatar = memo(({ isAssistant }: { isAssistant: boolean }) => (
 MessageAvatar.displayName = 'MessageAvatar';
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobile = false }) => {
+  // Add debug effect to track message changes
+  useEffect(() => {
+    console.log(`[ChatMessage] Message object changed:`, {
+      id: message.id,
+      role: message.role,
+      contentLength: message.content.length,
+      isPlaceholder: message.isPlaceholder,
+      hasImage: !!message.imageUrl
+    });
+  }, [message]);
+  
   // Validate message
   if (!message || !message.content) {
     console.error("[ChatMessage] Invalid message:", message);
@@ -101,7 +112,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
     hasImage: !!imageUrl
   });
   
-  // Skip placeholder messages - these are handled separately in MessageList
+  // Skip rendering placeholder messages - these are handled separately in MessageList
   if (isPlaceholder) {
     console.log(`[ChatMessage] Skipping placeholder message:`, { id, role });
     return null;
@@ -171,17 +182,42 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
   );
 };
 
-// Use React.memo with equality function
+// Use a simpler equality check to ensure re-renders happen when needed
 const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
-  return (
-    prevProps.message.id === nextProps.message.id &&
-    prevProps.message.content === nextProps.message.content &&
-    prevProps.message.isSaved === nextProps.message.isSaved &&
-    prevProps.message.isPlaceholder === nextProps.message.isPlaceholder &&
-    prevProps.isMobile === nextProps.isMobile
-  );
+  // Check if the message content has changed (most important)
+  if (prevProps.message.content !== nextProps.message.content) {
+    return false;
+  }
+  
+  // Check if placeholder status changed
+  if (prevProps.message.isPlaceholder !== nextProps.message.isPlaceholder) {
+    return false;
+  }
+  
+  // Check if error status changed
+  if (prevProps.message.isError !== nextProps.message.isError) {
+    return false;
+  }
+  
+  // Check if saved status changed
+  if (prevProps.message.isSaved !== nextProps.message.isSaved) {
+    return false;
+  }
+  
+  // Check if ID changed (shouldn't happen, but just in case)
+  if (prevProps.message.id !== nextProps.message.id) {
+    return false;
+  }
+  
+  // Check if mobile status changed
+  if (prevProps.isMobile !== nextProps.isMobile) {
+    return false;
+  }
+  
+  return true;
 };
 
+// Memoize the component with our improved equality function
 const MemoizedChatMessage = memo(ChatMessage, areEqual);
 MemoizedChatMessage.displayName = 'ChatMessage';
 

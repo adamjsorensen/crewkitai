@@ -72,7 +72,8 @@ export const useSendMessageMutation = () => {
       console.log("[useSendMessageMutation] Adding user message and placeholder", {
         userMessageId,
         assistantMessageId,
-        isPlaceholder: true
+        isPlaceholder: true,
+        placeholderMessageState: JSON.stringify(placeholderMessage)
       });
       
       // Update state with both messages
@@ -97,25 +98,50 @@ export const useSendMessageMutation = () => {
 
         console.log("[useSendMessageMutation] Response received:", {
           responseLength: data?.response?.length || 0,
+          suggestedFollowUpsCount: data?.suggestedFollowUps?.length || 0,
           assistantMessageId
         });
 
+        // Create a completely new array to trigger React's state update detection
+        console.log("[useSendMessageMutation] Before message replacement:", 
+          messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: m.isPlaceholder })));
+
         // Now replace the placeholder with the real message in a completely new array
-        setMessages(prev => {
-          return prev.map(message => {
+        setMessages(prevMessages => {
+          // Important debugging for state transformation
+          const placeholderIndex = prevMessages.findIndex(msg => msg.id === assistantMessageId);
+          console.log(`[useSendMessageMutation] Replacing placeholder at index ${placeholderIndex}`);
+          
+          if (placeholderIndex === -1) {
+            console.warn("[useSendMessageMutation] Could not find placeholder message to replace!");
+          }
+          
+          const newMessages = prevMessages.map(message => {
             if (message.id === assistantMessageId) {
-              // Create a completely new message object
-              return {
+              console.log("[useSendMessageMutation] Found placeholder message, replacing with:", {
                 id: assistantMessageId,
+                oldContent: message.content,
+                newContent: data.response.substring(0, 30) + "...",
+                wasPlaceholder: message.isPlaceholder
+              });
+              
+              // Create a completely new message object with all properties explicitly set
+              return {
+                id: assistantMessageId, // Keep the same ID for continuity
                 role: 'assistant',
                 content: data.response,
                 timestamp: new Date(),
                 suggestedFollowUps: data.suggestedFollowUps || [],
-                isPlaceholder: false
+                isPlaceholder: false, // No longer a placeholder
+                isError: false,
+                isSaved: false
               };
             }
-            return message;
+            return message; // Leave other messages unchanged
           });
+          
+          console.log("[useSendMessageMutation] After replacement, message count:", newMessages.length);
+          return newMessages;
         });
         
         console.log("[useSendMessageMutation] Message updated successfully");
