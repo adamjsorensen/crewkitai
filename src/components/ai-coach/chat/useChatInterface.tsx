@@ -70,24 +70,24 @@ export const useChatInterface = ({
   const handleSendMessage = useCallback(() => {
     if (!input.trim() && !imageFile) return;
     
-    // Only update if current state is false to avoid unnecessary re-renders
-    if (!hasStartedChat) {
-      setHasStartedChat(true);
-    }
+    // IMMEDIATELY set hasStartedChat to true when sending a message
+    setHasStartedChat(true);
     
     originalHandleSendMessage();
-  }, [originalHandleSendMessage, input, imageFile, hasStartedChat, setHasStartedChat]);
+  }, [originalHandleSendMessage, input, imageFile, setHasStartedChat]);
 
   // Wrap the example click handler with useCallback - now just fills input
   const handleExampleClick = useCallback((question: string) => {
     // Fill the input field but don't send the message
     originalHandleExampleClick(question);
     
-    // Set hasStartedChat to true to show the chat interface
-    if (!hasStartedChat) {
-      setHasStartedChat(true);
+    // Focus the input after filling it
+    if (inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
     }
-  }, [originalHandleExampleClick, hasStartedChat, setHasStartedChat]);
+  }, [originalHandleExampleClick, inputRef]);
 
   const handleBackToWelcome = useCallback(() => {
     // Reset input and clear any ongoing operations

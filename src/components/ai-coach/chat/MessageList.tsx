@@ -2,10 +2,9 @@
 import React, { useEffect, memo, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Loader2, ArrowDown } from 'lucide-react';
+import { AlertCircle, Loader2, ArrowDown, PaintBucket } from 'lucide-react';
 import ChatMessage from '../ChatMessage';
 import TypingIndicator from '../TypingIndicator';
-import { PaintBucket } from 'lucide-react';
 import MessageSkeleton from './MessageSkeleton';
 import { useInView } from 'react-intersection-observer';
 import { Message } from './types';
@@ -78,14 +77,17 @@ const ErrorMessage = memo(({ error, handleRetry }: { error: string, handleRetry:
 ));
 ErrorMessage.displayName = 'ErrorMessage';
 
-// Typing indicator component
+// Enhanced typing indicator component with better visibility
 const TypingMessage = memo(() => (
   <div className="flex items-start gap-3 animate-fade-in my-6">
     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
       <PaintBucket className="h-4 w-4 text-white" />
     </div>
     <div className="rounded-2xl p-4 bg-muted/70 shadow-sm">
-      <TypingIndicator />
+      <div className="flex items-center">
+        <TypingIndicator withIcon={true} className="py-1" />
+        <span className="text-sm text-muted-foreground ml-2">Your AI Coach is thinking...</span>
+      </div>
     </div>
   </div>
 ));

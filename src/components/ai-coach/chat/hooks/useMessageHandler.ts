@@ -103,6 +103,7 @@ export const useMessageHandler = ({
   const handleSendMessage = useCallback(async (input: string, shouldUseThinkMode: boolean = false) => {
     if (!input.trim()) return;
     
+    // Create and add user message immediately
     const userMessageId = `user-${Date.now()}`;
     const userMessage: Message = {
       id: userMessageId,
@@ -111,8 +112,13 @@ export const useMessageHandler = ({
       timestamp: new Date()
     };
     
+    // Add user message to the chat
     setMessages(prev => [...prev, userMessage]);
+    
+    // Clear input field
     setInput('');
+    
+    // Set loading state immediately
     setIsLoading(true);
     
     // Only use think mode if explicitly requested
@@ -120,18 +126,23 @@ export const useMessageHandler = ({
       setIsThinkMode(true);
     }
     
-    setTimeout(() => scrollToBottom(), 50);
+    // Scroll to bottom immediately
+    scrollToBottom();
     
-    if (enableStreaming) {
-      await sendStreamingMessage(input);
-    } else {
-      await sendMessageTraditional(input, null, shouldUseThinkMode);
-    }
+    // Small timeout to ensure UI updates before processing
+    setTimeout(async () => {
+      if (enableStreaming) {
+        await sendStreamingMessage(input);
+      } else {
+        await sendMessageTraditional(input, null, shouldUseThinkMode);
+      }
+      
+      // Reset think mode after sending
+      if (shouldUseThinkMode) {
+        setIsThinkMode(false);
+      }
+    }, 50);
     
-    // Reset think mode after sending
-    if (shouldUseThinkMode) {
-      setIsThinkMode(false);
-    }
   }, [enableStreaming, sendStreamingMessage, sendMessageTraditional, scrollToBottom, setIsThinkMode, setInput, setIsLoading, setMessages]);
 
   const handleRetry = useCallback(() => {
