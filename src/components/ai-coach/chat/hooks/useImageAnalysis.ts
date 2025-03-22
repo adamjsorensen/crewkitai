@@ -26,7 +26,6 @@ export const useImageAnalysis = ({
 
   const analyzeImage = useCallback(async (prompt: string, imageUrl: string) => {
     if (!user?.id) {
-      console.error('Analysis failed - No user ID');
       setError('Authentication required to analyze images');
       return null;
     }
@@ -34,23 +33,22 @@ export const useImageAnalysis = ({
     try {
       setIsAnalyzing(true);
 
-      // Add user message to UI
+      // Generate IDs once to avoid multiple calls to uuidv4()
       const userMessageId = uuidv4();
+      const aiMessageId = uuidv4();
+      
+      // Batch state updates for better performance
       setMessages(prev => [
         ...prev,
+        // Add user message with image
         {
           id: userMessageId,
           role: 'user',
           content: prompt,
           timestamp: new Date(),
           imageUrl
-        }
-      ]);
-
-      // Add placeholder AI message
-      const aiMessageId = uuidv4();
-      setMessages(prev => [
-        ...prev,
+        },
+        // Add placeholder AI message
         {
           id: aiMessageId,
           role: 'assistant',
@@ -88,7 +86,7 @@ export const useImageAnalysis = ({
         onConversationCreated(newConversationId);
       }
 
-      // Update AI message with analysis
+      // Update AI message with analysis - use functional state update
       setMessages(prev => 
         prev.map(msg => 
           msg.id === aiMessageId 
@@ -99,22 +97,19 @@ export const useImageAnalysis = ({
 
       return newConversationId || conversationId;
     } catch (error) {
-      console.error('Image analysis failed', error);
-      
-      // Update error message in UI
+      // Update error message in UI with a single state update
       setMessages(prev => {
-        const lastMessage = prev[prev.length - 1];
-        if (lastMessage && lastMessage.isLoading) {
-          return prev.map(msg => 
-            msg.id === lastMessage.id 
-              ? { 
-                  ...msg, 
-                  content: `Error analyzing image: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-                  isLoading: false,
-                  error: true
-                } 
-              : msg
-          );
+        // Find the loading message
+        const lastIndex = prev.findIndex(msg => msg.isLoading);
+        if (lastIndex >= 0) {
+          const newMessages = [...prev];
+          newMessages[lastIndex] = { 
+            ...newMessages[lastIndex], 
+            content: `Error analyzing image: ${error instanceof Error ? error.message : 'Unknown error'}`, 
+            isLoading: false,
+            error: true
+          };
+          return newMessages;
         }
         return prev;
       });

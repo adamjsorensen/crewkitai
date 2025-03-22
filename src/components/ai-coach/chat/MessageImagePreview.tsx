@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { ZoomIn } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
@@ -10,11 +10,22 @@ interface MessageImagePreviewProps {
 const MessageImagePreview: React.FC<MessageImagePreviewProps> = ({ imageUrl }) => {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   
+  // Early return if no image
   if (!imageUrl) return null;
+
+  // Use useCallback for the click handler to prevent recreating on each render
+  const handleImageClick = useCallback(() => {
+    setImageDialogOpen(true);
+  }, []);
+  
+  // Use useCallback for the dialog state change handler
+  const handleOpenChange = useCallback((open: boolean) => {
+    setImageDialogOpen(open);
+  }, []);
 
   return (
     <>
-      <div className="mb-3 group relative cursor-pointer" onClick={() => setImageDialogOpen(true)}>
+      <div className="mb-3 group relative cursor-pointer" onClick={handleImageClick}>
         <img 
           src={imageUrl} 
           alt="Uploaded image" 
@@ -26,8 +37,7 @@ const MessageImagePreview: React.FC<MessageImagePreviewProps> = ({ imageUrl }) =
         </div>
       </div>
 
-      {/* Image Dialog for fullscreen viewing */}
-      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+      <Dialog open={imageDialogOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none">
           <div className="relative">
             <img 
@@ -43,4 +53,8 @@ const MessageImagePreview: React.FC<MessageImagePreviewProps> = ({ imageUrl }) =
   );
 };
 
-export default React.memo(MessageImagePreview);
+// Rename to improve debugging in React DevTools
+const MemoizedMessageImagePreview = memo(MessageImagePreview);
+MemoizedMessageImagePreview.displayName = 'MessageImagePreview';
+
+export default MemoizedMessageImagePreview;
