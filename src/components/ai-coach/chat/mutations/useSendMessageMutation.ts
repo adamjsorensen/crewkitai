@@ -40,7 +40,8 @@ export const useSendMessageMutation = () => {
         messageLength: userMessage.length,
         hasImage: !!imageUrl,
         conversationId,
-        thinkMode: isThinkMode
+        thinkMode: isThinkMode,
+        messagesCount: messages.length
       });
 
       // Add placeholder assistant message to UI immediately for better UX
@@ -53,11 +54,18 @@ export const useSendMessageMutation = () => {
         isPlaceholder: true
       };
       
+      console.log("[useSendMessageMutation] Adding placeholder message:", placeholderId);
       setMessages(prev => [...prev, placeholderMessage]);
 
       try {
-        console.log("[useSendMessageMutation] Calling edge function");
+        console.log("[useSendMessageMutation] Calling edge function with payload:", {
+          messageLength: userMessage.length,
+          conversationId,
+          hasImage: !!imageUrl,
+          isThinkMode
+        });
         
+        const startTime = performance.now();
         // Call the edge function with all necessary data
         const { data, error } = await supabase.functions.invoke('ai-coach', {
           body: {
@@ -67,27 +75,53 @@ export const useSendMessageMutation = () => {
             isThinkMode
           }
         });
+        const endTime = performance.now();
+        const apiTime = endTime - startTime;
 
         if (error) {
           console.error("[useSendMessageMutation] Error from edge function:", error);
           throw new Error(error.message);
         }
 
-        console.log("[useSendMessageMutation] Response from edge function:", data);
+        console.log("[useSendMessageMutation] Response from edge function:", {
+          responseTime: `${apiTime.toFixed(0)}ms`,
+          responseLength: data?.response?.length || 0,
+          suggestedFollowUps: data?.suggestedFollowUps?.length || 0,
+          data: data // Log the full response structure
+        });
 
+        // Check response structure validity
+        if (!data || typeof data.response !== 'string') {
+          console.error("[useSendMessageMutation] Invalid response structure:", data);
+          throw new Error("Invalid response structure received from server");
+        }
+
+        console.log("[useSendMessageMutation] Replacing placeholder with actual response for:", placeholderId);
+        
         // Replace placeholder with actual response
-        setMessages(prev => prev.map(msg => {
-          if (msg.id === placeholderId) {
-            return {
-              id: `assistant-${Date.now()}`,
-              role: 'assistant',
-              content: data.response,
-              timestamp: new Date(),
-              suggestedFollowUps: data.suggestedFollowUps || []
-            };
-          }
-          return msg;
-        }));
+        setMessages(prev => {
+          const updatedMessages = prev.map(msg => {
+            if (msg.id === placeholderId) {
+              return {
+                id: `assistant-${Date.now()}`,
+                role: 'assistant',
+                content: data.response,
+                timestamp: new Date(),
+                suggestedFollowUps: data.suggestedFollowUps || []
+              };
+            }
+            return msg;
+          });
+          
+          console.log("[useSendMessageMutation] Messages after update:", {
+            previousCount: prev.length,
+            newCount: updatedMessages.length,
+            placeholderReplaced: prev.length === updatedMessages.length,
+            lastMessage: updatedMessages[updatedMessages.length - 1]
+          });
+          
+          return updatedMessages;
+        });
         
         setIsThinkMode(false);
         
@@ -99,6 +133,7 @@ export const useSendMessageMutation = () => {
         console.error('[useSendMessageMutation] Error:', error);
         
         // Show error in UI by replacing placeholder
+        console.log("[useSendMessageMutation] Replacing placeholder with error message");
         setMessages(prev => prev.map(msg => {
           if (msg.id === placeholderId) {
             return {

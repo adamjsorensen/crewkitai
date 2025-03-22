@@ -52,11 +52,33 @@ const MessageList: React.FC<MessageListProps> = ({
     .filter(m => m.role === 'assistant' && !m.isPlaceholder && m.suggestedFollowUps && m.suggestedFollowUps.length > 0)
     .pop();
   
-  // Add debug logging
+  // Add enhanced debug logging
   useEffect(() => {
     if (messages.length > 0) {
       console.log('[MessageList] Messages updated, count:', messages.length);
-      console.log('[MessageList] Last message:', messages[messages.length - 1]);
+      
+      // Log the structure of all messages
+      messages.forEach((msg, idx) => {
+        console.log(`[MessageList] Message ${idx}:`, {
+          id: msg.id,
+          role: msg.role,
+          isPlaceholder: !!msg.isPlaceholder,
+          isError: !!msg.isError,
+          contentLength: msg.content.length,
+          contentStart: msg.content.substring(0, 30),
+          hasSuggestions: !!(msg.suggestedFollowUps && msg.suggestedFollowUps.length > 0),
+          timestamp: msg.timestamp
+        });
+      });
+      
+      // Log the last message in more detail
+      if (messages.length > 0) {
+        const lastMsg = messages[messages.length - 1];
+        console.log('[MessageList] Last message:', lastMsg);
+      }
+      
+      const placeholderCount = messages.filter(m => m.isPlaceholder).length;
+      console.log(`[MessageList] Found ${placeholderCount} placeholder messages`);
       
       const suggestionsCount = messages.filter(m => 
         m.role === 'assistant' && 
@@ -76,6 +98,7 @@ const MessageList: React.FC<MessageListProps> = ({
   // Mark component as rendered after first mount
   useEffect(() => {
     setIsRendered(true);
+    console.log('[MessageList] Component rendered');
   }, []);
   
   useEffect(() => {
@@ -86,9 +109,11 @@ const MessageList: React.FC<MessageListProps> = ({
       
       if (userMessages.length > 0 && assistantMessages.length > 0) {
         setShowExamples(true);
+        console.log('[MessageList] Setting showExamples to true');
       }
     } else {
       setShowExamples(false);
+      console.log('[MessageList] Setting showExamples to false');
     }
   }, [messages]);
 
@@ -101,6 +126,7 @@ const MessageList: React.FC<MessageListProps> = ({
         {messages.map(message => {
           // Check if this is a placeholder message that should show typing indicator
           if (message.isPlaceholder && message.role === 'assistant') {
+            console.log('[MessageList] Rendering placeholder for:', message.id);
             return (
               <div key={message.id} className="flex items-start space-x-3">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
