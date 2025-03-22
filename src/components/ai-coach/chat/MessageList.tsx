@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import ChatMessage from '../ChatMessage';
 import ChatExampleQuestions from './ChatExampleQuestions';
 import { Message } from './types';
-import ThinkingMessage from './ThinkingMessage';
 
 interface MessageListProps {
   messages: Message[];
@@ -37,7 +36,6 @@ const MessageList: React.FC<MessageListProps> = ({
   isMobile
 }) => {
   const [showExamples, setShowExamples] = useState(false);
-  const hasThinkingMessage = messages.some(message => message.role === 'thinking');
   
   // Example questions that might appear after a user sends a message
   const exampleQuestions = [
@@ -48,7 +46,7 @@ const MessageList: React.FC<MessageListProps> = ({
   ];
   
   useEffect(() => {
-    if (messages.length >= 2 && !hasThinkingMessage) {
+    if (messages.length >= 2) {
       // Only show examples after the AI has responded
       const userMessages = messages.filter(m => m.role === 'user');
       const assistantMessages = messages.filter(m => m.role === 'assistant' && m.id !== 'welcome');
@@ -59,7 +57,7 @@ const MessageList: React.FC<MessageListProps> = ({
     } else {
       setShowExamples(false);
     }
-  }, [messages, hasThinkingMessage]);
+  }, [messages]);
 
   return (
     <div
@@ -67,22 +65,15 @@ const MessageList: React.FC<MessageListProps> = ({
       className="flex-1 overflow-y-auto pb-32 pt-4 px-4 scroll-smooth"
     >
       <div className="max-w-3xl mx-auto space-y-4">
-        {messages.map(message => {
-          if (message.role === 'thinking') {
-            return <ThinkingMessage key={message.id} />;
-          }
-          
-          return (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              isLoadingResponse={isLoading && message === messages[messages.length - 1] && message.role === 'assistant'}
-              onRetry={handleRetry}
-              onRegenerate={() => handleRegenerateMessage(message.id)}
-              isMobile={isMobile}
-            />
-          );
-        })}
+        {messages.map(message => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            onRetry={handleRetry}
+            onRegenerate={() => handleRegenerateMessage(message.id)}
+            isMobile={isMobile}
+          />
+        ))}
         
         {error && (
           <div className="p-4 bg-red-50 text-red-800 rounded-md">
@@ -98,7 +89,7 @@ const MessageList: React.FC<MessageListProps> = ({
           </div>
         )}
         
-        {!hasThinkingMessage && showExamples && (
+        {showExamples && (
           <ChatExampleQuestions 
             questions={exampleQuestions} 
             onQuestionClick={handleExampleClick} 

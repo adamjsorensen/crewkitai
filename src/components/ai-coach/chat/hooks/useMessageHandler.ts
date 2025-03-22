@@ -103,37 +103,14 @@ export const useMessageHandler = ({
     // Set loading state immediately
     setIsLoading(true);
     
-    // Add thinking message if think mode is enabled
-    if (shouldUseThinkMode) {
-      setIsThinkMode(true);
-      
-      // Add a temporary "thinking" message that will be replaced
-      const thinkingMessageId = `thinking-${Date.now()}`;
-      const thinkingMessage: Message = {
-        id: thinkingMessageId,
-        role: 'thinking',
-        content: 'Your AI Coach is thinking...',
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, thinkingMessage]);
-    }
-    
-    // Scroll to bottom immediately
+    // Pass the think mode state to the message sender
+    // No thinking message is added now
     scrollToBottom();
     
-    // Small timeout to ensure UI updates before processing
-    setTimeout(async () => {
-      await sendMessageTraditional(input, null, shouldUseThinkMode);
-      
-      // Remove thinking message once response is received
-      if (shouldUseThinkMode) {
-        setMessages(prev => prev.filter(msg => msg.role !== 'thinking'));
-        setIsThinkMode(false);
-      }
-    }, 50);
+    // We use the existing isThinkMode state when sending
+    await sendMessageTraditional(input, null, shouldUseThinkMode);
     
-  }, [sendMessageTraditional, scrollToBottom, setIsThinkMode, setInput, setIsLoading, setMessages]);
+  }, [sendMessageTraditional, scrollToBottom, setInput, setIsLoading, setMessages]);
 
   const handleRetry = useCallback(() => {
     const lastContent = baseHandleRetry();

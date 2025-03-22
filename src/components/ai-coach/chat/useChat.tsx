@@ -138,9 +138,9 @@ export const useChat = (
       
       console.log('[useChat] Processing text-only message');
       
-      // ALWAYS use think mode when sending messages from the main interface
-      // This ensures the "Your AI Coach is thinking..." message appears
-      await handleSendMessageBase(input, true);
+      // Use the current think mode setting from the UI when sending
+      // This connects the UI toggle to the actual model selection
+      await handleSendMessageBase(input, isThinkMode);
     } catch (error) {
       console.error('[useChat] Error sending message:', error);
       setError('Failed to send message. Please try again.');
@@ -157,7 +157,8 @@ export const useChat = (
     user,
     setInput,
     setIsLoading,
-    setError
+    setError,
+    isThinkMode // Use the think mode state from the UI
   ]);
   
   // Handle example click - now only populates the input

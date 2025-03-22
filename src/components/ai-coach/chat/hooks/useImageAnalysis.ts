@@ -1,12 +1,12 @@
 
-import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useCallback, useState } from 'react';
 import { Message } from '../types';
+import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
-import { User } from '@supabase/supabase-js';
+import { useToast } from '@/hooks/use-toast';
 
 interface UseImageAnalysisProps {
-  user: User | null;
+  user: any;
   conversationId: string | null;
   onConversationCreated?: (id: string) => void;
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -23,107 +23,110 @@ export const useImageAnalysis = ({
   scrollToBottom
 }: UseImageAnalysisProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { toast } = useToast();
 
-  const analyzeImage = useCallback(async (prompt: string, imageUrl: string) => {
-    if (!user?.id) {
-      setError('Authentication required to analyze images');
-      return null;
+  const analyzeImage = useCallback(async (text: string, imageUrl: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to analyze images.",
+        variant: "destructive"
+      });
+      return;
     }
 
     try {
+      console.log('[useImageAnalysis] Starting image analysis', { 
+        hasText: !!text, 
+        imageUrlLength: imageUrl.length,
+        conversationId
+      });
+      
       setIsAnalyzing(true);
-
-      // Generate IDs once to avoid multiple calls to uuidv4()
-      const userMessageId = uuidv4();
-      const aiMessageId = uuidv4();
       
-      // Batch state updates for better performance
-      setMessages(prev => [
-        ...prev,
-        // Add user message with image
-        {
-          id: userMessageId,
-          role: 'user',
-          content: prompt,
-          timestamp: new Date(),
-          imageUrl
-        },
-        // Add placeholder AI message
-        {
-          id: aiMessageId,
-          role: 'assistant',
-          content: 'Analyzing your image...',
-          timestamp: new Date(),
-          isLoading: true
-        }
-      ]);
-
-      // Scroll to bottom to show loading message
-      setTimeout(scrollToBottom, 50);
+      // Add user message with image
+      const userMessageId = `user-${Date.now()}`;
+      const userMessage: Message = {
+        id: userMessageId,
+        role: 'user',
+        content: text,
+        imageUrl,
+        timestamp: new Date()
+      };
       
-      // Use the main ai-coach edge function with image URL
-      const response = await supabase.functions.invoke('ai-coach', {
+      setMessages(prev => [...prev, userMessage]);
+      
+      // Add assistant placeholder response
+      const responseMessageId = `assistant-${Date.now()}`;
+      const assistantMessage: Message = {
+        id: responseMessageId,
+        role: 'assistant',
+        content: "Analyzing your image...",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+      
+      // Scroll to show the loading message
+      setTimeout(() => scrollToBottom(), 100);
+      
+      console.log('[useImageAnalysis] Calling AI function to analyze image');
+      
+      // Call the Supabase Edge Function to analyze the image
+      const { data, error: functionError } = await supabase.functions.invoke('ai-coach', {
         body: {
-          message: prompt || 'Please analyze this image.',
+          message: text,
           imageUrl,
           userId: user.id,
-          context: [],
           conversationId
         }
       });
-
-      if (response.error) {
-        throw new Error(`Edge function error: ${response.error.message || JSON.stringify(response.error)}`);
+      
+      if (functionError) {
+        console.error('[useImageAnalysis] Edge function error:', functionError);
+        throw new Error(functionError.message);
       }
-
-      const { response: analysis, conversationId: newConversationId } = response.data as { 
-        response: string;
-        conversationId: string;
-      };
-
-      // Notify about new conversation if needed
-      if (!conversationId && onConversationCreated && newConversationId) {
-        onConversationCreated(newConversationId);
-      }
-
-      // Update AI message with analysis - use functional state update
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === aiMessageId 
-            ? { ...msg, content: analysis, isLoading: false } 
-            : msg
-        )
-      );
-
-      return newConversationId || conversationId;
-    } catch (error) {
-      // Update error message in UI with a single state update
-      setMessages(prev => {
-        // Find the loading message
-        const lastIndex = prev.findIndex(msg => msg.isLoading);
-        if (lastIndex >= 0) {
-          const newMessages = [...prev];
-          newMessages[lastIndex] = { 
-            ...newMessages[lastIndex], 
-            content: `Error analyzing image: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-            isLoading: false,
-            error: true
-          };
-          return newMessages;
-        }
-        return prev;
+      
+      console.log('[useImageAnalysis] Received analysis response:', {
+        responseLength: data?.response?.length || 0,
+        imageProcessed: data?.imageProcessed,
+        newConversationId: data?.conversationId
       });
       
-      setError(`Failed to analyze image: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return null;
+      // Update the assistant message with the analysis
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === responseMessageId) {
+          return {
+            ...msg,
+            content: data.response
+          };
+        }
+        return msg;
+      }));
+      
+      // If this is a new conversation, update the conversation ID
+      if (!conversationId && data.conversationId && onConversationCreated) {
+        console.log('[useImageAnalysis] New conversation created:', data.conversationId);
+        onConversationCreated(data.conversationId);
+      }
+      
+      // Scroll to show the complete response
+      setTimeout(() => scrollToBottom(), 100);
+      
+    } catch (error) {
+      console.error('[useImageAnalysis] Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to analyze image';
+      setError(errorMessage);
+      
+      toast({
+        title: "Error",
+        description: "Failed to analyze image. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsAnalyzing(false);
-      setTimeout(scrollToBottom, 100);
     }
-  }, [user, conversationId, onConversationCreated, setMessages, setError, scrollToBottom]);
+  }, [user, conversationId, onConversationCreated, setMessages, setError, scrollToBottom, toast]);
 
-  return {
-    analyzeImage,
-    isAnalyzing
-  };
+  return { analyzeImage, isAnalyzing };
 };

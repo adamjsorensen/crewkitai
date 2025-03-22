@@ -1,6 +1,6 @@
 
-// Add the 'thinking' role to the Message type
-export type MessageRole = 'user' | 'assistant' | 'thinking';
+// Remove the 'thinking' role from the Message type
+export type MessageRole = 'user' | 'assistant';
 
 export interface Message {
   id: string;
