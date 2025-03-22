@@ -9,6 +9,11 @@ interface MessageContentProps {
   isAssistant: boolean;
 }
 
+// Define the proper type for the code component props
+interface CodeProps extends React.ClassAttributes<HTMLElement>, React.HTMLAttributes<HTMLElement> {
+  inline?: boolean;
+}
+
 const MessageContent: React.FC<MessageContentProps> = ({ 
   content,
   isAssistant
@@ -36,11 +41,9 @@ const MessageContent: React.FC<MessageContentProps> = ({
           // Style links to be clickable and obvious
           a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">{children}</a>,
           
-          // Improve code block styling
-          code: ({ className, children, ...props }: React.ClassAttributes<HTMLElement> & React.HTMLAttributes<HTMLElement> & { inline?: boolean }) => {
-            const isInline = props.inline;
-            
-            if (isInline) {
+          // Improve code block styling with proper type annotation
+          code: ({ className, children, inline, ...props }: CodeProps) => {
+            if (inline) {
               return <code className="px-1 py-0.5 bg-primary/10 rounded text-sm font-mono" {...props}>{children}</code>;
             }
             return (

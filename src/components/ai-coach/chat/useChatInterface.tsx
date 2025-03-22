@@ -67,30 +67,35 @@ export const useChatInterface = ({
   const handleSendMessage = useCallback(() => {
     if (!input.trim() && !imageFile) return;
     
-    // CRITICAL: ALWAYS set hasStartedChat to true BEFORE any other operations
-    // This is the key change to ensure immediate transition to chat view
+    // Ensure we force the render immediately by setting state first
+    // and guaranteeing it takes effect before anything else happens
     setHasStartedChat(true);
     
-    // Add a short timeout to ensure the UI transition happens before any potentially 
-    // blocking operations like sending the message
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure the UI update completes
+    // before we start any potentially blocking operations
+    requestAnimationFrame(() => {
       // Then proceed with sending the message
       originalHandleSendMessage();
-    }, 10);
+    });
   }, [originalHandleSendMessage, input, imageFile, setHasStartedChat]);
 
   // Wrap the example click handler with useCallback 
   const handleExampleClick = useCallback((question: string) => {
-    // Fill the input field with the example question
-    originalHandleExampleClick(question);
+    // Set hasStartedChat immediately when an example is clicked
+    setHasStartedChat(true);
     
-    // Focus the input after filling it
-    if (inputRef.current) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-    }
-  }, [originalHandleExampleClick, inputRef]);
+    // Then fill the input field with the example question
+    requestAnimationFrame(() => {
+      originalHandleExampleClick(question);
+      
+      // Focus the input after filling it
+      if (inputRef.current) {
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 50);
+      }
+    });
+  }, [originalHandleExampleClick, inputRef, setHasStartedChat]);
 
   const handleBackToWelcome = useCallback(() => {
     // Reset input and clear any ongoing operations
