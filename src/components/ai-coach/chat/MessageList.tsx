@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowDown, PaintBucket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ChatMessage from '../ChatMessage';
@@ -37,6 +37,7 @@ const MessageList: React.FC<MessageListProps> = ({
   isMobile
 }) => {
   const [showExamples, setShowExamples] = useState(false);
+  const renderCountRef = useRef(0);
   
   // Example questions that might appear if no suggested follow-ups are available
   const defaultExampleQuestions = [
@@ -51,14 +52,26 @@ const MessageList: React.FC<MessageListProps> = ({
     .filter(m => m.role === 'assistant' && !m.isPlaceholder && m.suggestedFollowUps && m.suggestedFollowUps.length > 0)
     .pop();
   
-  // Debug logging
+  // Debug logging for renders
+  useEffect(() => {
+    renderCountRef.current += 1;
+    console.log(`[MessageList] RENDERED (count: ${renderCountRef.current})`);
+  });
+  
+  // Debug logging for messages changes
   useEffect(() => {
     console.log('[MessageList] Messages updated, count:', messages.length);
     console.log('[MessageList] Message breakdown:', {
       user: messages.filter(m => m.role === 'user').length,
       assistant: messages.filter(m => m.role === 'assistant' && !m.isPlaceholder).length,
       placeholders: messages.filter(m => m.isPlaceholder).length,
-      messageIds: messages.map(m => ({ id: m.id, isPlaceholder: m.isPlaceholder }))
+      messageIds: messages.map(m => ({ 
+        id: m.id, 
+        role: m.role,
+        isPlaceholder: m.isPlaceholder,
+        contentLength: m.content?.length || 0,
+        contentPreview: m.content?.substring(0, 20) + "..." || ""
+      }))
     });
   }, [messages]);
   
@@ -89,7 +102,11 @@ const MessageList: React.FC<MessageListProps> = ({
   useEffect(() => {
     if (placeholderMessages.length > 0) {
       console.log('[MessageList] Found placeholder messages:', 
-        placeholderMessages.map(m => ({ id: m.id, content: m.content.substring(0, 20) })));
+        placeholderMessages.map(m => ({ 
+          id: m.id, 
+          content: m.content.substring(0, 20) + "...",
+          timestamp: m.timestamp?.toString()
+        })));
     }
   }, [placeholderMessages]);
 
@@ -106,26 +123,39 @@ const MessageList: React.FC<MessageListProps> = ({
         )}
         
         {/* Render all regular non-placeholder messages */}
-        {regularMessages.map((message) => (
-          <ChatMessage
-            key={`${message.id}-${message.content.length}`} // Force re-render when content changes
-            message={message}
-            onRegenerate={() => handleRegenerateMessage(message.id)}
-            isMobile={isMobile}
-          />
-        ))}
+        {regularMessages.map((message) => {
+          console.log(`[MessageList] Rendering regular message ${message.id}`, {
+            role: message.role,
+            isPlaceholder: message.isPlaceholder,
+            contentLength: message.content.length
+          });
+          return (
+            <ChatMessage
+              key={`${message.id}-${message.content.length}-${Date.now()}`} // Force re-render by including timestamp
+              message={message}
+              onRegenerate={() => handleRegenerateMessage(message.id)}
+              isMobile={isMobile}
+            />
+          );
+        })}
         
         {/* Render typing indicators for placeholder messages */}
-        {placeholderMessages.map((message) => (
-          <div key={message.id} className="flex items-start space-x-3 animate-fade-in">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-              <PaintBucket className="h-4 w-4 text-primary" />
+        {placeholderMessages.map((message) => {
+          console.log(`[MessageList] Rendering placeholder message ${message.id}`, {
+            role: message.role,
+            content: message.content
+          });
+          return (
+            <div key={message.id} className="flex items-start space-x-3 animate-fade-in">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <PaintBucket className="h-4 w-4 text-primary" />
+              </div>
+              <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
+                <TypingIndicator />
+              </div>
             </div>
-            <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
-              <TypingIndicator />
-            </div>
-          </div>
-        ))}
+          );
+        })}
         
         {/* Show loading indicator if loading but no placeholder exists */}
         {isLoading && !placeholderMessages.length && (

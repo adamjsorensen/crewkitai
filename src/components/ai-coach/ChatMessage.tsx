@@ -1,5 +1,5 @@
 
-import React, { memo, useMemo, useEffect } from 'react';
+import React, { memo, useMemo, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { PaintBucket, User, BookmarkIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -76,16 +76,38 @@ const MessageAvatar = memo(({ isAssistant }: { isAssistant: boolean }) => (
 MessageAvatar.displayName = 'MessageAvatar';
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobile = false }) => {
+  // Reference to track render count
+  const renderCountRef = useRef(0);
+  
   // Add debug effect to track message changes
   useEffect(() => {
-    console.log(`[ChatMessage] Message object changed:`, {
+    renderCountRef.current += 1;
+    console.log(`[ChatMessage ${message.id}] RENDERED (count: ${renderCountRef.current})`, {
       id: message.id,
       role: message.role,
       contentLength: message.content.length,
+      contentPreview: message.content.substring(0, 30) + "...",
       isPlaceholder: message.isPlaceholder,
-      hasImage: !!message.imageUrl
+      hasImage: !!message.imageUrl,
+      timestamp: message.timestamp?.toString()
     });
+    
+    return () => {
+      console.log(`[ChatMessage ${message.id}] UNMOUNTED`);
+    };
   }, [message]);
+  
+  // Log specific property changes that might affect rendering
+  useEffect(() => {
+    console.log(`[ChatMessage ${message.id}] Content changed:`, {
+      newLength: message.content.length,
+      preview: message.content.substring(0, 30) + "..."
+    });
+  }, [message.content, message.id]);
+  
+  useEffect(() => {
+    console.log(`[ChatMessage ${message.id}] Placeholder status changed to: ${message.isPlaceholder}`);
+  }, [message.isPlaceholder, message.id]);
   
   // Validate message
   if (!message || !message.content) {
@@ -104,7 +126,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
     isPlaceholder = false
   } = message;
   
-  console.log(`[ChatMessage] Rendering message:`, {
+  console.log(`[ChatMessage] Processing message for render:`, {
     id,
     role,
     contentLength: content.length,
@@ -184,36 +206,56 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
 
 // Use a simpler equality check to ensure re-renders happen when needed
 const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
-  // Check if the message content has changed (most important)
-  if (prevProps.message.content !== nextProps.message.content) {
+  const prevMsg = prevProps.message;
+  const nextMsg = nextProps.message;
+  
+  // First, log what's being compared
+  console.log(`[ChatMessage.areEqual] Comparing ${prevMsg.id}`, {
+    contentChanged: prevMsg.content !== nextMsg.content,
+    prevContentLength: prevMsg.content?.length,
+    nextContentLength: nextMsg.content?.length,
+    placeholderChanged: prevMsg.isPlaceholder !== nextMsg.isPlaceholder,
+    prevPlaceholder: prevMsg.isPlaceholder,
+    nextPlaceholder: nextMsg.isPlaceholder
+  });
+  
+  // ALWAYS re-render if the placeholder status changes
+  if (prevMsg.isPlaceholder !== nextMsg.isPlaceholder) {
+    console.log(`[ChatMessage.areEqual] Re-rendering due to placeholder change for ${prevMsg.id}`);
     return false;
   }
   
-  // Check if placeholder status changed
-  if (prevProps.message.isPlaceholder !== nextProps.message.isPlaceholder) {
+  // Check if the message content has changed (most important)
+  if (prevMsg.content !== nextMsg.content) {
+    console.log(`[ChatMessage.areEqual] Re-rendering due to content change for ${prevMsg.id}`);
     return false;
   }
   
   // Check if error status changed
-  if (prevProps.message.isError !== nextProps.message.isError) {
+  if (prevMsg.isError !== nextMsg.isError) {
+    console.log(`[ChatMessage.areEqual] Re-rendering due to error status change for ${prevMsg.id}`);
     return false;
   }
   
   // Check if saved status changed
-  if (prevProps.message.isSaved !== nextProps.message.isSaved) {
+  if (prevMsg.isSaved !== nextMsg.isSaved) {
+    console.log(`[ChatMessage.areEqual] Re-rendering due to saved status change for ${prevMsg.id}`);
     return false;
   }
   
   // Check if ID changed (shouldn't happen, but just in case)
-  if (prevProps.message.id !== nextProps.message.id) {
+  if (prevMsg.id !== nextMsg.id) {
+    console.log(`[ChatMessage.areEqual] Re-rendering due to ID change from ${prevMsg.id} to ${nextMsg.id}`);
     return false;
   }
   
   // Check if mobile status changed
   if (prevProps.isMobile !== nextProps.isMobile) {
+    console.log(`[ChatMessage.areEqual] Re-rendering due to mobile status change for ${prevMsg.id}`);
     return false;
   }
   
+  console.log(`[ChatMessage.areEqual] No changes detected for ${prevMsg.id}, preventing re-render`);
   return true;
 };
 

@@ -50,7 +50,13 @@ export const useSendMessage = ({
       inputLength: input.length,
       hasImage: !!imageFile,
       isThinkMode,
-      currentMessageCount: messages.length
+      currentMessageCount: messages.length,
+      messagesContentPreview: messages.map(m => ({ 
+        id: m.id, 
+        role: m.role, 
+        contentLength: m.content?.length,
+        isPlaceholder: m.isPlaceholder
+      }))
     });
     
     setIsLoading(true);
@@ -73,10 +79,16 @@ export const useSendMessage = ({
       
       // We need to capture the message state before mutation to track changes
       console.log('[useSendMessage] Message state before mutation:', 
-        messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: m.isPlaceholder })));
+        messages.map(m => ({ 
+          id: m.id, 
+          role: m.role, 
+          isPlaceholder: m.isPlaceholder,
+          contentLength: m.content?.length || 0
+        })));
       
       // We've simplified the approach here - we don't add the user message to UI
       // in this hook anymore, that's now done in the mutation
+      const startTime = performance.now();
       const result = await sendMessageMutation.mutateAsync({
         userMessage: input.trim(),
         imageUrl,
@@ -88,15 +100,25 @@ export const useSendMessage = ({
         setIsThinkMode,
         onConversationCreated
       });
+      const endTime = performance.now();
       
       // Check the message state after mutation
-      console.log('[useSendMessage] Message state after mutation:', 
-        messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: m.isPlaceholder })));
+      console.log('[useSendMessage] Message state after mutation:', {
+        messageCount: messages.length,
+        duration: `${(endTime - startTime).toFixed(0)}ms`,
+        messages: messages.map(m => ({ 
+          id: m.id, 
+          role: m.role, 
+          isPlaceholder: m.isPlaceholder,
+          contentLength: m.content?.length || 0 
+        }))
+      });
       
       console.log('[useSendMessage] Mutation completed successfully', {
         responseId: result.assistantMessageId,
         responseLength: result.response.length,
-        suggestedFollowUps: result.suggestedFollowUps.length
+        suggestedFollowUps: result.suggestedFollowUps.length,
+        responsePreview: result.response.substring(0, 50) + "..."
       });
       
       return result;
@@ -106,7 +128,15 @@ export const useSendMessage = ({
       throw error;
     } finally {
       setIsLoading(false);
-      console.log('[useSendMessage] Message sending process finished, final message count:', messages.length);
+      console.log('[useSendMessage] Message sending process finished, final message count:', {
+        count: messages.length,
+        messagesState: messages.map(m => ({ 
+          id: m.id, 
+          role: m.role, 
+          isPlaceholder: m.isPlaceholder,
+          contentLength: m.content?.length || 0
+        }))
+      });
     }
   }, [
     user,
