@@ -57,6 +57,7 @@ export const useChat = (
   const {
     fillInputWithExample,
     handleSendMessage: handleSendMessageBase,
+    prepareUserMessageUI,
     handleRetry,
     handleRegenerateMessage,
     analyzeImage,
@@ -96,7 +97,7 @@ export const useChat = (
     }
     
     try {
-      // Set loading state immediately so the UI can show loading indicators
+      // Set loading state after UI has been updated
       setIsLoading(true);
       
       if (imageFile) {
@@ -174,6 +175,7 @@ export const useChat = (
     handleImageChange,
     removeImage,
     handleSendMessage,
+    prepareUserMessageUI,
     handleKeyDown,
     handleExampleClick,
     handleRetry,

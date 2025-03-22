@@ -53,6 +53,18 @@ export const useSendMessage = ({
           content: msg.content
         }));
 
+      // Add placeholder assistant message to UI immediately for better UX
+      const placeholderId = `assistant-placeholder-${Date.now()}`;
+      const placeholderMessage: Message = {
+        id: placeholderId,
+        role: 'assistant',
+        content: '...',
+        timestamp: new Date(),
+        isPlaceholder: true
+      };
+      
+      setMessages(prev => [...prev, placeholderMessage]);
+
       const { data, error } = await supabase.functions.invoke('ai-coach', {
         body: {
           message: userMessage,
@@ -69,20 +81,26 @@ export const useSendMessage = ({
       return { 
         response: data.response, 
         userMessage, 
-        imageUrl 
+        imageUrl,
+        placeholderId
       };
     },
-    onSuccess: async ({ response, userMessage, imageUrl }) => {
+    onSuccess: async ({ response, userMessage, imageUrl, placeholderId }) => {
       if (!user) return;
 
-      const aiResponse: Message = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: response,
-        timestamp: new Date()
-      };
+      // Replace placeholder with actual response
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === placeholderId) {
+          return {
+            id: `assistant-${Date.now()}`,
+            role: 'assistant',
+            content: response,
+            timestamp: new Date()
+          };
+        }
+        return msg;
+      }));
       
-      setMessages(prev => [...prev, aiResponse]);
       setIsThinkMode(false);
 
       try {
@@ -144,14 +162,8 @@ export const useSendMessage = ({
     
     let imageUrl: string | null = null;
     
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date(),
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
+    // We don't add the user message here because it should be done in the calling component
+    // for better UI responsiveness
     
     setIsLoading(true);
     setError(null);
@@ -159,16 +171,16 @@ export const useSendMessage = ({
     if (imageFile) {
       imageUrl = await uploadImage(imageFile);
       if (imageUrl) {
+        // Update the user message with the image
         setMessages(prev => {
           const updated = [...prev];
-          if (updated.length > 0) {
-            const lastMsg = updated[updated.length - 1];
-            if (lastMsg.role === 'user' && lastMsg.id === userMessage.id) {
-              updated[updated.length - 1] = {
-                ...lastMsg,
-                imageUrl
-              };
-            }
+          // Find the last user message
+          const lastUserMsgIndex = updated.length - 1;
+          if (lastUserMsgIndex >= 0 && updated[lastUserMsgIndex].role === 'user') {
+            updated[lastUserMsgIndex] = {
+              ...updated[lastUserMsgIndex],
+              imageUrl
+            };
           }
           return updated;
         });

@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { Message } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -79,8 +80,9 @@ export const useMessageHandler = ({
     setInput(question);
   }, [setInput]);
 
-  const handleSendMessage = useCallback(async (input: string, shouldUseThinkMode: boolean = false) => {
-    if (!input.trim()) return;
+  // Modified: Split the functionality to prepare UI immediately
+  const prepareUserMessageUI = useCallback((input: string) => {
+    if (!input.trim()) return null;
     
     const userMessageId = `user-${Date.now()}`;
     const userMessage: Message = {
@@ -90,18 +92,33 @@ export const useMessageHandler = ({
       timestamp: new Date()
     };
     
+    // Add user message to UI immediately
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setIsLoading(true);
     scrollToBottom();
     
+    return userMessage;
+  }, [setMessages, setInput, scrollToBottom]);
+
+  // Modified to use the UI preparation separately from the API call
+  const handleSendMessage = useCallback(async (input: string, shouldUseThinkMode: boolean = false) => {
+    if (!input.trim()) return;
+    
+    // Create and display user message immediately for UI responsiveness
+    const userMessage = prepareUserMessageUI(input);
+    if (!userMessage) return;
+    
+    // Set loading state for response - this doesn't block the UI transition
+    setIsLoading(true);
+    
     try {
+      // Proceed with API call after UI is ready
       await sendMessageTraditional(input, null, shouldUseThinkMode);
     } catch (error) {
       console.error('Error in handleSendMessage:', error);
       setError('Failed to send message. Please try again.');
     }
-  }, [sendMessageTraditional, scrollToBottom, setInput, setIsLoading, setMessages, setError]);
+  }, [prepareUserMessageUI, sendMessageTraditional, setIsLoading, setError]);
 
   const handleRetry = useCallback(() => {
     const lastContent = baseHandleRetry();
@@ -111,6 +128,7 @@ export const useMessageHandler = ({
   return {
     fillInputWithExample,
     handleSendMessage,
+    prepareUserMessageUI,
     handleRetry,
     handleRegenerateMessage,
     analyzeImage,

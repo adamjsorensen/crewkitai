@@ -17,9 +17,8 @@ export const useChatInterface = ({
   onNewChat,
   onBackToWelcome
 }: UseChatInterfaceProps) => {
-  // Track if user has started a chat (replaces complex showWelcome logic)
+  // Track if user has started a chat
   const [hasStartedChat, setHasStartedChat] = useState(() => {
-    // Calculate initial state only once during component initialization
     return !isNewChat || !!conversationId;
   });
 
@@ -46,6 +45,7 @@ export const useChatInterface = ({
     handleImageChange,
     removeImage,
     handleSendMessage: originalHandleSendMessage,
+    prepareUserMessageUI,
     handleKeyDown,
     handleExampleClick: originalHandleExampleClick,
     handleRetry,
@@ -53,28 +53,31 @@ export const useChatInterface = ({
     scrollToBottom
   } = chatHook;
 
-  // Update hasStartedChat only when props change
+  // Update hasStartedChat when props change
   useEffect(() => {
-    if (conversationId) {
-      // If we have a conversation ID, we're in an existing chat
-      if (!hasStartedChat) {
-        setHasStartedChat(true);
-      }
+    if (conversationId && !hasStartedChat) {
+      setHasStartedChat(true);
     }
   }, [conversationId, hasStartedChat]);
   
-  // Completely decouple UI transition from message sending
+  // CRITICAL FIX: Completely decouple UI transition from message sending
   const handleSendMessage = useCallback(() => {
     if (!input.trim() && !imageFile) return;
     
-    // CRITICAL: Immediately show the chat UI without any async operations
+    // IMMEDIATELY show the chat UI without any async operations
     setHasStartedChat(true);
     
-    // Give the UI a frame to update before proceeding with message sending
-    window.setTimeout(() => {
+    // First add the user message to the UI immediately for instant feedback
+    if (input.trim()) {
+      prepareUserMessageUI(input);
+    }
+    
+    // Then proceed with the actual message sending as a separate operation
+    // This ensures the UI updates first before any API calls
+    requestAnimationFrame(() => {
       originalHandleSendMessage();
-    }, 0);
-  }, [originalHandleSendMessage, input, imageFile, setHasStartedChat]);
+    });
+  }, [originalHandleSendMessage, input, imageFile, prepareUserMessageUI, setHasStartedChat]);
 
   // Handle example click - immediately transition then fill input
   const handleExampleClick = useCallback((question: string) => {
@@ -82,13 +85,13 @@ export const useChatInterface = ({
     setHasStartedChat(true);
     
     // Then populate the input after the UI has switched
-    window.setTimeout(() => {
+    requestAnimationFrame(() => {
       originalHandleExampleClick(question);
       // Focus the input after filling it
       if (inputRef.current) {
         inputRef.current.focus();
       }
-    }, 0);
+    });
   }, [originalHandleExampleClick, inputRef, setHasStartedChat]);
 
   const handleBackToWelcome = useCallback(() => {

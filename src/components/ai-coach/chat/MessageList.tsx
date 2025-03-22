@@ -66,17 +66,34 @@ const MessageList: React.FC<MessageListProps> = ({
       className="flex-1 overflow-y-auto pb-32 pt-4 px-4 scroll-smooth"
     >
       <div className="max-w-3xl mx-auto space-y-4">
-        {messages.map(message => (
-          <ChatMessage
-            key={message.id}
-            message={message}
-            onRegenerate={() => handleRegenerateMessage(message.id)}
-            isMobile={isMobile}
-          />
-        ))}
+        {messages.map(message => {
+          // Check if this is a placeholder message that should show typing indicator
+          if (message.isPlaceholder && message.role === 'assistant') {
+            return (
+              <div key={message.id} className="flex items-start space-x-3">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                  <PaintBucket className="h-4 w-4 text-primary" />
+                </div>
+                <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
+                  <TypingIndicator />
+                </div>
+              </div>
+            );
+          }
+          
+          // Regular message rendering
+          return (
+            <ChatMessage
+              key={message.id}
+              message={message}
+              onRegenerate={() => handleRegenerateMessage(message.id)}
+              isMobile={isMobile}
+            />
+          );
+        })}
         
-        {/* AI Typing indicator when loading */}
-        {isLoading && (
+        {/* AI Typing indicator when loading but no placeholder is present */}
+        {isLoading && !messages.some(m => m.isPlaceholder) && (
           <div className="flex items-start space-x-3">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
               <PaintBucket className="h-4 w-4 text-primary" />

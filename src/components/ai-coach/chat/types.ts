@@ -1,11 +1,10 @@
-
 export interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  imageUrl?: string | null;
-  isSaved?: boolean;
+  imageUrl?: string;
+  isPlaceholder?: boolean;
 }
 
 export interface ChatThreadProps {
