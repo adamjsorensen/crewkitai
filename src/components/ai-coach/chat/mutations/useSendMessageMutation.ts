@@ -140,19 +140,19 @@ export const useSendMessageMutation = () => {
             return [...prevMessages, newAssistantMessage];
           }
           
-          // Create a completely new array to ensure React detects the change
+          // Create a completely new array with correct typing to ensure React detects the change
           const updatedMessages: Message[] = [
             ...prevMessages.slice(0, placeholderIndex),
             {
               id: assistantMessageId,
-              role: 'assistant', // Explicitly specify as 'assistant' to match the Message type
+              role: 'assistant' as const, // Use const assertion to ensure it's "assistant" literal type
               content: data.response,
               timestamp: new Date(),
               suggestedFollowUps: data.suggestedFollowUps || [],
               isPlaceholder: false,
               isError: false,
               isSaved: false
-            } as Message, // Add type assertion to ensure TypeScript recognizes this as a Message
+            } as Message, // Ensure TypeScript recognizes this as a Message
             ...prevMessages.slice(placeholderIndex + 1)
           ];
           
@@ -190,7 +190,7 @@ export const useSendMessageMutation = () => {
         
         // Update the placeholder to show an error message with a new array reference
         setMessages(prev => {
-          const updatedMessages = prev.map(message => {
+          const updatedMessages: Message[] = prev.map(message => {
             if (message.id === assistantMessageId) {
               console.log(`[useSendMessageMutation] Updating message ${message.id} to error state`);
               return {
@@ -198,8 +198,9 @@ export const useSendMessageMutation = () => {
                 content: "I'm sorry, I couldn't process your request. Please try again.",
                 isPlaceholder: false,
                 isError: true,
-                timestamp: new Date()
-              } as Message; // Type assertion to ensure it's recognized as a Message
+                timestamp: new Date(),
+                role: 'assistant' as const // Use const assertion
+              } as Message; // Ensure TypeScript recognizes this as a Message
             }
             return message;
           });

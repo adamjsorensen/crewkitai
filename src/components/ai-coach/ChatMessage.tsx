@@ -221,7 +221,7 @@ const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
     idChanged: prevMsg.id !== nextMsg.id
   });
   
-  // CRITICAL: Force re-render if content or placeholder status changes
+  // Force re-render on ANY property change to ensure updates are displayed
   if (prevMsg.content !== nextMsg.content) {
     console.log(`[ChatMessage.areEqual] Content changed for ${prevMsg.id} - forcing re-render`);
     return false;
@@ -232,25 +232,21 @@ const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
     return false;
   }
   
-  // Check if error status changed
   if (!!prevMsg.isError !== !!nextMsg.isError) {
     console.log(`[ChatMessage.areEqual] Error status changed for ${prevMsg.id} - forcing re-render`);
     return false;
   }
   
-  // Check if saved status changed
   if (!!prevMsg.isSaved !== !!nextMsg.isSaved) {
     console.log(`[ChatMessage.areEqual] Saved status changed for ${prevMsg.id} - forcing re-render`);
     return false;
   }
   
-  // Check if ID changed (shouldn't happen, but just in case)
   if (prevMsg.id !== nextMsg.id) {
     console.log(`[ChatMessage.areEqual] ID changed from ${prevMsg.id} to ${nextMsg.id} - forcing re-render`);
     return false;
   }
   
-  // Check if mobile status changed
   if (prevProps.isMobile !== nextProps.isMobile) {
     console.log(`[ChatMessage.areEqual] Mobile status changed for ${prevMsg.id} - forcing re-render`);
     return false;

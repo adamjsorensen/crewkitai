@@ -152,13 +152,13 @@ const MessageList: React.FC<MessageListProps> = ({
             role: message.role,
             isPlaceholder: !!message.isPlaceholder,
             contentLength: message.content?.length || 0,
-            key: `${message.id}-${message.content?.length || 0}-${Date.now()}`
+            key: `msg-${message.id}-${message.content?.length || 0}-${Date.now()}`
           });
           
           return (
             <ChatMessage
-              key={`${message.id}-${message.content?.length || 0}-${Date.now()}`} // Force re-render by including length and timestamp
-              message={message}
+              key={`msg-${message.id}-${message.content?.length || 0}-${Date.now()}`} // Enhanced key to force re-render
+              message={{...message}} // Pass a copy of the message to ensure reference changes
               onRegenerate={() => handleRegenerateMessage(message.id)}
               isMobile={isMobile}
             />
