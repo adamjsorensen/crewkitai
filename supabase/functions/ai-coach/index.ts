@@ -4,6 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.0';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Max-Age': '86400', // 24 hours cache for preflight requests
 };
 
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -144,9 +146,19 @@ async function cleanupDuplicateConversations(userId: string, conversationId: str
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  console.log("[ai-coach] Received request:", {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries([...req.headers.entries()].filter(([key]) => 
+      !['authorization', 'apikey'].includes(key.toLowerCase())
+    ))
+  });
+
+  // Handle CORS preflight requests - improved with better error handling
   if (req.method === 'OPTIONS') {
+    console.log("[ai-coach] Handling OPTIONS preflight request");
     return new Response(null, {
+      status: 204, // No Content is more appropriate for OPTIONS
       headers: corsHeaders,
     });
   }
@@ -156,11 +168,48 @@ serve(async (req) => {
     const settings = await getAiSettings();
     
     // Get the request body
-    const { message, imageUrl, userId, context = [], conversationId = null, thinkMode = false } = await req.json();
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log("[ai-coach] Parsed request body:", {
+        hasMessage: !!requestBody.message,
+        hasImageUrl: !!requestBody.imageUrl,
+        userId: requestBody.userId ? `${requestBody.userId.substring(0, 8)}...` : 'missing',
+        contextLength: requestBody.context?.length || 0,
+        conversationId: requestBody.conversationId || 'new',
+        thinkMode: !!requestBody.thinkMode
+      });
+    } catch (parseError) {
+      console.error("[ai-coach] Error parsing request body:", parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          details: parseError instanceof Error ? parseError.message : 'Unknown parsing error'
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    const { message, imageUrl, userId, context = [], conversationId = null, thinkMode = false } = requestBody;
     
     if (!message && !imageUrl) {
+      console.error("[ai-coach] Missing required parameters: no message or image");
       return new Response(
         JSON.stringify({ error: 'Message or image is required' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    if (!userId) {
+      console.error("[ai-coach] Missing required parameter: userId");
+      return new Response(
+        JSON.stringify({ error: 'User ID is required' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -358,8 +407,8 @@ serve(async (req) => {
     }
 
     // Call OpenAI API with enhanced error handling
-    console.log('Sending request to OpenAI API');
-    console.log('Request body:', JSON.stringify(requestBody, (key, value) => {
+    console.log('[ai-coach] Sending request to OpenAI API');
+    console.log('[ai-coach] Request body:', JSON.stringify(requestBody, (key, value) => {
       // Truncate long strings in logging
       if (typeof value === 'string' && value.length > 100) {
         return value.substring(0, 100) + '...';
@@ -369,7 +418,7 @@ serve(async (req) => {
     
     let openAIResponse;
     try {
-      console.log(`Sending OpenAI request at ${new Date().toISOString()}, has image: ${imageUrl ? 'YES' : 'NO'}`);
+      console.log(`[ai-coach] Sending OpenAI request at ${new Date().toISOString()}, has image: ${imageUrl ? 'YES' : 'NO'}`);
       const startTime = Date.now();
       
       openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -382,36 +431,57 @@ serve(async (req) => {
       });
       
       const duration = Date.now() - startTime;
-      console.log(`OpenAI API response received in ${duration}ms with status: ${openAIResponse.status}`);
+      console.log(`[ai-coach] OpenAI API response received in ${duration}ms with status: ${openAIResponse.status}`);
     } catch (fetchError) {
-      console.error('Fetch error calling OpenAI API:', {
-        error: fetchError instanceof Error ? {
-          name: fetchError.name,
-          message: fetchError.message,
-          stack: fetchError.stack
-        } : fetchError,
+      const errorDetails = fetchError instanceof Error ? {
+        name: fetchError.name,
+        message: fetchError.message,
+        stack: fetchError.stack
+      } : String(fetchError);
+      
+      console.error('[ai-coach] Fetch error calling OpenAI API:', {
+        error: errorDetails,
         hasImage: !!imageUrl,
         model: requestBody.model
       });
-      throw new Error(`Network error calling OpenAI API: ${fetchError instanceof Error ? fetchError.message : 'Unknown fetch error'}`);
+      
+      return new Response(
+        JSON.stringify({
+          error: 'Network error when calling OpenAI API',
+          details: fetchError instanceof Error ? fetchError.message : 'Unknown fetch error'
+        }),
+        {
+          status: 502, // Bad Gateway is appropriate for upstream service failure
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     if (!openAIResponse.ok) {
       let errorDetails = 'No error details available';
       try {
         const errorData = await openAIResponse.json();
-        console.error('OpenAI API error response:', errorData);
+        console.error('[ai-coach] OpenAI API error response:', errorData);
         errorDetails = JSON.stringify(errorData);
       } catch (parseError) {
-        console.error('Failed to parse error response:', parseError);
+        console.error('[ai-coach] Failed to parse error response:', parseError);
         try {
           errorDetails = await openAIResponse.text();
         } catch (textError) {
-          console.error('Failed to get error text:', textError);
+          console.error('[ai-coach] Failed to get error text:', textError);
         }
       }
       
-      throw new Error(`OpenAI API error (${openAIResponse.status}): ${errorDetails}`);
+      return new Response(
+        JSON.stringify({
+          error: `OpenAI API error (${openAIResponse.status})`,
+          details: errorDetails
+        }),
+        {
+          status: 502, // Bad Gateway
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const data = await openAIResponse.json();
@@ -552,10 +622,20 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error processing request:', error);
+    const errorDetails = error instanceof Error ? {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    } : String(error);
+    
+    console.error('[ai-coach] Error processing request:', errorDetails);
     
     return new Response(
-      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      JSON.stringify({ 
+        error: 'An unexpected error occurred',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
