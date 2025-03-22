@@ -1,5 +1,5 @@
 
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, ArrowLeft, PlusCircle } from 'lucide-react';
 import { useChat } from './chat/useChat';
@@ -8,9 +8,9 @@ import ChatMessageInput from './chat/ChatMessageInput';
 import ImagePreview from './chat/ImagePreview';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MessageSkeleton from './chat/MessageSkeleton';
+import WelcomeSection from './chat/WelcomeSection';
 
-// Lazy load WelcomeSection for better initial load performance
-const WelcomeSection = lazy(() => import('./chat/WelcomeSection'));
+// Remove lazy loading of WelcomeSection since it's causing issues
 
 type Message = {
   id: string;
