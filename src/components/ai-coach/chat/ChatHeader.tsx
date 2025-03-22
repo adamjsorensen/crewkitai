@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ChatHeaderProps {
   onBackClick: () => void;
@@ -10,20 +11,24 @@ interface ChatHeaderProps {
 const ChatHeader = ({ onBackClick, onNewChatClick }: ChatHeaderProps) => {
   return (
     <div className="sticky top-0 z-10 flex items-center justify-between p-2 bg-background/95 backdrop-blur-sm border-b">
-      <button
+      <Button
         onClick={onBackClick}
-        className="inline-flex items-center justify-center rounded-md p-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        variant="ghost"
+        className="flex items-center gap-2"
+        aria-label="Back to AI Coach"
       >
-        <ArrowLeft className="h-5 w-5" />
-        <span className="ml-1">Back to AI Coach</span>
-      </button>
-      <button
+        <ArrowLeft className="h-4 w-4" />
+        <span>Back to AI Coach</span>
+      </Button>
+      <Button
         onClick={onNewChatClick}
-        className="inline-flex items-center justify-center rounded-md p-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        variant="ghost"
+        className="flex items-center gap-2"
+        aria-label="Start new chat"
       >
-        <span className="mr-1">New Chat</span>
-        <PlusCircle className="h-5 w-5" />
-      </button>
+        <span>New Chat</span>
+        <PlusCircle className="h-4 w-4" />
+      </Button>
     </div>
   );
 };
