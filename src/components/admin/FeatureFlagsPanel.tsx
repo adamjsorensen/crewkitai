@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useFeatureFlags } from '@/contexts/FeatureFlagsContext';
 import { Switch } from '@/components/ui/switch';
@@ -66,20 +67,12 @@ const FeatureFlagsPanel = () => {
           )}
           
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-md">
-              <div>
-                <h3 className="font-medium">Enable Streaming Responses</h3>
-                <p className="text-sm text-gray-500">
-                  Allow responses to stream in real-time in the chat interface
-                </p>
-              </div>
-              <Switch
-                checked={flags.enableStreaming}
-                onCheckedChange={(checked) => handleToggleFlag('enableStreaming', checked)}
-              />
-            </div>
-            
-            {/* Add more feature flags here as needed */}
+            {/* Feature flags will be added here when needed */}
+            {Object.keys(flags).length === 0 && (
+              <p className="text-center text-gray-500 py-4">
+                No feature flags are currently defined.
+              </p>
+            )}
           </div>
           
           <div className="mt-6 text-sm text-gray-500">
