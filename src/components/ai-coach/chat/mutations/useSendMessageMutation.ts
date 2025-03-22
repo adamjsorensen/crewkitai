@@ -58,10 +58,12 @@ export const useSendMessageMutation = () => {
       try {
         console.log("[useSendMessageMutation] Calling edge function");
         
-        // Simple call to the edge function - minimal parameters for testing
+        // Call the edge function with all necessary data
         const { data, error } = await supabase.functions.invoke('ai-coach', {
           body: {
-            message: userMessage
+            message: userMessage,
+            conversationId,
+            imageUrl
           }
         });
 
