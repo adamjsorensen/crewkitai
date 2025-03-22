@@ -129,32 +129,30 @@ export const useSendMessageMutation = () => {
           if (placeholderIndex === -1) {
             console.error("[useSendMessageMutation] CRITICAL ERROR: Could not find placeholder to replace!");
             // Add as new message since we can't find the placeholder
-            return [
-              ...prevMessages,
-              {
-                id: assistantMessageId,
-                role: 'assistant',
-                content: data.response,
-                timestamp: new Date(),
-                suggestedFollowUps: data.suggestedFollowUps || [],
-                isPlaceholder: false
-              }
-            ];
+            const newAssistantMessage: Message = {
+              id: assistantMessageId,
+              role: 'assistant',
+              content: data.response,
+              timestamp: new Date(),
+              suggestedFollowUps: data.suggestedFollowUps || [],
+              isPlaceholder: false
+            };
+            return [...prevMessages, newAssistantMessage];
           }
           
           // Create a completely new array to ensure React detects the change
-          const updatedMessages = [
+          const updatedMessages: Message[] = [
             ...prevMessages.slice(0, placeholderIndex),
             {
               id: assistantMessageId,
-              role: 'assistant',
+              role: 'assistant', // Explicitly specify as 'assistant' to match the Message type
               content: data.response,
               timestamp: new Date(),
               suggestedFollowUps: data.suggestedFollowUps || [],
               isPlaceholder: false,
               isError: false,
               isSaved: false
-            },
+            } as Message, // Add type assertion to ensure TypeScript recognizes this as a Message
             ...prevMessages.slice(placeholderIndex + 1)
           ];
           
@@ -201,7 +199,7 @@ export const useSendMessageMutation = () => {
                 isPlaceholder: false,
                 isError: true,
                 timestamp: new Date()
-              };
+              } as Message; // Type assertion to ensure it's recognized as a Message
             }
             return message;
           });
