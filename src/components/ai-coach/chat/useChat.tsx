@@ -138,8 +138,9 @@ export const useChat = (
       
       console.log('[useChat] Processing text-only message');
       
-      // Pass the current input and think mode state to the handler
-      await handleSendMessageBase(input, isThinkMode);
+      // ALWAYS use think mode when sending messages from the main interface
+      // This ensures the "Your AI Coach is thinking..." message appears
+      await handleSendMessageBase(input, true);
     } catch (error) {
       console.error('[useChat] Error sending message:', error);
       setError('Failed to send message. Please try again.');
@@ -156,8 +157,7 @@ export const useChat = (
     user,
     setInput,
     setIsLoading,
-    setError,
-    isThinkMode
+    setError
   ]);
   
   // Handle example click - now only populates the input

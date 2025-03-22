@@ -76,12 +76,12 @@ export const useMessageHandler = ({
     scrollToBottom
   });
 
-  // New function: just fills the input with the example, doesn't send
+  // Function to fill the input with the example, doesn't send
   const fillInputWithExample = useCallback((question: string) => {
     setInput(question);
   }, [setInput]);
 
-  // Modified: handle actual sending of message after user clicks submit
+  // Handle actual sending of message after user clicks submit
   const handleSendMessage = useCallback(async (input: string, shouldUseThinkMode: boolean = false) => {
     if (!input.trim()) return;
     
@@ -103,9 +103,20 @@ export const useMessageHandler = ({
     // Set loading state immediately
     setIsLoading(true);
     
-    // Only use think mode if explicitly requested
+    // Add thinking message if think mode is enabled
     if (shouldUseThinkMode) {
       setIsThinkMode(true);
+      
+      // Add a temporary "thinking" message that will be replaced
+      const thinkingMessageId = `thinking-${Date.now()}`;
+      const thinkingMessage: Message = {
+        id: thinkingMessageId,
+        role: 'thinking',
+        content: 'Your AI Coach is thinking...',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, thinkingMessage]);
     }
     
     // Scroll to bottom immediately
@@ -115,8 +126,9 @@ export const useMessageHandler = ({
     setTimeout(async () => {
       await sendMessageTraditional(input, null, shouldUseThinkMode);
       
-      // Reset think mode after sending
+      // Remove thinking message once response is received
       if (shouldUseThinkMode) {
+        setMessages(prev => prev.filter(msg => msg.role !== 'thinking'));
         setIsThinkMode(false);
       }
     }, 50);

@@ -1,13 +1,11 @@
 
-import React, { useEffect, memo, useMemo } from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import React, { useState, useEffect } from 'react';
+import { ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Loader2, ArrowDown, PaintBucket } from 'lucide-react';
 import ChatMessage from '../ChatMessage';
-import TypingIndicator from '../TypingIndicator';
-import MessageSkeleton from './MessageSkeleton';
-import { useInView } from 'react-intersection-observer';
+import ChatExampleQuestions from './ChatExampleQuestions';
 import { Message } from './types';
+import ThinkingMessage from './ThinkingMessage';
 
 interface MessageListProps {
   messages: Message[];
@@ -21,93 +19,10 @@ interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement>;
   messagesContainerRef: React.RefObject<HTMLDivElement>;
   handleExampleClick: (question: string) => void;
-  isMobile?: boolean;
+  isMobile: boolean;
 }
 
-// Calculate visible messages for better performance
-const useVisibleMessages = (messages: Message[], isMobile: boolean) => {
-  return useMemo(() => {
-    const isWelcomeMessage = messages.length === 1 && messages[0].id === 'welcome';
-    
-    // Show empty state if we're just starting
-    if (messages.length === 0 || (isWelcomeMessage && messages.length <= 1)) {
-      return [];
-    }
-    
-    // Limit visible messages on mobile for better performance
-    if (isMobile && messages.length > 15) {
-      return messages.slice(Math.max(0, messages.length - 15));
-    }
-    
-    return messages;
-  }, [messages, isMobile]);
-};
-
-// Extract EmptyState into a separate component
-const EmptyState = memo(() => (
-  <div className="h-full flex items-center justify-center">
-    <div className="text-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-      <p className="text-muted-foreground">
-        Starting conversation...
-      </p>
-    </div>
-  </div>
-));
-EmptyState.displayName = 'EmptyState';
-
-// Extract LoadingState into a separate component
-const LoadingState = memo(() => (
-  <div className="h-full px-3 sm:px-4 pt-4">
-    <MessageSkeleton />
-    <MessageSkeleton />
-  </div>
-));
-LoadingState.displayName = 'LoadingState';
-
-// Extract ErrorMessage into a separate component
-const ErrorMessage = memo(({ error, handleRetry }: { error: string, handleRetry: () => void }) => (
-  <div className="flex items-center space-x-2 p-3 text-destructive bg-destructive/10 rounded-md animate-fade-in my-4 max-w-md mx-auto">
-    <AlertCircle className="h-4 w-4" />
-    <span className="text-sm">{error}</span>
-    <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
-      Retry
-    </Button>
-  </div>
-));
-ErrorMessage.displayName = 'ErrorMessage';
-
-// Enhanced typing indicator component with better visibility
-const TypingMessage = memo(() => (
-  <div className="flex items-start gap-3 animate-fade-in my-6">
-    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
-      <PaintBucket className="h-4 w-4 text-white" />
-    </div>
-    <div className="rounded-2xl p-4 bg-muted/70 shadow-sm">
-      <div className="flex items-center">
-        <TypingIndicator withIcon={true} className="py-1" />
-        <span className="text-sm text-muted-foreground ml-2">Your AI Coach is thinking...</span>
-      </div>
-    </div>
-  </div>
-));
-TypingMessage.displayName = 'TypingMessage';
-
-// ScrollToBottomButton component
-const ScrollToBottomButton = memo(({ onClick, isMobile }: { onClick: () => void, isMobile?: boolean }) => (
-  <Button
-    variant="outline"
-    size="icon"
-    className={`fixed bottom-28 right-4 sm:right-8 rounded-full shadow-md bg-background z-20 border border-border/50 ${isMobile ? 'h-10 w-10' : ''}`}
-    onClick={onClick}
-  >
-    <ArrowDown className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
-  </Button>
-));
-ScrollToBottomButton.displayName = 'ScrollToBottomButton';
-
-// Main MessageList component
-const MessageList: React.FC<MessageListProps> = memo(({
+const MessageList: React.FC<MessageListProps> = ({
   messages,
   isLoading,
   isLoadingHistory,
@@ -119,78 +34,92 @@ const MessageList: React.FC<MessageListProps> = memo(({
   messagesEndRef,
   messagesContainerRef,
   handleExampleClick,
-  isMobile = false
+  isMobile
 }) => {
-  const { ref: bottomInViewRef, inView: isBottomInView } = useInView({
-    threshold: 0.1,
-  });
-
-  // Use memoized visible messages
-  const visibleMessages = useVisibleMessages(messages, isMobile);
-
-  // Determine if we should show the empty state - moved outside component body
-  const showEmptyState = useMemo(() => {
-    const isWelcomeMessage = messages.length === 1 && messages[0].id === 'welcome';
-    return messages.length === 0 || (isWelcomeMessage && messages.length <= 1);
-  }, [messages]);
-
+  const [showExamples, setShowExamples] = useState(false);
+  const hasThinkingMessage = messages.some(message => message.role === 'thinking');
+  
+  // Example questions that might appear after a user sends a message
+  const exampleQuestions = [
+    "How can I charge more for my painting services?",
+    "What's the best way to handle difficult clients?",
+    "How do I estimate a kitchen cabinet painting job?",
+    "What marketing strategies work best for painters?"
+  ];
+  
   useEffect(() => {
-    // Ensure scroll to bottom on initial render and when messages change
-    if (messages.length > 0 && !isLoadingHistory) {
-      setTimeout(() => scrollToBottom(), 100);
+    if (messages.length >= 2 && !hasThinkingMessage) {
+      // Only show examples after the AI has responded
+      const userMessages = messages.filter(m => m.role === 'user');
+      const assistantMessages = messages.filter(m => m.role === 'assistant' && m.id !== 'welcome');
+      
+      if (userMessages.length > 0 && assistantMessages.length > 0) {
+        setShowExamples(true);
+      }
+    } else {
+      setShowExamples(false);
     }
-  }, [messages, scrollToBottom, isLoadingHistory]);
-
-  // IMPORTANT: Always create messageComponents regardless of conditional rendering
-  // This ensures hooks are always called in the same order
-  const messageComponents = useMemo(() => (
-    visibleMessages.map(message => (
-      <ChatMessage 
-        key={message.id} 
-        message={message} 
-        onRegenerate={handleRegenerateMessage}
-        isMobile={isMobile}
-      />
-    ))
-  ), [visibleMessages, handleRegenerateMessage, isMobile]);
-
-  // Conditional rendering with early returns for better performance
-  if (isLoadingHistory) {
-    return <LoadingState />;
-  }
-
-  if (showEmptyState) {
-    return <EmptyState />;
-  }
+  }, [messages, hasThinkingMessage]);
 
   return (
-    <div className="h-full flex-1 flex flex-col overflow-hidden relative">
-      <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-background via-background/95 to-transparent h-6 pointer-events-none" />
+    <div
+      ref={messagesContainerRef}
+      className="flex-1 overflow-y-auto pb-32 pt-4 px-4 scroll-smooth"
+    >
+      <div className="max-w-3xl mx-auto space-y-4">
+        {messages.map(message => {
+          if (message.role === 'thinking') {
+            return <ThinkingMessage key={message.id} />;
+          }
+          
+          return (
+            <ChatMessage
+              key={message.id}
+              message={message}
+              isLoadingResponse={isLoading && message === messages[messages.length - 1] && message.role === 'assistant'}
+              onRetry={handleRetry}
+              onRegenerate={() => handleRegenerateMessage(message.id)}
+              isMobile={isMobile}
+            />
+          );
+        })}
+        
+        {error && (
+          <div className="p-4 bg-red-50 text-red-800 rounded-md">
+            <p className="font-medium">Error</p>
+            <p className="text-sm">{error}</p>
+            <Button 
+              variant="outline" 
+              className="mt-2" 
+              onClick={handleRetry}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+        
+        {!hasThinkingMessage && showExamples && (
+          <ChatExampleQuestions 
+            questions={exampleQuestions} 
+            onQuestionClick={handleExampleClick} 
+          />
+        )}
+        
+        <div ref={messagesEndRef} />
+      </div>
       
-      <ScrollArea 
-        ref={messagesContainerRef} 
-        className="h-full px-3 sm:px-4 pt-4 pb-24 overflow-y-auto flex-1"
-      >
-        <div className="space-y-1 pb-24 max-w-3xl mx-auto"> 
-          {messageComponents}
-          
-          {isLoading && <TypingMessage />}
-          
-          {error && <ErrorMessage error={error} handleRetry={handleRetry} />}
-          
-          <div ref={messagesEndRef} />
-          <div ref={bottomInViewRef} className="h-1" />
-        </div>
-      </ScrollArea>
-      
-      {showScrollButton && !isBottomInView && (
-        <ScrollToBottomButton onClick={scrollToBottom} isMobile={isMobile} />
+      {showScrollButton && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="fixed bottom-24 right-8 h-10 w-10 rounded-full shadow-md border border-border/60 bg-background/80 backdrop-blur-sm z-10"
+          onClick={scrollToBottom}
+        >
+          <ArrowDown className="h-5 w-5" />
+        </Button>
       )}
     </div>
   );
-});
-
-// Add display name for debugging
-MessageList.displayName = 'MessageList';
+};
 
 export default MessageList;
