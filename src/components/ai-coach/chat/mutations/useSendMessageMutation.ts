@@ -48,7 +48,7 @@ export const useSendMessageMutation = () => {
       const placeholderMessage: Message = {
         id: placeholderId,
         role: 'assistant',
-        content: '...',
+        content: isThinkMode ? '...thinking deeply about your question...' : '...',
         timestamp: new Date(),
         isPlaceholder: true
       };
@@ -63,7 +63,8 @@ export const useSendMessageMutation = () => {
           body: {
             message: userMessage,
             conversationId,
-            imageUrl
+            imageUrl,
+            isThinkMode
           }
         });
 
