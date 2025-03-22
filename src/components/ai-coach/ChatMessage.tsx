@@ -82,8 +82,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
     content, 
     timestamp, 
     imageUrl, 
-    isStreaming,
-    isSaved
+    isStreaming = false,
+    isSaved = false
   } = message;
   
   const isAssistant = role === 'assistant';
@@ -155,8 +155,8 @@ const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
   return (
     prevProps.message.id === nextProps.message.id &&
     prevProps.message.content === nextProps.message.content &&
-    prevProps.message.isStreaming === nextProps.message.isStreaming &&
-    prevProps.message.isSaved === nextProps.message.isSaved &&
+    (prevProps.message.isStreaming === nextProps.message.isStreaming) &&
+    (prevProps.message.isSaved === nextProps.message.isSaved) &&
     prevProps.isMobile === nextProps.isMobile
   );
 };

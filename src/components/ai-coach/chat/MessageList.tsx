@@ -70,7 +70,6 @@ const MessageList: React.FC<MessageListProps> = ({
           <ChatMessage
             key={message.id}
             message={message}
-            onRetry={handleRetry}
             onRegenerate={() => handleRegenerateMessage(message.id)}
             isMobile={isMobile}
           />

@@ -60,27 +60,24 @@ export const useChatInterface = ({
       if (!hasStartedChat) {
         setHasStartedChat(true);
       }
-    } else if (isNewChat) {
-      // For a new chat, reset the hasStartedChat flag
-      setHasStartedChat(false);
     }
-  }, [conversationId, isNewChat, hasStartedChat]);
+  }, [conversationId, hasStartedChat]);
   
   // Wrap the send message handler with useCallback to prevent unnecessary recreations
   const handleSendMessage = useCallback(() => {
     if (!input.trim() && !imageFile) return;
     
-    // IMMEDIATELY set hasStartedChat to true when sending a message
-    // This ensures we switch to the chat view right away
+    // CRITICAL: Immediately set hasStartedChat to true before sending the message
+    // This ensures we switch to the chat view right away, before waiting for response
     setHasStartedChat(true);
     
     // Then proceed with sending the message
     originalHandleSendMessage();
   }, [originalHandleSendMessage, input, imageFile, setHasStartedChat]);
 
-  // Wrap the example click handler with useCallback - now just fills input
+  // Wrap the example click handler with useCallback 
   const handleExampleClick = useCallback((question: string) => {
-    // Fill the input field but don't send the message
+    // Fill the input field with the example question
     originalHandleExampleClick(question);
     
     // Focus the input after filling it

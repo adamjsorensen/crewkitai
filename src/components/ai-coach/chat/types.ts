@@ -1,12 +1,23 @@
 
-// Remove the 'thinking' role from the Message type
-export type MessageRole = 'user' | 'assistant';
-
 export interface Message {
   id: string;
-  role: MessageRole;
+  role: 'user' | 'assistant' | 'system';
   content: string;
-  imageUrl?: string | null;
   timestamp: Date;
-  keyPoints?: string[];
+  imageUrl?: string | null;
+  isStreaming?: boolean;
+  isSaved?: boolean;
+}
+
+export interface ChatThreadProps {
+  messages: Message[];
+  isLoading: boolean;
+  onRetry: () => void;
+}
+
+export interface ChatInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  disabled?: boolean;
 }

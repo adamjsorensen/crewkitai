@@ -100,13 +100,12 @@ export const useMessageHandler = ({
     // Clear input field
     setInput('');
     
-    // Set loading state immediately
+    // Set loading state immediately to show typing indicator
     setIsLoading(true);
     
-    // Scroll to bottom immediately to show the user message and prepare for loading animation
+    // Scroll to bottom immediately to show the user message and loading indicator
     scrollToBottom();
     
-    // We use the existing isThinkMode state when sending
     // Send the message to the backend after UI updates
     await sendMessageTraditional(input, null, shouldUseThinkMode);
     
