@@ -5,12 +5,13 @@ export type Message = {
   content: string;
   timestamp: Date;
   imageUrl?: string;
+  isLoading?: boolean;
+  error?: boolean;
+  errorInfo?: any;
   isStreaming?: boolean;
-  isLoading?: boolean; // Adding the missing property
-  error?: boolean;     // Adding error property for completeness
 };
 
 export type ConversationContext = {
   role: 'user' | 'assistant';
   content: string;
-}[];
+};

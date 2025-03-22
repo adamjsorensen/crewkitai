@@ -360,13 +360,67 @@ serve(async (req) => {
       imageWasProvided: !!imageUrl
     });
 
+    // Store conversation in database if needed
+    let newConversationId = conversationId;
+    
+    if (!conversationId && userId) {
+      try {
+        // Create a new root conversation
+        const title = message ? (message.length > 30 ? message.substring(0, 30) + '...' : message) : 'Image analysis';
+        
+        const { data: rootData, error: rootError } = await supabase
+          .from('ai_coach_conversations')
+          .insert({
+            user_id: userId,
+            user_message: message || 'Image analysis request',
+            ai_response: aiResponse,
+            is_root: true,
+            title,
+            image_url: imageUrl
+          })
+          .select('id')
+          .single();
+        
+        if (rootError) {
+          console.error('Error creating conversation:', rootError);
+        } else {
+          console.log('Created new conversation with ID:', rootData.id);
+          newConversationId = rootData.id;
+        }
+      } catch (dbError) {
+        console.error('Database error when creating conversation:', dbError);
+      }
+    } else if (conversationId && userId) {
+      try {
+        // Add message to existing conversation
+        const { error: msgError } = await supabase
+          .from('ai_coach_conversations')
+          .insert({
+            user_id: userId,
+            user_message: message || 'Image analysis request',
+            ai_response: aiResponse,
+            conversation_id: conversationId,
+            image_url: imageUrl
+          });
+        
+        if (msgError) {
+          console.error('Error adding message to conversation:', msgError);
+        } else {
+          console.log('Added message to existing conversation:', conversationId);
+        }
+      } catch (dbError) {
+        console.error('Database error when adding message:', dbError);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         response: aiResponse,
         model: data.model,
         usage: data.usage,
         imageProcessed: !!imageUrl,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        conversationId: newConversationId
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

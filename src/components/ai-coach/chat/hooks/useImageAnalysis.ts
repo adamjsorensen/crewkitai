@@ -95,37 +95,31 @@ export const useImageAnalysis = ({
       // Scroll to bottom to show loading message
       setTimeout(scrollToBottom, 50);
 
-      // Get authentication token for edge function call
-      logDebug('Getting authentication session');
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Authentication required');
-      }
-
-      // Call the vision-analysis edge function
-      logDebug('Calling vision-analysis edge function with parameters', {
+      // Use the regular ai-coach edge function with image URL
+      logDebug('Calling ai-coach edge function with image', {
         imageUrlLength: imageUrl.length,
         promptLength: prompt.length
       });
       
       // Detailed logging of request
-      console.log('Making request to vision-analysis with payload:', {
+      console.log('Making request to ai-coach with payload:', {
         imageUrlSample: imageUrl.substring(0, 30) + '...' + imageUrl.substring(imageUrl.length - 30),
         promptSample: prompt,
         userId: user.id,
         conversationId
       });
       
-      const response = await supabase.functions.invoke('vision-analysis', {
+      const response = await supabase.functions.invoke('ai-coach', {
         body: {
+          message: prompt || 'Please analyze this image.',
           imageUrl,
-          prompt,
           userId: user.id,
+          context: [],
           conversationId
         }
       });
 
-      logDebug('Response from vision-analysis received', {
+      logDebug('Response from ai-coach received', {
         status: response.error ? 'ERROR' : 'SUCCESS',
         error: response.error,
         dataKeys: response.data ? Object.keys(response.data) : []
@@ -135,8 +129,8 @@ export const useImageAnalysis = ({
         throw new Error(`Edge function error: ${response.error}`);
       }
 
-      const { analysis, conversationId: newConversationId } = response.data as { 
-        analysis: string;
+      const { response: analysis, conversationId: newConversationId } = response.data as { 
+        response: string;
         conversationId: string;
       };
 
