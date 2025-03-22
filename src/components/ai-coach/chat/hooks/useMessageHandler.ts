@@ -4,7 +4,6 @@ import { Message } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '@supabase/supabase-js';
 import { useImageAnalysis } from './useImageAnalysis';
-import { useStreamingChat } from './useStreamingChat';
 import { useSendMessage } from './useSendMessage';
 import { useRetryMessage } from './useRetryMessage';
 import { useRegenerateMessage } from './useRegenerateMessage';
@@ -20,7 +19,6 @@ interface UseMessageHandlerProps {
   onConversationCreated?: (id: string) => void;
   setIsThinkMode: (isThinkMode: boolean) => void;
   scrollToBottom: () => void;
-  enableStreaming: boolean;
   uploadImage: (file: File) => Promise<string | null>;
   removeImage: () => void;
 }
@@ -36,7 +34,6 @@ export const useMessageHandler = ({
   onConversationCreated,
   setIsThinkMode,
   scrollToBottom,
-  enableStreaming,
   uploadImage,
   removeImage
 }: UseMessageHandlerProps) => {
@@ -65,21 +62,6 @@ export const useMessageHandler = ({
     setIsLoading,
     setError,
     conversationId
-  });
-  
-  const {
-    isStreaming,
-    sendStreamingMessage
-  } = useStreamingChat({
-    user,
-    messages,
-    setMessages,
-    setIsLoading,
-    setError,
-    conversationId,
-    onConversationCreated,
-    scrollToBottom,
-    setIsThinkMode
   });
   
   const {
@@ -131,11 +113,7 @@ export const useMessageHandler = ({
     
     // Small timeout to ensure UI updates before processing
     setTimeout(async () => {
-      if (enableStreaming) {
-        await sendStreamingMessage(input);
-      } else {
-        await sendMessageTraditional(input, null, shouldUseThinkMode);
-      }
+      await sendMessageTraditional(input, null, shouldUseThinkMode);
       
       // Reset think mode after sending
       if (shouldUseThinkMode) {
@@ -143,7 +121,7 @@ export const useMessageHandler = ({
       }
     }, 50);
     
-  }, [enableStreaming, sendStreamingMessage, sendMessageTraditional, scrollToBottom, setIsThinkMode, setInput, setIsLoading, setMessages]);
+  }, [sendMessageTraditional, scrollToBottom, setIsThinkMode, setInput, setIsLoading, setMessages]);
 
   const handleRetry = useCallback(() => {
     const lastContent = baseHandleRetry();
@@ -156,9 +134,6 @@ export const useMessageHandler = ({
     handleRetry,
     handleRegenerateMessage,
     analyzeImage,
-    isAnalyzing,
-    isStreaming,
-    sendMessageTraditional,
-    sendStreamingMessage
+    isAnalyzing
   };
 };

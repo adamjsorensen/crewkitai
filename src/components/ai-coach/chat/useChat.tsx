@@ -1,6 +1,5 @@
 
 import { useCallback, useEffect } from 'react';
-import { useFeatureFlags } from '@/contexts/FeatureFlagsContext';
 import { v4 as uuidv4 } from 'uuid';
 import { useChatCore } from './hooks/useChatCore';
 import { useMessageHandler } from './hooks/useMessageHandler';
@@ -15,8 +14,6 @@ export const useChat = (
   isNewChat: boolean,
   onConversationCreated?: (id: string) => void
 ) => {
-  const { flags } = useFeatureFlags();
-  
   const {
     input, 
     setInput,
@@ -63,10 +60,7 @@ export const useChat = (
     handleRetry,
     handleRegenerateMessage,
     analyzeImage,
-    isAnalyzing,
-    isStreaming,
-    sendMessageTraditional,
-    sendStreamingMessage
+    isAnalyzing
   } = useMessageHandler({
     user,
     messages,
@@ -78,7 +72,6 @@ export const useChat = (
     onConversationCreated,
     setIsThinkMode,
     scrollToBottom,
-    enableStreaming: flags.enableStreaming,
     uploadImage,
     removeImage
   });
@@ -200,7 +193,6 @@ export const useChat = (
     showScrollButton,
     isThinkMode,
     setIsThinkMode,
-    isStreaming: (flags.enableStreaming && !imageFile) ? isStreaming : false,
     messagesEndRef,
     messagesContainerRef,
     fileInputRef,

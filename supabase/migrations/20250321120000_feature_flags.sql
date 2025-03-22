@@ -1,3 +1,4 @@
+
 -- Create feature flags table
 CREATE TABLE IF NOT EXISTS feature_flags (
   name TEXT PRIMARY KEY,
@@ -8,9 +9,10 @@ CREATE TABLE IF NOT EXISTS feature_flags (
 );
 
 -- Add initial feature flags
-INSERT INTO feature_flags (name, enabled, description)
-VALUES ('enableStreaming', false, 'Enable streaming responses in the chat interface')
-ON CONFLICT (name) DO NOTHING;
+-- Removing the streaming flag as it's no longer used
+-- INSERT INTO feature_flags (name, enabled, description)
+-- VALUES ('enableStreaming', false, 'Enable streaming responses in the chat interface')
+-- ON CONFLICT (name) DO NOTHING;
 
 -- Add RLS policies for feature_flags table
 ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
