@@ -1,11 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.0';
 
+// Simplified CORS headers for reliability
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Max-Age': '86400', // 24 hours cache for preflight requests
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Allow-Methods': '*',
+  'Access-Control-Max-Age': '86400'
 };
 
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -85,7 +86,7 @@ async function getAiSettings() {
   }
 }
 
-// Define a function to check for and clean up duplicate conversations
+// Define a simplified cleanup function
 async function cleanupDuplicateConversations(userId: string, conversationId: string | null) {
   if (!conversationId) return;
   
@@ -154,12 +155,12 @@ serve(async (req) => {
     ))
   });
 
-  // Handle CORS preflight requests - improved with better error handling
+  // Simplified CORS handling for OPTIONS requests
   if (req.method === 'OPTIONS') {
-    console.log("[ai-coach] Handling OPTIONS preflight request");
+    console.log("[ai-coach] Handling OPTIONS request");
     return new Response(null, {
-      status: 204, // No Content is more appropriate for OPTIONS
-      headers: corsHeaders,
+      status: 204,
+      headers: corsHeaders
     });
   }
 
@@ -381,12 +382,16 @@ serve(async (req) => {
     // Define request body based on the model and include function calling
     const requestBody: any = {
       model: model,
-      messages: messages,
-      functions: functionDefinitions,
-      function_call: {
-        name: "generate_follow_up_questions"
-      }
+      messages: messages
     };
+
+    // Only add function calling for OpenAI models
+    if (!model.includes('o3-mini')) {
+      requestBody.functions = functionDefinitions;
+      requestBody.function_call = {
+        name: "generate_follow_up_questions"
+      };
+    }
 
     // Add model-specific parameters
     // Check if the model is o3-mini (Anthropic Claude model)
