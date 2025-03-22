@@ -1,5 +1,5 @@
 
-import React, { useEffect, memo } from 'react';
+import React, { useEffect, memo, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Loader2, ArrowDown } from 'lucide-react';
@@ -40,22 +40,39 @@ const MessageList: React.FC<MessageListProps> = memo(({
   handleExampleClick,
   isMobile = false
 }) => {
-  const isWelcomeMessage = messages.length === 1 && messages[0].id === 'welcome';
   const { ref: bottomInViewRef, inView: isBottomInView } = useInView({
     threshold: 0.1,
   });
 
-  // Limit visible messages to improve performance on mobile
-  const visibleMessages = isMobile && messages.length > 15
-    ? messages.slice(Math.max(0, messages.length - 15))
-    : messages;
+  // Memoize visible messages to improve performance on mobile
+  const visibleMessages = useMemo(() => {
+    const isWelcomeMessage = messages.length === 1 && messages[0].id === 'welcome';
+    
+    // Show empty state if we're just starting
+    if (messages.length === 0 || (isWelcomeMessage && messages.length <= 1)) {
+      return [];
+    }
+    
+    // Limit visible messages on mobile for better performance
+    if (isMobile && messages.length > 15) {
+      return messages.slice(Math.max(0, messages.length - 15));
+    }
+    
+    return messages;
+  }, [messages, isMobile]);
+
+  // Determine if we should show the empty state
+  const showEmptyState = useMemo(() => {
+    const isWelcomeMessage = messages.length === 1 && messages[0].id === 'welcome';
+    return messages.length === 0 || (isWelcomeMessage && messages.length <= 1);
+  }, [messages]);
 
   useEffect(() => {
     // Ensure scroll to bottom on initial render and when messages change
-    if (messages.length > 0) {
+    if (messages.length > 0 && !isLoadingHistory) {
       setTimeout(() => scrollToBottom(), 100);
     }
-  }, [messages, scrollToBottom]);
+  }, [messages, scrollToBottom, isLoadingHistory]);
 
   if (isLoadingHistory) {
     return (
@@ -67,9 +84,6 @@ const MessageList: React.FC<MessageListProps> = memo(({
   }
 
   // Show an empty state with loading indicator if there are no messages
-  // or if the only message is the welcome message
-  const showEmptyState = messages.length === 0 || (isWelcomeMessage && messages.length <= 1);
-  
   if (showEmptyState) {
     return (
       <div className="h-full flex items-center justify-center">

@@ -24,23 +24,12 @@ export const useImageAnalysis = ({
 }: UseImageAnalysisProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // More concise debug logging function
-  const logDebug = (message: string, data?: any) => {
-    console.log(`[ImageAnalysis] ${message}`, data || '');
-  };
-  
-  const logError = (message: string, error: any) => {
-    console.error(`[ImageAnalysis:Error] ${message}`, error);
-  };
-
   const analyzeImage = useCallback(async (prompt: string, imageUrl: string) => {
     if (!user?.id) {
-      logError('Analysis failed - No user ID', { user });
+      console.error('Analysis failed - No user ID');
       setError('Authentication required to analyze images');
       return null;
     }
-
-    logDebug('Starting image analysis', { prompt, imageUrl: imageUrl.substring(0, 30) + '...' });
 
     try {
       setIsAnalyzing(true);
@@ -74,11 +63,6 @@ export const useImageAnalysis = ({
       // Scroll to bottom to show loading message
       setTimeout(scrollToBottom, 50);
       
-      logDebug('Calling ai-coach edge function with image', {
-        promptLength: prompt.length,
-        imageUrlLength: imageUrl.length
-      });
-      
       // Use the main ai-coach edge function with image URL
       const response = await supabase.functions.invoke('ai-coach', {
         body: {
@@ -99,14 +83,8 @@ export const useImageAnalysis = ({
         conversationId: string;
       };
 
-      logDebug('Successfully processed image analysis', {
-        analysisLength: analysis.length,
-        newConversationId
-      });
-
       // Notify about new conversation if needed
       if (!conversationId && onConversationCreated && newConversationId) {
-        logDebug('New conversation created', { newConversationId });
         onConversationCreated(newConversationId);
       }
 
@@ -119,10 +97,9 @@ export const useImageAnalysis = ({
         )
       );
 
-      logDebug('Image analysis completed successfully');
       return newConversationId || conversationId;
     } catch (error) {
-      logError('Image analysis failed', error);
+      console.error('Image analysis failed', error);
       
       // Update error message in UI
       setMessages(prev => {

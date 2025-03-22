@@ -11,6 +11,7 @@ export type Message = {
   isStreaming?: boolean;
   isPinned?: boolean;
   isSaved?: boolean;
+  needsRegeneration?: boolean;
 };
 
 export type ConversationContext = {
