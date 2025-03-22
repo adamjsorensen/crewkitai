@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { Message } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -76,16 +75,13 @@ export const useMessageHandler = ({
     scrollToBottom
   });
 
-  // Function to fill the input with the example, doesn't send
   const fillInputWithExample = useCallback((question: string) => {
     setInput(question);
   }, [setInput]);
 
-  // Handle actual sending of message after user clicks submit
   const handleSendMessage = useCallback(async (input: string, shouldUseThinkMode: boolean = false) => {
     if (!input.trim()) return;
     
-    // Create and add user message immediately
     const userMessageId = `user-${Date.now()}`;
     const userMessage: Message = {
       id: userMessageId,
@@ -94,29 +90,17 @@ export const useMessageHandler = ({
       timestamp: new Date()
     };
     
-    // CRITICAL: Add user message to the chat IMMEDIATELY before any async operations
     setMessages(prev => [...prev, userMessage]);
-    
-    // Clear input field immediately
     setInput('');
-    
-    // Set loading state immediately to show typing indicator
     setIsLoading(true);
-    
-    // Scroll to bottom immediately to show the user message
     scrollToBottom();
     
-    // IMPORTANT: Use setTimeout to ensure the UI updates complete before potentially blocking operations
-    setTimeout(async () => {
-      try {
-        // Send the message to the backend
-        await sendMessageTraditional(input, null, shouldUseThinkMode);
-      } catch (error) {
-        console.error('Error in handleSendMessage:', error);
-        setError('Failed to send message. Please try again.');
-      }
-    }, 10);
-    
+    try {
+      await sendMessageTraditional(input, null, shouldUseThinkMode);
+    } catch (error) {
+      console.error('Error in handleSendMessage:', error);
+      setError('Failed to send message. Please try again.');
+    }
   }, [sendMessageTraditional, scrollToBottom, setInput, setIsLoading, setMessages, setError]);
 
   const handleRetry = useCallback(() => {

@@ -1,5 +1,5 @@
 
-import React, { Suspense, memo } from 'react';
+import React, { Suspense, memo, lazy } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import WelcomeSection from './chat/WelcomeSection';
@@ -69,40 +69,45 @@ const ChatInterface: React.FC<ChatInterfaceProps> = memo(({
     onBackToWelcome
   });
 
+  // Both chat UI and welcome UI are preloaded
+  const chatUI = (
+    <div className="flex-1 overflow-hidden flex flex-col relative">
+      <ChatHeader 
+        onBackClick={handleBackToWelcome}
+        onNewChatClick={handleNewChatClick}
+      />
+      
+      <ChatContent 
+        messages={messages}
+        isLoading={isLoading}
+        isLoadingHistory={isLoadingHistory}
+        error={error}
+        handleRetry={handleRetry}
+        handleRegenerateMessage={handleRegenerateMessage}
+        showScrollButton={showScrollButton}
+        scrollToBottom={scrollToBottom}
+        messagesEndRef={messagesEndRef}
+        messagesContainerRef={messagesContainerRef}
+        handleExampleClick={handleExampleClick}
+        isMobile={isMobile}
+      />
+    </div>
+  );
+
+  const welcomeUI = (
+    <Suspense fallback={<MessageSkeleton />}>
+      <WelcomeSection 
+        onCategorySelect={handleExampleClick} 
+        onNewChat={onNewChat}
+        onHistoryClick={onHistoryClick}
+      />
+    </Suspense>
+  );
+
   return (
     <div className="flex flex-col h-full max-h-[85vh] relative">
-      {!hasStartedChat ? (
-        <Suspense fallback={<MessageSkeleton />}>
-          <WelcomeSection 
-            onCategorySelect={handleExampleClick} 
-            onNewChat={onNewChat}
-            onHistoryClick={onHistoryClick}
-          />
-        </Suspense>
-      ) : (
-        <div className="flex-1 overflow-hidden flex flex-col relative">
-          {/* Top navigation bar */}
-          <ChatHeader 
-            onBackClick={handleBackToWelcome}
-            onNewChatClick={handleNewChatClick}
-          />
-          
-          <ChatContent 
-            messages={messages}
-            isLoading={isLoading}
-            isLoadingHistory={isLoadingHistory}
-            error={error}
-            handleRetry={handleRetry}
-            handleRegenerateMessage={handleRegenerateMessage}
-            showScrollButton={showScrollButton}
-            scrollToBottom={scrollToBottom}
-            messagesEndRef={messagesEndRef}
-            messagesContainerRef={messagesContainerRef}
-            handleExampleClick={handleExampleClick}
-            isMobile={isMobile}
-          />
-        </div>
-      )}
+      {/* Simply switch between the two UI states without loading anything */}
+      {hasStartedChat ? chatUI : welcomeUI}
       
       <ChatInputArea 
         input={input}
