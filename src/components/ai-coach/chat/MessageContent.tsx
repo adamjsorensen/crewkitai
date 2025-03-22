@@ -37,8 +37,10 @@ const MessageContent: React.FC<MessageContentProps> = ({
           a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">{children}</a>,
           
           // Improve code block styling
-          code: ({ node, inline, className, children, ...props }) => {
-            if (inline) {
+          code: ({ className, children, ...props }: React.ClassAttributes<HTMLElement> & React.HTMLAttributes<HTMLElement> & { inline?: boolean }) => {
+            const isInline = props.inline;
+            
+            if (isInline) {
               return <code className="px-1 py-0.5 bg-primary/10 rounded text-sm font-mono" {...props}>{children}</code>;
             }
             return (
