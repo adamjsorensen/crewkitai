@@ -1,31 +1,45 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
-import { Message } from './types';
+
+import { useCallback, useEffect } from 'react';
+import { useFeatureFlags } from '@/contexts/FeatureFlagsContext';
 import { v4 as uuidv4 } from 'uuid';
-import { fetchConversationHistory } from './api/fetchConversationHistory';
+import { useChatCore } from './hooks/useChatCore';
+import { useMessageHandler } from './hooks/useMessageHandler';
 import { useImageHandling } from './hooks/useImageHandling';
-import { useMessageOperations } from './hooks/useMessageOperations';
 import { useScrollManagement } from './hooks/useScrollManagement';
 import { useConversationUtils } from './hooks/useConversationUtils';
-import { useStreamingChat } from './hooks/useStreamingChat';
-import { useImageAnalysis } from './hooks/useImageAnalysis';
-import { useFeatureFlags } from '@/contexts/FeatureFlagsContext';
+import { useKeyboardHandling } from './hooks/useKeyboardHandling';
+import { Message } from './types';
 
 export const useChat = (
   conversationId: string | null,
   isNewChat: boolean,
   onConversationCreated?: (id: string) => void
 ) => {
-  const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isThinkMode, setIsThinkMode] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const { user } = useAuth();
   const { flags } = useFeatureFlags();
+  
+  const {
+    input, 
+    setInput,
+    messages, 
+    setMessages,
+    isLoading, 
+    setIsLoading,
+    error, 
+    setError,
+    isThinkMode, 
+    setIsThinkMode,
+    isLoadingHistory,
+    fileInputRef,
+    inputRef,
+    user
+  } = useChatCore(conversationId, isNewChat, onConversationCreated);
+  
+  const {
+    showScrollButton,
+    messagesEndRef,
+    messagesContainerRef,
+    scrollToBottom
+  } = useScrollManagement();
   
   const {
     imageFile,
@@ -38,98 +52,41 @@ export const useChat = (
   } = useImageHandling({ user });
   
   const {
-    showScrollButton,
-    messagesEndRef,
-    messagesContainerRef,
-    scrollToBottom
-  } = useScrollManagement();
-  
-  const {
     isCopying,
     copyConversation,
     clearConversation
   } = useConversationUtils(messages, setMessages, onConversationCreated);
   
   const {
-    handleSendMessage: sendMessageTraditional,
-    handleRetry: baseHandleRetry,
-    handleRegenerateMessage
-  } = useMessageOperations({
-    user,
-    messages,
-    setMessages,
-    setIsLoading,
-    setError,
-    conversationId,
-    onConversationCreated,
-    uploadImage,
-    removeImage,
-    imageFile,
-    isThinkMode,
-    setIsThinkMode
-  });
-  
-  const {
-    isStreaming,
-    sendStreamingMessage
-  } = useStreamingChat({
-    user,
-    messages,
-    setMessages,
-    setIsLoading,
-    setError,
-    conversationId,
-    onConversationCreated,
-    scrollToBottom,
-    setIsThinkMode
-  });
-  
-  const {
+    handleExampleClick,
+    handleRetry,
+    handleRegenerateMessage,
     analyzeImage,
-    isAnalyzing
-  } = useImageAnalysis({
+    isAnalyzing,
+    isStreaming,
+    sendMessageTraditional,
+    sendStreamingMessage
+  } = useMessageHandler({
     user,
+    messages,
+    setMessages,
+    setInput,
+    setIsLoading,
+    setError,
     conversationId,
     onConversationCreated,
-    setMessages,
-    setError,
-    scrollToBottom
+    setIsThinkMode,
+    scrollToBottom,
+    enableStreaming: flags.enableStreaming
   });
   
-  const { data: historyMessages = [], isLoading: isLoadingHistory } = useQuery({
-    queryKey: ['conversationHistory', conversationId],
-    queryFn: () => fetchConversationHistory(conversationId, user?.id),
-    enabled: !isNewChat && !!conversationId && !!user,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  useEffect(() => {
-    if (isNewChat) {
-      setMessages([{
-        id: 'welcome',
-        role: 'assistant',
-        content: "Hello! I'm your AI Coach for the painting industry. How can I help you today? Ask me about pricing jobs, managing clients, leading crews, or marketing strategies.",
-        timestamp: new Date()
-      }]);
-    } else if (!isLoadingHistory && historyMessages.length > 0) {
-      setMessages(historyMessages);
-    } else if (!isLoadingHistory && historyMessages.length === 0 && !isNewChat && conversationId) {
-      setMessages([{
-        id: 'welcome',
-        role: 'assistant',
-        content: "Hello! I'm your AI Coach for the painting industry. How can I help you today? Ask me about pricing jobs, managing clients, leading crews, or marketing strategies.",
-        timestamp: new Date()
-      }]);
-    }
-  }, [isNewChat, historyMessages, isLoadingHistory, conversationId]);
-
+  // Scroll to bottom when messages change
   useEffect(() => {
     console.log("[useChat] Messages changed, scrolling to bottom...");
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  // Scroll to bottom after loading completes
   useEffect(() => {
     if (!isLoading) {
       console.log("[useChat] Loading completed, scrolling to bottom...");
@@ -139,11 +96,11 @@ export const useChat = (
       return () => clearTimeout(timer);
     }
   }, [isLoading, scrollToBottom]);
-
+  
   const handleImageClick = useCallback(() => {
     handleImageClickBase(fileInputRef);
-  }, [handleImageClickBase]);
-
+  }, [handleImageClickBase, fileInputRef]);
+  
   const handleSendMessage = useCallback(async () => {
     if (!input.trim() && !imageFile) {
       console.log('[useChat] No input or image file, ignoring send request');
@@ -194,7 +151,6 @@ export const useChat = (
       };
       
       setMessages(prev => [...prev, userMessage]);
-      
       setInput('');
       
       setTimeout(() => scrollToBottom(), 50);
@@ -213,48 +169,25 @@ export const useChat = (
       setIsLoading(false);
       setIsThinkMode(false);
     }
-  }, [flags.enableStreaming, sendStreamingMessage, sendMessageTraditional, analyzeImage, input, imageFile, uploadImage, removeImage, scrollToBottom, setIsThinkMode, user]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  }, [handleSendMessage]);
-
-  const handleExampleClick = useCallback((question: string) => {
-    setInput(question);
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-    
-    const userMessageId = `user-${Date.now()}`;
-    const userMessage: Message = {
-      id: userMessageId,
-      role: 'user',
-      content: question,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    
-    setInput('');
-    setIsLoading(true);
-    setIsThinkMode(true);
-    
-    setTimeout(() => scrollToBottom(), 50);
-    
-    if (flags.enableStreaming) {
-      sendStreamingMessage(question);
-    } else {
-      sendMessageTraditional(question);
-    }
-  }, [flags.enableStreaming, sendStreamingMessage, sendMessageTraditional, scrollToBottom, setIsThinkMode]);
-
-  const handleRetry = useCallback(() => {
-    const lastContent = baseHandleRetry();
-    setInput(lastContent);
-  }, [baseHandleRetry]);
+  }, [
+    flags.enableStreaming, 
+    sendStreamingMessage, 
+    sendMessageTraditional, 
+    analyzeImage, 
+    input, 
+    imageFile, 
+    uploadImage, 
+    removeImage, 
+    scrollToBottom, 
+    setIsThinkMode, 
+    user,
+    setInput,
+    setIsLoading,
+    setMessages,
+    setError
+  ]);
+  
+  const { handleKeyDown } = useKeyboardHandling({ handleSendMessage });
 
   return {
     input,
