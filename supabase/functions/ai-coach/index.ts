@@ -157,8 +157,24 @@ async function callOpenAI(message: string, settings: AISettings, isThinkMode = f
     }
     
     const data = await response.json();
+    
+    // Enhanced logging
+    console.log('[ai-coach] OpenAI response received:', {
+      model: model,
+      responseLength: data.choices[0]?.message?.content?.length || 0,
+      promptTokens: data.usage?.prompt_tokens || 0,
+      completionTokens: data.usage?.completion_tokens || 0,
+      totalTokens: data.usage?.total_tokens || 0
+    });
+    
+    // Validate response content
+    if (!data.choices?.[0]?.message?.content) {
+      console.error("[ai-coach] Invalid response format from OpenAI:", data);
+      throw new Error("Invalid response format from OpenAI");
+    }
+    
     return {
-      response: data.choices[0]?.message?.content || "I couldn't generate a response. Please try again.",
+      response: data.choices[0].message.content,
       model: model,
       usage: data.usage
     };
@@ -231,7 +247,7 @@ serve(async (req) => {
     if (req.method === 'GET') {
       console.log('[ai-coach] Handling GET request (health check)');
       return new Response(
-        JSON.stringify({ status: 'ok', version: '22-models-fix' }),
+        JSON.stringify({ status: 'ok', version: '23-message-display-fix' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200

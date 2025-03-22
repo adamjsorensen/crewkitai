@@ -71,6 +71,14 @@ const MessageList: React.FC<MessageListProps> = ({
       
       console.log(`[MessageList] Message breakdown: ${userCount} user, ${assistantCount} assistant, ${placeholderCount} placeholders`);
       
+      // Debug: Log all messages in the array
+      console.log('[MessageList] All messages:', messages.map(m => ({
+        id: m.id,
+        role: m.role,
+        isPlaceholder: !!m.isPlaceholder,
+        contentStart: m.content.substring(0, 30)
+      })));
+      
       // Log details of the last message for debugging
       if (messages.length > 0) {
         const lastMsg = messages[messages.length - 1];
@@ -78,7 +86,8 @@ const MessageList: React.FC<MessageListProps> = ({
           id: lastMsg.id, 
           role: lastMsg.role,
           isPlaceholder: !!lastMsg.isPlaceholder,
-          contentLength: lastMsg.content.length
+          contentLength: lastMsg.content.length,
+          content: lastMsg.content.substring(0, 50) + '...'
         });
       }
     }
@@ -104,6 +113,12 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, [messages]);
 
+  // Force scroll on messages change
+  useEffect(() => {
+    console.log('[MessageList] Messages changed, scrolling to bottom');
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
   return (
     <div
       ref={messagesContainerRef}
@@ -122,7 +137,7 @@ const MessageList: React.FC<MessageListProps> = ({
           if (message.isPlaceholder && message.role === 'assistant') {
             console.log('[MessageList] Rendering placeholder for message:', message.id);
             return (
-              <div key={message.id} className="flex items-start space-x-3">
+              <div key={message.id} className="flex items-start space-x-3 animate-fade-in">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                   <PaintBucket className="h-4 w-4 text-primary" />
                 </div>
@@ -147,7 +162,7 @@ const MessageList: React.FC<MessageListProps> = ({
         
         {/* AI Typing indicator when loading but no placeholder is present */}
         {isLoading && !messages.some(m => m.isPlaceholder) && (
-          <div className="flex items-start space-x-3">
+          <div className="flex items-start space-x-3 animate-fade-in">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
               <PaintBucket className="h-4 w-4 text-primary" />
             </div>

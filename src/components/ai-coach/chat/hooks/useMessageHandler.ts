@@ -40,8 +40,8 @@ export const useMessageHandler = ({
   // Track if we're in the process of adding UI elements
   const [isAddingToUI, setIsAddingToUI] = useState(false);
   
-  // Use our refactored send message hook
-  const { handleSendMessage: sendMessageTraditional } = useSendMessage({
+  // Use our refactored send message hook with improved response handling
+  const { handleSendMessage: sendMessage } = useSendMessage({
     user,
     messages,
     setMessages,
@@ -114,11 +114,11 @@ export const useMessageHandler = ({
     }
   }, [setMessages, setInput, scrollToBottom]);
 
-  // Send message with UI updates decoupled from API call
+  // Send message with improved response handling
   const handleSendMessage = useCallback(async (input: string, shouldUseThinkMode: boolean = false) => {
     if (!input.trim()) return;
     
-    console.log("[useMessageHandler] handleSendMessage called with:", input);
+    console.log("[useMessageHandler] handleSendMessage called with:", input, "thinkMode:", shouldUseThinkMode);
     
     try {
       // First add the user message to UI
@@ -131,15 +131,31 @@ export const useMessageHandler = ({
       
       console.log("[useMessageHandler] User message added, now sending to API");
       
-      // Then send the message to the API
-      await sendMessageTraditional(input, null, shouldUseThinkMode);
+      // Set loading state
+      setIsLoading(true);
       
-      console.log("[useMessageHandler] API call completed");
+      // Then send the message to the API and await the response
+      const response = await sendMessage(input, null, shouldUseThinkMode);
+      
+      console.log("[useMessageHandler] API call completed with response:", response);
+      
+      // Verify the placeholder was replaced properly
+      setTimeout(() => {
+        console.log("[useMessageHandler] Current messages after response:", 
+          messages.map(m => ({ id: m.id, role: m.role, isPlaceholder: m.isPlaceholder })));
+        
+        // Force scroll to bottom to ensure new message is visible
+        scrollToBottom();
+      }, 100);
+      
+      return response;
     } catch (error) {
       console.error('[useMessageHandler] Error in handleSendMessage:', error);
       setError('Failed to send message. Please try again.');
+      // Ensure loading state is reset
+      setIsLoading(false);
     }
-  }, [sendMessageTraditional, setError, prepareUserMessageUI]);
+  }, [sendMessage, setError, prepareUserMessageUI, setIsLoading, messages, scrollToBottom]);
 
   const handleRetry = useCallback(() => {
     const lastContent = baseHandleRetry();

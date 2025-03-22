@@ -17,6 +17,12 @@ interface SendMessageParams {
   onConversationCreated?: (id: string) => void;
 }
 
+interface SendMessageResult {
+  response: string;
+  suggestedFollowUps: string[];
+  assistantMessageId: string;
+}
+
 export const useSendMessageMutation = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -32,7 +38,7 @@ export const useSendMessageMutation = () => {
       setMessages,
       setIsThinkMode,
       onConversationCreated
-    }: SendMessageParams) => {
+    }: SendMessageParams): Promise<SendMessageResult> => {
       if (!user) throw new Error("No user logged in");
 
       // Add detailed logging
@@ -55,7 +61,15 @@ export const useSendMessageMutation = () => {
       };
       
       console.log("[useSendMessageMutation] Adding placeholder message:", placeholderId);
+      
+      // Using a separate variable to track the placeholder ID
+      let currentPlaceholderId = placeholderId;
+      
+      // Add the placeholder in a synchronous update
       setMessages(prev => [...prev, placeholderMessage]);
+      
+      // Verify the placeholder was added
+      console.log("[useSendMessageMutation] Placeholder added, now calling edge function");
 
       try {
         console.log("[useSendMessageMutation] Calling edge function with payload:", {
@@ -96,29 +110,48 @@ export const useSendMessageMutation = () => {
           throw new Error("Invalid response structure received from server");
         }
 
-        // SIMPLIFIED: Create the new assistant message
+        // Generate a consistent, deterministic ID for the assistant message
+        const assistantMessageId = `assistant-${Date.now()}`;
+        
+        // Create the new assistant message
         const assistantMessage: Message = {
-          id: `assistant-${Date.now()}`,
+          id: assistantMessageId,
           role: 'assistant' as const,
           content: data.response,
           timestamp: new Date(),
           suggestedFollowUps: data.suggestedFollowUps || []
         };
         
-        console.log("[useSendMessageMutation] Created new assistant message:", assistantMessage.id);
+        console.log("[useSendMessageMutation] Created new assistant message:", assistantMessageId);
         
-        // CRITICAL FIX: Use a single state update to replace the placeholder with the actual message
-        // This avoids the race condition where the placeholder could be removed without adding the response
+        // Use a synchronized state update to replace the placeholder
         setMessages(prev => {
+          // Log the current messages state before update
+          console.log("[useSendMessageMutation] Current messages before update:", 
+            prev.map(m => ({ id: m.id, role: m.role, isPlaceholder: !!m.isPlaceholder })));
+          
+          // Find if placeholder exists
+          const hasPlaceholder = prev.some(m => m.id === currentPlaceholderId);
+          
+          if (!hasPlaceholder) {
+            console.warn("[useSendMessageMutation] Placeholder not found in messages array!");
+          }
+          
           // Create a new array without the placeholder
-          const filteredMessages = prev.filter(msg => msg.id !== placeholderId);
-          // Then add the new assistant message
-          return [...filteredMessages, assistantMessage];
+          const filteredMessages = prev.filter(m => m.id !== currentPlaceholderId);
+          
+          // Return the new state with the assistant message added
+          const newMessages = [...filteredMessages, assistantMessage];
+          
+          console.log("[useSendMessageMutation] New messages array:", 
+            newMessages.map(m => ({ id: m.id, role: m.role })));
+          
+          return newMessages;
         });
         
         console.log("[useSendMessageMutation] Updated messages array with new assistant message", {
           assistantMessageId: assistantMessage.id,
-          totalMessages: messages.length + 1
+          placeholderReplaced: currentPlaceholderId
         });
         
         setIsThinkMode(false);
@@ -131,7 +164,7 @@ export const useSendMessageMutation = () => {
       } catch (error) {
         console.error('[useSendMessageMutation] Error:', error);
         
-        // SIMPLIFIED: Use single state update for error case too
+        // Create an error message to replace the placeholder
         const errorMessage: Message = {
           id: `error-${Date.now()}`,
           role: 'assistant' as const,
@@ -144,7 +177,7 @@ export const useSendMessageMutation = () => {
         
         // Update messages in a single operation
         setMessages(prev => {
-          const filteredMessages = prev.filter(msg => msg.id !== placeholderId);
+          const filteredMessages = prev.filter(m => m.id !== currentPlaceholderId);
           return [...filteredMessages, errorMessage];
         });
         

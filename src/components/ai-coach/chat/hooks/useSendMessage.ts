@@ -40,7 +40,10 @@ export const useSendMessage = ({
   const sendMessageMutation = useSendMessageMutation();
 
   const handleSendMessage = useCallback(async (input: string, imageFile: File | null, isThinkMode: boolean) => {
-    if ((!input.trim() && !imageFile) || !user) return;
+    if ((!input.trim() && !imageFile) || !user) {
+      console.error('[useSendMessage] No input, image, or user');
+      return null;
+    }
     
     setIsLoading(true);
     setError(null);
@@ -56,8 +59,14 @@ export const useSendMessage = ({
         }
       }
       
-      // Send the message through the mutation
-      await sendMessageMutation.mutateAsync({
+      console.log('[useSendMessage] Calling sendMessageMutation with:', {
+        userMessage: input.trim().substring(0, 30) + '...',
+        hasImage: !!imageUrl,
+        isThinkMode
+      });
+      
+      // Send the message through the mutation and directly return the result
+      const result = await sendMessageMutation.mutateAsync({
         userMessage: input.trim(),
         imageUrl,
         isThinkMode,
@@ -68,9 +77,18 @@ export const useSendMessage = ({
         setIsThinkMode,
         onConversationCreated
       });
+      
+      console.log('[useSendMessage] Mutation result:', {
+        responseLength: result.response.length,
+        suggestedFollowUps: result.suggestedFollowUps?.length || 0,
+        assistantMessageId: result.assistantMessageId
+      });
+      
+      return result;
     } catch (error) {
-      console.error('Error in handleSendMessage:', error);
+      console.error('[useSendMessage] Error in handleSendMessage:', error);
       setError(error instanceof Error ? error.message : 'Failed to send message');
+      throw error; // Re-throw to allow caller to handle
     } finally {
       setIsLoading(false);
     }
