@@ -76,22 +76,14 @@ export const useChat = (
     removeImage
   });
   
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change, but avoid scrolling on initial render
   useEffect(() => {
-    console.log("[useChat] Messages changed, scrolling to bottom...");
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  // Scroll to bottom after loading completes
-  useEffect(() => {
-    if (!isLoading) {
-      console.log("[useChat] Loading completed, scrolling to bottom...");
-      const timer = setTimeout(() => {
-        scrollToBottom();
-      }, 100);
-      return () => clearTimeout(timer);
+    // Only scroll if we have actual messages (beyond the welcome message)
+    const hasRealMessages = messages.some(m => m.id !== 'welcome');
+    if (hasRealMessages) {
+      scrollToBottom();
     }
-  }, [isLoading, scrollToBottom]);
+  }, [messages, scrollToBottom]);
   
   const handleImageClick = useCallback(() => {
     handleImageClickBase(fileInputRef);
@@ -100,52 +92,33 @@ export const useChat = (
   // Modified: Handle message sending with image processing if needed
   const handleSendMessage = useCallback(async () => {
     if (!input.trim() && !imageFile) {
-      console.log('[useChat] No input or image file, ignoring send request');
       return;
     }
     
     try {
-      console.log('[useChat] Starting to process message send request', {
-        hasTextInput: !!input.trim(),
-        hasImageFile: !!imageFile,
-        imageFileName: imageFile?.name,
-        imageFileSize: imageFile?.size,
-        userIsAuthed: !!user
-      });
-      
+      // Set loading state immediately so the UI can show loading indicators
       setIsLoading(true);
       
       if (imageFile) {
-        console.log('[useChat] Image file detected, starting upload process');
         const uploadedImageUrl = await uploadImage(imageFile);
         
         if (!uploadedImageUrl) {
-          console.error('[useChat] Image upload failed');
           throw new Error('Failed to upload image');
         }
         
-        console.log('[useChat] Image uploaded successfully, URL length:', uploadedImageUrl.length);
-        console.log('[useChat] Starting dedicated image analysis with prompt:', input);
-        
         await analyzeImage(input || 'Please analyze this image.', uploadedImageUrl);
         
-        console.log('[useChat] Image analysis complete, clearing input and image');
         setInput('');
         removeImage();
         
         return;
       }
       
-      console.log('[useChat] Processing text-only message');
-      
-      // Use the current think mode setting from the UI when sending
-      // This connects the UI toggle to the actual model selection
+      // Use the current think mode setting from the UI when sending the message
       await handleSendMessageBase(input, isThinkMode);
     } catch (error) {
       console.error('[useChat] Error sending message:', error);
       setError('Failed to send message. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   }, [
     handleSendMessageBase,
@@ -158,12 +131,11 @@ export const useChat = (
     setInput,
     setIsLoading,
     setError,
-    isThinkMode // Use the think mode state from the UI
+    isThinkMode
   ]);
   
-  // Handle example click - now only populates the input
+  // Handle example click - only populates the input
   const handleExampleClick = useCallback((question: string) => {
-    console.log('[useChat] Example clicked, filling input with:', question);
     fillInputWithExample(question);
     
     // Focus the input field after filling it
@@ -174,7 +146,7 @@ export const useChat = (
     }
   }, [fillInputWithExample, inputRef]);
   
-  // Use our updated keyboard handling hook
+  // Use our keyboard handling hook
   const { handleKeyDown } = useKeyboardHandling({ 
     handleSendMessage,
     isLoading,

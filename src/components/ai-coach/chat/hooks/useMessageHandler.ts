@@ -103,11 +103,11 @@ export const useMessageHandler = ({
     // Set loading state immediately
     setIsLoading(true);
     
-    // Pass the think mode state to the message sender
-    // No thinking message is added now
+    // Scroll to bottom immediately to show the user message and prepare for loading animation
     scrollToBottom();
     
     // We use the existing isThinkMode state when sending
+    // Send the message to the backend after UI updates
     await sendMessageTraditional(input, null, shouldUseThinkMode);
     
   }, [sendMessageTraditional, scrollToBottom, setInput, setIsLoading, setMessages]);

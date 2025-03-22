@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowDown } from 'lucide-react';
+import { ArrowDown, PaintBucket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ChatMessage from '../ChatMessage';
 import ChatExampleQuestions from './ChatExampleQuestions';
 import { Message } from './types';
+import TypingIndicator from '../TypingIndicator';
 
 interface MessageListProps {
   messages: Message[];
@@ -74,6 +75,18 @@ const MessageList: React.FC<MessageListProps> = ({
             isMobile={isMobile}
           />
         ))}
+        
+        {/* AI Typing indicator when loading */}
+        {isLoading && (
+          <div className="flex items-start space-x-3">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <PaintBucket className="h-4 w-4 text-primary" />
+            </div>
+            <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
+              <TypingIndicator />
+            </div>
+          </div>
+        )}
         
         {error && (
           <div className="p-4 bg-red-50 text-red-800 rounded-md">
