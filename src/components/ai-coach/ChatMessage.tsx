@@ -82,7 +82,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
     content, 
     timestamp, 
     imageUrl, 
-    isStreaming = false,
     isSaved = false
   } = message;
   
@@ -90,9 +89,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
   
   // Use memoization to avoid recalculating key points on every render
   const keyPoints = useMemo(() => {
-    if (isStreaming) return null;
     return getKeyPoints(content, isAssistant, isMobile);
-  }, [content, isAssistant, isMobile, isStreaming]);
+  }, [content, isAssistant, isMobile]);
   
   // Memoize the regenerate handler to maintain stable reference
   const handleRegenerateMessage = useMemo(() => {
@@ -122,7 +120,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRegenerate, isMobi
         <div className="text-sm">
           <MessageContent 
             content={content} 
-            isStreaming={isStreaming} 
             isAssistant={isAssistant} 
           />
         </div>
@@ -155,7 +152,6 @@ const areEqual = (prevProps: ChatMessageProps, nextProps: ChatMessageProps) => {
   return (
     prevProps.message.id === nextProps.message.id &&
     prevProps.message.content === nextProps.message.content &&
-    (prevProps.message.isStreaming === nextProps.message.isStreaming) &&
     (prevProps.message.isSaved === nextProps.message.isSaved) &&
     prevProps.isMobile === nextProps.isMobile
   );

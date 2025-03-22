@@ -94,22 +94,30 @@ export const useMessageHandler = ({
       timestamp: new Date()
     };
     
-    // Add user message to the chat
+    // CRITICAL: Add user message to the chat IMMEDIATELY before any async operations
     setMessages(prev => [...prev, userMessage]);
     
-    // Clear input field
+    // Clear input field immediately
     setInput('');
     
     // Set loading state immediately to show typing indicator
     setIsLoading(true);
     
-    // Scroll to bottom immediately to show the user message and loading indicator
+    // Scroll to bottom immediately to show the user message
     scrollToBottom();
     
-    // Send the message to the backend after UI updates
-    await sendMessageTraditional(input, null, shouldUseThinkMode);
+    // IMPORTANT: Use setTimeout to ensure the UI updates complete before potentially blocking operations
+    setTimeout(async () => {
+      try {
+        // Send the message to the backend
+        await sendMessageTraditional(input, null, shouldUseThinkMode);
+      } catch (error) {
+        console.error('Error in handleSendMessage:', error);
+        setError('Failed to send message. Please try again.');
+      }
+    }, 10);
     
-  }, [sendMessageTraditional, scrollToBottom, setInput, setIsLoading, setMessages]);
+  }, [sendMessageTraditional, scrollToBottom, setInput, setIsLoading, setMessages, setError]);
 
   const handleRetry = useCallback(() => {
     const lastContent = baseHandleRetry();

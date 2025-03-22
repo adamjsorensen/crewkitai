@@ -1,93 +1,63 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { cn } from '@/lib/utils';
 
 interface MessageContentProps {
   content: string;
-  isStreaming?: boolean;
   isAssistant: boolean;
 }
 
-const MessageContent: React.FC<MessageContentProps> = ({ content, isStreaming, isAssistant }) => {
-  // Simple content rendering for user messages
+const MessageContent: React.FC<MessageContentProps> = ({ 
+  content,
+  isAssistant
+}) => {
+  // If it's a user message, simple text display (no markdown)
   if (!isAssistant) {
-    return <p className="leading-relaxed">{content}</p>;
+    return <p className="whitespace-pre-wrap">{content}</p>;
   }
 
-  // Memoize the markdown components configuration to prevent recreating on each render
-  const markdownComponents = useMemo(() => ({
-    p: ({ node, ...props }: any) => (
-      <p {...props} className="my-1.5 leading-relaxed" />
-    ),
-    h1: ({ node, ...props }: any) => (
-      <h1 {...props} className="text-base font-semibold mt-3 mb-1.5" />
-    ),
-    h2: ({ node, ...props }: any) => (
-      <h2 {...props} className="text-base font-semibold mt-3 mb-1.5" />
-    ),
-    h3: ({ node, ...props }: any) => (
-      <h3 {...props} className="text-sm font-semibold mt-3 mb-1.5" />
-    ),
-    a: ({ node, ...props }: any) => (
-      <a {...props} className="text-primary underline hover:text-primary/80 transition-colors" target="_blank" rel="noopener noreferrer" />
-    ),
-    ul: ({ node, ...props }: any) => (
-      <ul {...props} className="list-disc pl-5 my-1.5" />
-    ),
-    ol: ({ node, ...props }: any) => (
-      <ol {...props} className="list-decimal pl-5 my-1.5" />
-    ),
-    li: ({ node, ...props }: any) => (
-      <li {...props} className="my-1" />
-    ),
-    code: ({ node, className, children, ...props }: any) => {
-      const match = /language-(\w+)/.exec(className || '');
-      return !className ? (
-        <code className="bg-muted/70 px-1.5 py-0.5 rounded text-xs" {...props}>
-          {children}
-        </code>
-      ) : (
-        <code className="block bg-muted/60 p-2.5 rounded text-xs overflow-x-auto" {...props}>
-          {children}
-        </code>
-      );
-    }
-  }), []);
-
+  // For assistant messages, use markdown with styling
   return (
-    <>
-      <ReactMarkdown 
+    <div className={cn(
+      "prose prose-sm dark:prose-invert max-w-none",
+      "prose-p:my-1.5 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5",
+      "prose-pre:my-2 prose-pre:bg-primary/5 prose-pre:p-2 prose-pre:rounded-md prose-pre:text-xs"
+    )}>
+      <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        className="prose-compact prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-p:my-1.5 prose-pre:bg-muted/50 prose-pre:p-2 prose-pre:rounded-md"
-        components={markdownComponents}
+        components={{
+          // Override h1, h2, etc. with properly sized headings
+          h1: ({ children }) => <h1 className="text-xl font-bold">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-lg font-semibold">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-base font-medium">{children}</h3>,
+          
+          // Style links to be clickable and obvious
+          a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">{children}</a>,
+          
+          // Improve code block styling
+          code: ({ node, inline, className, children, ...props }) => {
+            if (inline) {
+              return <code className="px-1 py-0.5 bg-primary/10 rounded text-sm font-mono" {...props}>{children}</code>;
+            }
+            return (
+              <pre className="overflow-auto p-2 bg-primary/5 rounded-md text-xs">
+                <code className="font-mono" {...props}>{children}</code>
+              </pre>
+            );
+          },
+          
+          // Improve list styling
+          ul: ({ children }) => <ul className="pl-5 list-disc">{children}</ul>,
+          ol: ({ children }) => <ol className="pl-5 list-decimal">{children}</ol>,
+          li: ({ children }) => <li className="mb-1">{children}</li>,
+        }}
       >
         {content}
       </ReactMarkdown>
-      
-      {isStreaming && (
-        <span className="inline-flex items-center mt-1">
-          <span className="typing-indicator">
-            <span className="dot"></span>
-            <span className="dot"></span>
-            <span className="dot"></span>
-          </span>
-        </span>
-      )}
-    </>
+    </div>
   );
 };
 
-// Use memo with a custom equality function for better performance
-const areEqual = (prevProps: MessageContentProps, nextProps: MessageContentProps) => {
-  return (
-    prevProps.content === nextProps.content &&
-    prevProps.isStreaming === nextProps.isStreaming &&
-    prevProps.isAssistant === nextProps.isAssistant
-  );
-};
-
-const MemoizedMessageContent = React.memo(MessageContent, areEqual);
-MemoizedMessageContent.displayName = 'MessageContent';
-
-export default MemoizedMessageContent;
+export default React.memo(MessageContent);

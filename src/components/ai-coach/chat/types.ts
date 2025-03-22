@@ -5,7 +5,6 @@ export interface Message {
   content: string;
   timestamp: Date;
   imageUrl?: string | null;
-  isStreaming?: boolean;
   isSaved?: boolean;
 }
 

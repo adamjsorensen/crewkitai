@@ -67,12 +67,16 @@ export const useChatInterface = ({
   const handleSendMessage = useCallback(() => {
     if (!input.trim() && !imageFile) return;
     
-    // CRITICAL: Immediately set hasStartedChat to true before sending the message
-    // This ensures we switch to the chat view right away, before waiting for response
+    // CRITICAL: ALWAYS set hasStartedChat to true BEFORE any other operations
+    // This is the key change to ensure immediate transition to chat view
     setHasStartedChat(true);
     
-    // Then proceed with sending the message
-    originalHandleSendMessage();
+    // Add a short timeout to ensure the UI transition happens before any potentially 
+    // blocking operations like sending the message
+    setTimeout(() => {
+      // Then proceed with sending the message
+      originalHandleSendMessage();
+    }, 10);
   }, [originalHandleSendMessage, input, imageFile, setHasStartedChat]);
 
   // Wrap the example click handler with useCallback 
