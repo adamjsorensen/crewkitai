@@ -27,7 +27,6 @@ export const useChat = (
   const { user } = useAuth();
   const { flags } = useFeatureFlags();
   
-  // Custom hooks
   const {
     imageFile,
     imagePreviewUrl,
@@ -51,7 +50,6 @@ export const useChat = (
     clearConversation
   } = useConversationUtils(messages, setMessages, onConversationCreated);
   
-  // Traditional message operations (non-streaming)
   const {
     handleSendMessage: sendMessageTraditional,
     handleRetry: baseHandleRetry,
@@ -71,7 +69,6 @@ export const useChat = (
     setIsThinkMode
   });
   
-  // Streaming chat functionality
   const {
     isStreaming,
     sendStreamingMessage
@@ -87,7 +84,6 @@ export const useChat = (
     setIsThinkMode
   });
   
-  // New Image Analysis functionality
   const {
     analyzeImage,
     isAnalyzing
@@ -100,7 +96,6 @@ export const useChat = (
     scrollToBottom
   });
   
-  // Fetch conversation history
   const { data: historyMessages = [], isLoading: isLoadingHistory } = useQuery({
     queryKey: ['conversationHistory', conversationId],
     queryFn: () => fetchConversationHistory(conversationId, user?.id),
@@ -110,7 +105,6 @@ export const useChat = (
     refetchOnWindowFocus: false,
   });
 
-  // Initialize messages based on chat state
   useEffect(() => {
     if (isNewChat) {
       setMessages([{
@@ -131,13 +125,11 @@ export const useChat = (
     }
   }, [isNewChat, historyMessages, isLoadingHistory, conversationId]);
 
-  // Auto-scroll when messages change
   useEffect(() => {
     console.log("[useChat] Messages changed, scrolling to bottom...");
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Additional scroll for when loading completes
   useEffect(() => {
     if (!isLoading) {
       console.log("[useChat] Loading completed, scrolling to bottom...");
@@ -148,40 +140,51 @@ export const useChat = (
     }
   }, [isLoading, scrollToBottom]);
 
-  // Wrapper functions with optimized handling
   const handleImageClick = useCallback(() => {
     handleImageClickBase(fileInputRef);
   }, [handleImageClickBase]);
 
   const handleSendMessage = useCallback(async () => {
-    if (!input.trim() && !imageFile) return;
+    if (!input.trim() && !imageFile) {
+      console.log('[useChat] No input or image file, ignoring send request');
+      return;
+    }
     
     try {
+      console.log('[useChat] Starting to process message send request', {
+        hasTextInput: !!input.trim(),
+        hasImageFile: !!imageFile,
+        imageFileName: imageFile?.name,
+        imageFileSize: imageFile?.size,
+        userIsAuthed: !!user
+      });
+      
       setIsLoading(true);
       setIsThinkMode(true);
       
-      // Handle image upload if there's an image file
       if (imageFile) {
-        console.log('[useChat] Uploading image before sending message');
+        console.log('[useChat] Image file detected, starting upload process');
         const uploadedImageUrl = await uploadImage(imageFile);
+        
         if (!uploadedImageUrl) {
+          console.error('[useChat] Image upload failed');
           throw new Error('Failed to upload image');
         }
         
-        console.log('[useChat] Image uploaded successfully, using dedicated image analysis');
+        console.log('[useChat] Image uploaded successfully, URL length:', uploadedImageUrl.length);
+        console.log('[useChat] Starting dedicated image analysis with prompt:', input);
         
-        // Use the dedicated image analysis functionality instead of streaming with image
-        await analyzeImage(input, uploadedImageUrl);
+        await analyzeImage(input || 'Please analyze this image.', uploadedImageUrl);
         
-        // Clear input and image after sending
+        console.log('[useChat] Image analysis complete, clearing input and image');
         setInput('');
         removeImage();
         
-        return; // Early return since image analysis handles everything
+        return;
       }
       
-      // For text-only messages, proceed with regular handling
-      // Immediately add user message to the UI
+      console.log('[useChat] Processing text-only message');
+      
       const userMessageId = `user-${uuidv4()}`;
       const userMessage: Message = {
         id: userMessageId,
@@ -190,22 +193,17 @@ export const useChat = (
         timestamp: new Date()
       };
       
-      // Update messages state immediately to show user input
       setMessages(prev => [...prev, userMessage]);
       
-      // Clear input
       setInput('');
       
-      // Scroll to bottom immediately after adding user message
       setTimeout(() => scrollToBottom(), 50);
       
-      // Choose between streaming and traditional based on feature flag
       if (flags.enableStreaming) {
         console.log('[useChat] Using streaming mode for text message');
-        // Process the message with streaming (text only)
         await sendStreamingMessage(input);
       } else {
-        // Process the message traditionally
+        console.log('[useChat] Using traditional mode for text message');
         await sendMessageTraditional(input);
       }
     } catch (error) {
@@ -215,7 +213,7 @@ export const useChat = (
       setIsLoading(false);
       setIsThinkMode(false);
     }
-  }, [flags.enableStreaming, sendStreamingMessage, sendMessageTraditional, analyzeImage, input, imageFile, uploadImage, removeImage, scrollToBottom, setIsThinkMode]);
+  }, [flags.enableStreaming, sendStreamingMessage, sendMessageTraditional, analyzeImage, input, imageFile, uploadImage, removeImage, scrollToBottom, setIsThinkMode, user]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -230,7 +228,6 @@ export const useChat = (
       inputRef.current.focus();
     }
     
-    // Immediately add the question to the UI
     const userMessageId = `user-${Date.now()}`;
     const userMessage: Message = {
       id: userMessageId,
@@ -239,23 +236,17 @@ export const useChat = (
       timestamp: new Date()
     };
     
-    // Update messages state immediately
     setMessages(prev => [...prev, userMessage]);
     
-    // Clear input and start loading state
     setInput('');
     setIsLoading(true);
     setIsThinkMode(true);
     
-    // Scroll to bottom immediately
     setTimeout(() => scrollToBottom(), 50);
     
-    // Choose between streaming and traditional based on feature flag
     if (flags.enableStreaming) {
-      // Process the message with streaming
       sendStreamingMessage(question);
     } else {
-      // Process the message traditionally
       sendMessageTraditional(question);
     }
   }, [flags.enableStreaming, sendStreamingMessage, sendMessageTraditional, scrollToBottom, setIsThinkMode]);

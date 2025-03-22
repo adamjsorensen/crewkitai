@@ -24,19 +24,19 @@ export const useImageAnalysis = ({
 }: UseImageAnalysisProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Debug logging function with stack trace
+  // Enhanced debug logging function with stack trace and timing
   const logDebug = (message: string, data?: any) => {
     const stack = new Error().stack;
-    console.log(`[ImageAnalysis] ${message}`, {
+    console.log(`[ImageAnalysis:${new Date().toISOString().slice(11, 23)}] ${message}`, {
       data: data || '',
       timestamp: new Date().toISOString(),
-      stack: stack?.split('\n').slice(2).join('\n')
+      stack: stack?.split('\n').slice(2, 4).join('\n') // Just include 2 levels for brevity
     });
   };
   
-  // Error logging function
+  // Error logging function with more details
   const logError = (message: string, error: any) => {
-    console.error(`[ImageAnalysis:Error] ${message}`, {
+    console.error(`[ImageAnalysis:Error:${new Date().toISOString().slice(11, 23)}] ${message}`, {
       error: error instanceof Error ? {
         name: error.name,
         message: error.message,
@@ -53,16 +53,20 @@ export const useImageAnalysis = ({
       return null;
     }
 
+    logDebug('=== STARTING IMAGE ANALYSIS ===', { 
+      promptLength: prompt.length,
+      promptExcerpt: prompt.substring(0, 50) + (prompt.length > 50 ? '...' : ''),
+      imageUrlSample: imageUrl.substring(0, 50) + '...',
+      userId: user.id.substring(0, 8) + '...',
+      conversationId: conversationId ? conversationId.substring(0, 8) + '...' : 'new'
+    });
+
     try {
       setIsAnalyzing(true);
-      logDebug('Starting image analysis', { 
-        promptLength: prompt.length,
-        imageUrlSample: imageUrl.substring(0, 50) + '...',
-        userId: user.id
-      });
 
       // Add user message to UI
       const userMessageId = uuidv4();
+      logDebug('Adding user message to UI', { userMessageId });
       setMessages(prev => [
         ...prev,
         {
@@ -76,6 +80,7 @@ export const useImageAnalysis = ({
 
       // Add placeholder AI message
       const aiMessageId = uuidv4();
+      logDebug('Adding placeholder AI response', { aiMessageId });
       setMessages(prev => [
         ...prev,
         {
@@ -90,14 +95,27 @@ export const useImageAnalysis = ({
       // Scroll to bottom to show loading message
       setTimeout(scrollToBottom, 50);
 
-      // Get authentication token
+      // Get authentication token for edge function call
+      logDebug('Getting authentication session');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         throw new Error('Authentication required');
       }
 
       // Call the vision-analysis edge function
-      logDebug('Calling vision-analysis edge function');
+      logDebug('Calling vision-analysis edge function with parameters', {
+        imageUrlLength: imageUrl.length,
+        promptLength: prompt.length
+      });
+      
+      // Detailed logging of request
+      console.log('Making request to vision-analysis with payload:', {
+        imageUrlSample: imageUrl.substring(0, 30) + '...' + imageUrl.substring(imageUrl.length - 30),
+        promptSample: prompt,
+        userId: user.id,
+        conversationId
+      });
+      
       const response = await supabase.functions.invoke('vision-analysis', {
         body: {
           imageUrl,
@@ -105,6 +123,12 @@ export const useImageAnalysis = ({
           userId: user.id,
           conversationId
         }
+      });
+
+      logDebug('Response from vision-analysis received', {
+        status: response.error ? 'ERROR' : 'SUCCESS',
+        error: response.error,
+        dataKeys: response.data ? Object.keys(response.data) : []
       });
 
       if (response.error) {
@@ -116,6 +140,12 @@ export const useImageAnalysis = ({
         conversationId: string;
       };
 
+      logDebug('Successfully processed image analysis', {
+        analysisLength: analysis.length,
+        analysisExcerpt: analysis.substring(0, 50) + '...',
+        newConversationId: newConversationId || 'none'
+      });
+
       // Notify about new conversation if needed
       if (!conversationId && onConversationCreated && newConversationId) {
         logDebug('New conversation created', { newConversationId });
@@ -123,6 +153,11 @@ export const useImageAnalysis = ({
       }
 
       // Update AI message with analysis
+      logDebug('Updating AI message with analysis results', { 
+        aiMessageId,
+        analysisLength: analysis.length
+      });
+      
       setMessages(prev => 
         prev.map(msg => 
           msg.id === aiMessageId 
@@ -131,12 +166,13 @@ export const useImageAnalysis = ({
         )
       );
 
-      logDebug('Image analysis completed successfully');
+      logDebug('=== IMAGE ANALYSIS COMPLETED SUCCESSFULLY ===');
       return newConversationId || conversationId;
     } catch (error) {
       logError('Image analysis failed', error);
       
       // Update error message in UI
+      logDebug('Updating UI with error message');
       setMessages(prev => {
         const lastMessage = prev[prev.length - 1];
         if (lastMessage && lastMessage.isLoading) {
@@ -155,6 +191,7 @@ export const useImageAnalysis = ({
       });
       
       setError(`Failed to analyze image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logDebug('=== IMAGE ANALYSIS FAILED ===');
       return null;
     } finally {
       setIsAnalyzing(false);
