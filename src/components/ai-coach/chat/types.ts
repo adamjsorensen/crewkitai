@@ -9,9 +9,16 @@ export type Message = {
   error?: boolean;
   errorInfo?: any;
   isStreaming?: boolean;
+  isPinned?: boolean;
+  isSaved?: boolean;
 };
 
 export type ConversationContext = {
   role: 'user' | 'assistant';
   content: string;
 };
+
+// Standardize the AI role types for more consistent handling
+export type AIRole = 'assistant';
+export type UserRole = 'user';
+export type MessageRole = AIRole | UserRole;

@@ -1,5 +1,4 @@
-
-import React, { Suspense, useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, ArrowLeft, PlusCircle } from 'lucide-react';
 import { useChat } from './chat/useChat';
@@ -9,8 +8,6 @@ import ImagePreview from './chat/ImagePreview';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MessageSkeleton from './chat/MessageSkeleton';
 import WelcomeSection from './chat/WelcomeSection';
-
-// Remove lazy loading of WelcomeSection since it's causing issues
 
 type Message = {
   id: string;
@@ -32,7 +29,8 @@ interface ChatInterfaceProps {
 // Keep a render counter outside the component to track re-renders
 let renderCount = 0;
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({
+// Memoize the entire ChatInterface component to prevent unnecessary re-renders
+const ChatInterface: React.FC<ChatInterfaceProps> = memo(({
   conversationId = null,
   isNewChat = true,
   onConversationCreated,
@@ -41,7 +39,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onBackToWelcome
 }) => {
   renderCount++;
-  console.log(`[ChatInterface] Render #${renderCount} - conversationId:`, conversationId, "isNewChat:", isNewChat, "props:", { conversationId, isNewChat, onConversationCreated });
+  console.log(`[ChatInterface] Render #${renderCount} - conversationId:`, conversationId, "isNewChat:", isNewChat);
   
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -49,32 +47,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [hasStartedChat, setHasStartedChat] = useState(() => {
     // Calculate initial state only once during component initialization
     const initialValue = !isNewChat || !!conversationId;
-    console.log("[ChatInterface] Initial hasStartedChat:", initialValue);
     return initialValue;
   });
   
-  // Update hasStartedChat ONLY when props change, with proper dependency tracking
+  // Update hasStartedChat only when props change
   useEffect(() => {
-    // This effect should only run when conversationId or isNewChat actually change
-    console.log("[ChatInterface] Props changed - updating state accordingly");
-    
     if (conversationId) {
       // If we have a conversation ID, we're in an existing chat
       if (!hasStartedChat) {
-        console.log("[ChatInterface] Setting hasStartedChat to true because conversationId exists");
         setHasStartedChat(true);
       }
     } else if (isNewChat) {
       // For a new chat, reset the hasStartedChat flag
-      console.log("[ChatInterface] Setting hasStartedChat to false for new chat");
       setHasStartedChat(false);
     }
-    // The check against current state value prevents unnecessary state updates
-    
-    return () => {
-      console.log("[ChatInterface] Effect cleanup");
-    };
-  }, [conversationId, isNewChat]); // ONLY depend on the props, not on internal state
+  }, [conversationId, isNewChat, hasStartedChat]);
   
   const {
     input,
@@ -104,10 +91,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     scrollToBottom
   } = useChat(conversationId, isNewChat, onConversationCreated);
 
-  // Wrap the send message handler
-  const handleSendMessage = () => {
+  // Wrap the send message handler with useCallback to prevent unnecessary recreations
+  const handleSendMessage = useCallback(() => {
     if (!input.trim() && !imageFile) return;
-    console.log("[ChatInterface] Message send initiated");
     
     // Only update if current state is false to avoid unnecessary re-renders
     if (!hasStartedChat) {
@@ -115,12 +101,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
     
     originalHandleSendMessage();
-  };
+  }, [originalHandleSendMessage, input, imageFile, hasStartedChat, setHasStartedChat]);
 
-  // Wrap the example click handler
-  const handleExampleClick = (question: string) => {
-    console.log("[ChatInterface] Example clicked");
-    
+  // Wrap the example click handler with useCallback
+  const handleExampleClick = useCallback((question: string) => {
     // Only update if current state is false to avoid unnecessary re-renders
     if (!hasStartedChat) {
       setHasStartedChat(true);
@@ -131,17 +115,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setTimeout(() => {
       originalHandleExampleClick(question);
     }, 50);
-  };
+  }, [originalHandleExampleClick, hasStartedChat, setHasStartedChat, setInput]);
 
   if (isLoadingHistory) {
-    console.log("[ChatInterface] Loading history...");
     return <div className="flex flex-col h-[75vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p className="text-muted-foreground">Loading conversation...</p>
       </div>;
   }
-
-  console.log("[ChatInterface] Rendering with hasStartedChat:", hasStartedChat, "messages.length:", messages.length);
 
   return (
     <div className="flex flex-col h-full max-h-[85vh] relative">
@@ -228,6 +209,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       />
     </div>
   );
-};
+});
+
+// Add display name for debugging
+ChatInterface.displayName = 'ChatInterface';
 
 export default ChatInterface;

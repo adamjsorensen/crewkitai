@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, memo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Loader2, ArrowDown } from 'lucide-react';
@@ -8,14 +8,7 @@ import TypingIndicator from '../TypingIndicator';
 import { PaintBucket } from 'lucide-react';
 import MessageSkeleton from './MessageSkeleton';
 import { useInView } from 'react-intersection-observer';
-
-type Message = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  imageUrl?: string;
-};
+import { Message } from './types';
 
 interface MessageListProps {
   messages: Message[];
@@ -32,7 +25,8 @@ interface MessageListProps {
   isMobile?: boolean;
 }
 
-const MessageList: React.FC<MessageListProps> = ({
+// Memoize the MessageList component to prevent unnecessary re-renders
+const MessageList: React.FC<MessageListProps> = memo(({
   messages,
   isLoading,
   isLoadingHistory,
@@ -97,7 +91,7 @@ const MessageList: React.FC<MessageListProps> = ({
         ref={messagesContainerRef} 
         className="h-full px-3 sm:px-4 pt-4 pb-24 overflow-y-auto flex-1"
       >
-        <div className="space-y-1 pb-24 max-w-3xl mx-auto"> {/* Added more bottom padding to ensure space for fixed input */}
+        <div className="space-y-1 pb-24 max-w-3xl mx-auto"> 
           {visibleMessages.map(message => (
             <ChatMessage 
               key={message.id} 
@@ -145,6 +139,9 @@ const MessageList: React.FC<MessageListProps> = ({
       )}
     </div>
   );
-};
+});
+
+// Add display name for debugging
+MessageList.displayName = 'MessageList';
 
 export default MessageList;
