@@ -13,9 +13,15 @@ import MobileCategoryDrawer from './MobileCategoryDrawer';
 
 interface WelcomeSectionProps {
   onCategorySelect: (category: string) => void;
+  onNewChat?: () => void;
+  onHistoryClick?: () => void;
 }
 
-const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => {
+const WelcomeSection: React.FC<WelcomeSectionProps> = ({ 
+  onCategorySelect,
+  onNewChat,
+  onHistoryClick
+}) => {
   const { categories, isLoading, error } = useWelcomeContent();
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const isMobile = useIsMobile();
@@ -69,13 +75,38 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
   const activeCategory = categories.find(cat => cat.id === activeTab) || categories[0];
 
   return (
-    <ScrollArea className="h-full px-2 pt-2">
-      <div className="py-4 mb-6 max-w-4xl mx-auto">
+    <ScrollArea className="h-full px-2 pt-2 w-full overflow-x-hidden">
+      <div className="py-4 mb-6 max-w-4xl mx-auto w-full overflow-x-hidden">
         <Card className="overflow-hidden border-border/40 shadow-md">
           <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-border/30 bg-background/50">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold text-foreground">AI Coach</h2>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-semibold text-foreground">AI Coach</h2>
+              </div>
+              {!isMobile && (
+                <div className="flex gap-2">
+                  {onNewChat && (
+                    <button
+                      onClick={onNewChat}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-sm font-medium bg-primary/90 text-primary-foreground hover:bg-primary transition-colors"
+                    >
+                      <LucideIcons.PlusCircle className="h-4 w-4 mr-1.5" />
+                      <span>New Chat</span>
+                    </button>
+                  )}
+                  
+                  {onHistoryClick && (
+                    <button
+                      onClick={onHistoryClick}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+                    >
+                      <LucideIcons.History className="h-4 w-4 mr-1.5" />
+                      <span className="hidden sm:inline">History</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground mt-3 mb-2">
               How can I help with your painting business today?
@@ -97,7 +128,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onCategorySelect }) => 
           <Tabs 
             value={activeTab || (categories[0]?.id || "")} 
             onValueChange={(value) => setActiveTab(value)}
-            className="w-full"
+            className="w-full overflow-x-hidden"
           >
             {!isMobile && (
               <div className="border-b border-border/30 overflow-auto">

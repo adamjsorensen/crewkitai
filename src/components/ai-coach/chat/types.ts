@@ -5,6 +5,7 @@ export type Message = {
   content: string;
   timestamp: Date;
   imageUrl?: string;
+  isStreaming?: boolean;
 };
 
 export type ConversationContext = {

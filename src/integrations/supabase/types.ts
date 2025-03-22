@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      feature_flags: {
+        Row: {
+          name: string
+          enabled: boolean
+          description: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          name: string
+          enabled: boolean
+          description?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          name?: string
+          enabled?: boolean
+          description?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ai_coach_content_filters: {
         Row: {
           created_at: string | null

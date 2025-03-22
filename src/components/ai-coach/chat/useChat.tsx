@@ -3,11 +3,14 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Message } from './types';
+import { v4 as uuidv4 } from 'uuid';
 import { fetchConversationHistory } from './api/fetchConversationHistory';
 import { useImageHandling } from './hooks/useImageHandling';
 import { useMessageOperations } from './hooks/useMessageOperations';
 import { useScrollManagement } from './hooks/useScrollManagement';
 import { useConversationUtils } from './hooks/useConversationUtils';
+import { useStreamingChat } from './hooks/useStreamingChat';
+import { useFeatureFlags } from '@/contexts/FeatureFlagsContext';
 
 export const useChat = (
   conversationId: string | null,
@@ -22,6 +25,7 @@ export const useChat = (
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
+  const { flags } = useFeatureFlags();
   
   // Custom hooks
   const {
@@ -47,8 +51,9 @@ export const useChat = (
     clearConversation
   } = useConversationUtils(messages, setMessages, onConversationCreated);
   
+  // Traditional message operations (non-streaming)
   const {
-    handleSendMessage: sendMessage,
+    handleSendMessage: sendMessageTraditional,
     handleRetry: baseHandleRetry,
     handleRegenerateMessage
   } = useMessageOperations({
@@ -63,6 +68,22 @@ export const useChat = (
     removeImage,
     imageFile,
     isThinkMode,
+    setIsThinkMode
+  });
+  
+  // Streaming chat functionality
+  const {
+    isStreaming,
+    sendStreamingMessage
+  } = useStreamingChat({
+    user,
+    messages,
+    setMessages,
+    setIsLoading,
+    setError,
+    conversationId,
+    onConversationCreated,
+    scrollToBottom,
     setIsThinkMode
   });
   
@@ -119,32 +140,61 @@ export const useChat = (
     handleImageClickBase(fileInputRef);
   }, [handleImageClickBase]);
 
-  const handleSendMessage = useCallback(() => {
+  const handleSendMessage = useCallback(async () => {
     if (!input.trim() && !imageFile) return;
     
-    // Immediately add user message to the UI
-    const userMessageId = `user-${Date.now()}`;
-    const userMessage: Message = {
-      id: userMessageId,
-      role: 'user',
-      content: input,
-      timestamp: new Date(),
-      imageUrl: imagePreviewUrl || undefined
-    };
-    
-    // Update messages state immediately to show user input
-    setMessages(prev => [...prev, userMessage]);
-    
-    // Clear input and start loading state
-    setInput('');
-    setIsLoading(true);
-    
-    // Scroll to bottom immediately after adding user message
-    setTimeout(() => scrollToBottom(), 50);
-    
-    // Process the message in the background
-    sendMessage(input);
-  }, [sendMessage, input, imageFile, imagePreviewUrl, scrollToBottom]);
+    try {
+      setIsLoading(true);
+      setIsThinkMode(true);
+      
+      // Handle image upload if there's an image file
+      let uploadedImageUrl: string | undefined = undefined;
+      if (imageFile) {
+        console.log('[useChat] Uploading image before sending message');
+        uploadedImageUrl = await uploadImage(imageFile);
+        if (!uploadedImageUrl) {
+          throw new Error('Failed to upload image');
+        }
+        console.log('[useChat] Image uploaded successfully', { uploadedImageUrl });
+      }
+      
+      // Immediately add user message to the UI
+      const userMessageId = `user-${uuidv4()}`;
+      const userMessage: Message = {
+        id: userMessageId,
+        role: 'user',
+        content: input,
+        timestamp: new Date(),
+        imageUrl: uploadedImageUrl
+      };
+      
+      // Update messages state immediately to show user input
+      setMessages(prev => [...prev, userMessage]);
+      
+      // Clear input
+      setInput('');
+      removeImage(); // Clear the image after successful upload
+      
+      // Scroll to bottom immediately after adding user message
+      setTimeout(() => scrollToBottom(), 50);
+      
+      // Choose between streaming and traditional based on feature flag
+      if (flags.enableStreaming) {
+        console.log('[useChat] Using streaming mode with image', { hasImage: !!uploadedImageUrl });
+        // Process the message with streaming
+        await sendStreamingMessage(input, uploadedImageUrl);
+      } else {
+        // Process the message traditionally
+        await sendMessageTraditional(input);
+      }
+    } catch (error) {
+      console.error('[useChat] Error sending message:', error);
+      setError('Failed to send message. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setIsThinkMode(false);
+    }
+  }, [flags.enableStreaming, sendStreamingMessage, sendMessageTraditional, input, imageFile, imagePreviewUrl, scrollToBottom, setIsThinkMode]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -174,13 +224,20 @@ export const useChat = (
     // Clear input and start loading state
     setInput('');
     setIsLoading(true);
+    setIsThinkMode(true);
     
     // Scroll to bottom immediately
     setTimeout(() => scrollToBottom(), 50);
     
-    // Process the message in the background
-    sendMessage(question);
-  }, [sendMessage, scrollToBottom]);
+    // Choose between streaming and traditional based on feature flag
+    if (flags.enableStreaming) {
+      // Process the message with streaming
+      sendStreamingMessage(question);
+    } else {
+      // Process the message traditionally
+      sendMessageTraditional(question);
+    }
+  }, [flags.enableStreaming, sendStreamingMessage, sendMessageTraditional, scrollToBottom, setIsThinkMode]);
 
   const handleRetry = useCallback(() => {
     const lastContent = baseHandleRetry();
@@ -200,6 +257,7 @@ export const useChat = (
     showScrollButton,
     isThinkMode,
     setIsThinkMode,
+    isStreaming: flags.enableStreaming ? isStreaming : false,
     messagesEndRef,
     messagesContainerRef,
     fileInputRef,

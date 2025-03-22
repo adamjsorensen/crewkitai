@@ -44,7 +44,19 @@ const DashboardSidebar = () => {
   const { signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { toggleSidebar, state } = useSidebar();
+  const { toggleSidebar, state, setOpen } = useSidebar();
+  
+  // Ensure sidebar is always visible in icon mode when collapsed
+  React.useEffect(() => {
+    if (state === "collapsed") {
+      // Make sure the sidebar stays in icon-only mode and doesn't completely disappear
+      const sidebarElement = document.querySelector('[data-collapsible="icon"]');
+      if (sidebarElement) {
+        sidebarElement.classList.remove('hidden');
+        sidebarElement.classList.add('flex');
+      }
+    }
+  }, [state]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -69,9 +81,23 @@ const DashboardSidebar = () => {
   const SidebarContentItems = () => (
     <>
       <SidebarHeader className="py-3">
-        <div className="flex items-center gap-2 px-4">
-          <PaintBucket className="h-6 w-6 text-primary" />
-          <span className="font-display text-lg font-semibold">CrewkitAI</span>
+        <div className="flex items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <PaintBucket className="h-6 w-6 text-primary" />
+            <span className="font-display text-lg font-semibold">CrewkitAI</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 ml-2 hover:bg-accent" 
+            onClick={toggleSidebar}
+          >
+            {state === "collapsed" ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
         </div>
       </SidebarHeader>
 
@@ -170,21 +196,7 @@ const DashboardSidebar = () => {
         <SidebarRail />
       </Sidebar>
       
-      {/* Position collapse button away from any sidebar elements */}
-      <div className="fixed bottom-16 left-6 z-50 md:flex hidden">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="rounded-full shadow-md bg-background" 
-          onClick={toggleSidebar}
-        >
-          {state === "collapsed" ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
+      {/* Sidebar collapse button now positioned at the top */}
     </>
   );
 };

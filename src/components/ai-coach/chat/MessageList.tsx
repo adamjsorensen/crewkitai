@@ -95,9 +95,9 @@ const MessageList: React.FC<MessageListProps> = ({
       
       <ScrollArea 
         ref={messagesContainerRef} 
-        className="h-full px-3 sm:px-4 pt-4 pb-2 overflow-y-auto flex-1"
+        className="h-full px-3 sm:px-4 pt-4 pb-24 overflow-y-auto flex-1"
       >
-        <div className="space-y-1 pb-16 max-w-3xl mx-auto"> {/* Added more bottom padding to ensure space for input */}
+        <div className="space-y-1 pb-24 max-w-3xl mx-auto"> {/* Added more bottom padding to ensure space for fixed input */}
           {visibleMessages.map(message => (
             <ChatMessage 
               key={message.id} 

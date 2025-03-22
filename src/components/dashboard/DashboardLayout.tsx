@@ -1,7 +1,6 @@
 
 import React from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import DashboardSidebar from "./Sidebar";
+import CollapsibleSidebar from "./CollapsibleSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -14,16 +13,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isMobile = useIsMobile();
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full overflow-hidden">
-        <DashboardSidebar />
-        <div className="flex-1 flex flex-col">
-          <main className={`flex-1 p-4 ${isMobile ? 'pb-16' : 'pb-20'} bg-background ${isMobile ? 'overflow-hidden' : 'overflow-auto'}`}>
-            {children}
-          </main>
-        </div>
+    <div className="flex min-h-screen w-full overflow-hidden">
+      <CollapsibleSidebar />
+      <div className="flex-1 flex flex-col ml-[4.5rem] transition-all duration-300">
+        <main className={`flex-1 p-4 ${isMobile ? 'pb-16' : 'pb-20'} bg-background overflow-hidden`}>
+          {children}
+        </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { FeatureFlagsProvider } from "./contexts/FeatureFlagsContext";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
@@ -19,6 +20,7 @@ import PersonalProfilePage from "./pages/profile/PersonalProfilePage";
 import SettingsPage from "./pages/profile/SettingsPage";
 import AiCoach from "./pages/AiCoach";
 import AiSettingsPage from "./pages/admin/AiSettingsPage";
+import FeatureFlagsPage from "./pages/admin/FeatureFlagsPage";
 import { useEffect } from "react";
 import { prefetchWelcomeContent } from "./hooks/useWelcomeContent";
 
@@ -60,6 +62,7 @@ const AppContent = () => {
         
         {/* Admin Routes */}
         <Route path="/dashboard/admin/ai-settings" element={<AiSettingsPage />} />
+        <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
         
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
@@ -72,9 +75,11 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <AppContent />
+        <FeatureFlagsProvider>
+          <Toaster />
+          <Sonner />
+          <AppContent />
+        </FeatureFlagsProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
