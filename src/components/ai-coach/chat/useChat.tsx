@@ -58,7 +58,8 @@ export const useChat = (
   } = useConversationUtils(messages, setMessages, onConversationCreated);
   
   const {
-    handleExampleClick,
+    fillInputWithExample,
+    handleSendMessage: handleSendMessageBase,
     handleRetry,
     handleRegenerateMessage,
     analyzeImage,
@@ -103,6 +104,7 @@ export const useChat = (
     handleImageClickBase(fileInputRef);
   }, [handleImageClickBase, fileInputRef]);
   
+  // Modified: Handle message sending with image processing if needed
   const handleSendMessage = useCallback(async () => {
     if (!input.trim() && !imageFile) {
       console.log('[useChat] No input or image file, ignoring send request');
@@ -119,7 +121,6 @@ export const useChat = (
       });
       
       setIsLoading(true);
-      setIsThinkMode(true);
       
       if (imageFile) {
         console.log('[useChat] Image file detected, starting upload process');
@@ -144,51 +145,40 @@ export const useChat = (
       
       console.log('[useChat] Processing text-only message');
       
-      const userMessageId = `user-${uuidv4()}`;
-      const userMessage: Message = {
-        id: userMessageId,
-        role: 'user',
-        content: input,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, userMessage]);
-      setInput('');
-      
-      setTimeout(() => scrollToBottom(), 50);
-      
-      if (flags.enableStreaming) {
-        console.log('[useChat] Using streaming mode for text message');
-        await sendStreamingMessage(input);
-      } else {
-        console.log('[useChat] Using traditional mode for text message');
-        await sendMessageTraditional(input, null, isThinkMode);
-      }
+      // Pass the current input and think mode state to the handler
+      await handleSendMessageBase(input, isThinkMode);
     } catch (error) {
       console.error('[useChat] Error sending message:', error);
       setError('Failed to send message. Please try again.');
     } finally {
       setIsLoading(false);
-      setIsThinkMode(false);
     }
   }, [
-    flags.enableStreaming, 
-    sendStreamingMessage, 
-    sendMessageTraditional, 
+    handleSendMessageBase,
     analyzeImage, 
     input, 
     imageFile, 
     uploadImage, 
     removeImage, 
-    scrollToBottom, 
-    setIsThinkMode, 
     user,
     setInput,
     setIsLoading,
-    setMessages,
     setError,
     isThinkMode
   ]);
+  
+  // Handle example click - now only populates the input
+  const handleExampleClick = useCallback((question: string) => {
+    console.log('[useChat] Example clicked, filling input with:', question);
+    fillInputWithExample(question);
+    
+    // Focus the input field after filling it
+    if (inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [fillInputWithExample, inputRef]);
   
   // Use our updated keyboard handling hook
   const { handleKeyDown } = useKeyboardHandling({ 

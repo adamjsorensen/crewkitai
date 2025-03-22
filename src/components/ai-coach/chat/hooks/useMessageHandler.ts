@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { Message } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -93,29 +94,43 @@ export const useMessageHandler = ({
     scrollToBottom
   });
 
-  const handleExampleClick = useCallback((question: string) => {
+  // New function: just fills the input with the example, doesn't send
+  const fillInputWithExample = useCallback((question: string) => {
     setInput(question);
+  }, [setInput]);
+
+  // Modified: handle actual sending of message after user clicks submit
+  const handleSendMessage = useCallback(async (input: string, shouldUseThinkMode: boolean = false) => {
+    if (!input.trim()) return;
     
     const userMessageId = `user-${Date.now()}`;
     const userMessage: Message = {
       id: userMessageId,
       role: 'user',
-      content: question,
+      content: input,
       timestamp: new Date()
     };
     
     setMessages(prev => [...prev, userMessage]);
-    
     setInput('');
     setIsLoading(true);
-    setIsThinkMode(true);
+    
+    // Only use think mode if explicitly requested
+    if (shouldUseThinkMode) {
+      setIsThinkMode(true);
+    }
     
     setTimeout(() => scrollToBottom(), 50);
     
     if (enableStreaming) {
-      sendStreamingMessage(question);
+      await sendStreamingMessage(input);
     } else {
-      sendMessageTraditional(question, null, true);
+      await sendMessageTraditional(input, null, shouldUseThinkMode);
+    }
+    
+    // Reset think mode after sending
+    if (shouldUseThinkMode) {
+      setIsThinkMode(false);
     }
   }, [enableStreaming, sendStreamingMessage, sendMessageTraditional, scrollToBottom, setIsThinkMode, setInput, setIsLoading, setMessages]);
 
@@ -125,7 +140,8 @@ export const useMessageHandler = ({
   }, [baseHandleRetry, setInput]);
 
   return {
-    handleExampleClick,
+    fillInputWithExample,
+    handleSendMessage,
     handleRetry,
     handleRegenerateMessage,
     analyzeImage,
