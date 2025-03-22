@@ -77,7 +77,9 @@ export const useChat = (
     onConversationCreated,
     setIsThinkMode,
     scrollToBottom,
-    enableStreaming: flags.enableStreaming
+    enableStreaming: flags.enableStreaming,
+    uploadImage,
+    removeImage
   });
   
   // Scroll to bottom when messages change
@@ -160,7 +162,7 @@ export const useChat = (
         await sendStreamingMessage(input);
       } else {
         console.log('[useChat] Using traditional mode for text message');
-        await sendMessageTraditional(input);
+        await sendMessageTraditional(input, null, isThinkMode);
       }
     } catch (error) {
       console.error('[useChat] Error sending message:', error);
@@ -184,10 +186,16 @@ export const useChat = (
     setInput,
     setIsLoading,
     setMessages,
-    setError
+    setError,
+    isThinkMode
   ]);
   
-  const { handleKeyDown } = useKeyboardHandling({ handleSendMessage });
+  // Use our updated keyboard handling hook
+  const { handleKeyDown } = useKeyboardHandling({ 
+    handleSendMessage,
+    isLoading,
+    input
+  });
 
   return {
     input,

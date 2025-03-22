@@ -1,11 +1,12 @@
-
 import { useCallback } from 'react';
 import { Message } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '@supabase/supabase-js';
 import { useImageAnalysis } from './useImageAnalysis';
 import { useStreamingChat } from './useStreamingChat';
-import { useMessageOperations } from './useMessageOperations';
+import { useSendMessage } from './useSendMessage';
+import { useRetryMessage } from './useRetryMessage';
+import { useRegenerateMessage } from './useRegenerateMessage';
 
 interface UseMessageHandlerProps {
   user: User | null;
@@ -19,6 +20,8 @@ interface UseMessageHandlerProps {
   setIsThinkMode: (isThinkMode: boolean) => void;
   scrollToBottom: () => void;
   enableStreaming: boolean;
+  uploadImage: (file: File) => Promise<string | null>;
+  removeImage: () => void;
 }
 
 export const useMessageHandler = ({
@@ -32,13 +35,11 @@ export const useMessageHandler = ({
   onConversationCreated,
   setIsThinkMode,
   scrollToBottom,
-  enableStreaming
+  enableStreaming,
+  uploadImage,
+  removeImage
 }: UseMessageHandlerProps) => {
-  const {
-    handleSendMessage: sendMessageTraditional,
-    handleRetry: baseHandleRetry,
-    handleRegenerateMessage
-  } = useMessageOperations({
+  const { handleSendMessage: sendMessageTraditional } = useSendMessage({
     user,
     messages,
     setMessages,
@@ -46,11 +47,23 @@ export const useMessageHandler = ({
     setError,
     conversationId,
     onConversationCreated,
-    uploadImage: async () => "", // Will be overridden in useChat
-    removeImage: () => {}, // Will be overridden in useChat
-    imageFile: null, // Will be overridden in useChat
-    isThinkMode: false, // Will be overridden in useChat
+    uploadImage,
+    removeImage,
     setIsThinkMode
+  });
+  
+  const { handleRetry: baseHandleRetry } = useRetryMessage({
+    messages,
+    setMessages
+  });
+  
+  const { handleRegenerateMessage } = useRegenerateMessage({
+    user,
+    messages,
+    setMessages,
+    setIsLoading,
+    setError,
+    conversationId
   });
   
   const {
@@ -102,7 +115,7 @@ export const useMessageHandler = ({
     if (enableStreaming) {
       sendStreamingMessage(question);
     } else {
-      sendMessageTraditional(question);
+      sendMessageTraditional(question, null, true);
     }
   }, [enableStreaming, sendStreamingMessage, sendMessageTraditional, scrollToBottom, setIsThinkMode, setInput, setIsLoading, setMessages]);
 
