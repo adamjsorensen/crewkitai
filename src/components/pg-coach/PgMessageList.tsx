@@ -3,7 +3,7 @@ import React from 'react';
 import { ArrowDown, PaintBucket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PgMessage from './PgMessage';
-import { PgMessage as PgMessageType } from './PgChatInterface';
+import { PgMessage as PgMessageType } from '@/hooks/usePgChat';
 
 interface PgMessageListProps {
   messages: PgMessageType[];
