@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useScrollManagement } from '@/hooks/useScrollManagement';
 import PgMessageList from './PgMessageList';
 import PgChatInput from './PgChatInput';
 import PgWelcomeSection from './PgWelcomeSection';
@@ -21,6 +22,15 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   // State for tracking UI transition
   const [hasStartedChat, setHasStartedChat] = useState(() => !!initialConversationId);
   
+  // Use our custom scroll management hook
+  const {
+    showScrollButton,
+    messagesEndRef,
+    messagesContainerRef,
+    scrollToBottom,
+    scrollToBottomIfNeeded
+  } = useScrollManagement();
+  
   // Initialize chat with API functionality
   const {
     messages,
@@ -29,18 +39,21 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     isLoadingHistory,
     error,
     isThinkMode,
-    showScrollButton,
-    messagesEndRef,
-    messagesContainerRef,
     handleSendMessage: apiSendMessage,
     handleRetry,
     handleToggleThinkMode,
     handleNewChat: apiNewChat,
-    scrollToBottom,
   } = usePgChat({
     initialConversationId,
     onConversationStart
   });
+
+  // Effect to scroll to bottom when new messages arrive, but only if user is near bottom
+  useEffect(() => {
+    if (messages.length > 0 && !isLoadingHistory) {
+      scrollToBottomIfNeeded();
+    }
+  }, [messages, isLoadingHistory, scrollToBottomIfNeeded]);
 
   // Update hasStartedChat when initialConversationId changes
   useEffect(() => {
@@ -181,7 +194,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     }
   };
 
-  // Handle new chat
+  // Handle new chat - now reset UI state too
   const handleNewChat = () => {
     setHasStartedChat(false);
     apiNewChat();
@@ -193,7 +206,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <PgChatHeader 
         isThinkMode={isThinkMode}
         onToggleThinkMode={handleToggleThinkMode}

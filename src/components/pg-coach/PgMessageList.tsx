@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { ArrowDown, PaintBucket } from 'lucide-react';
+import { ArrowDown, PaintBucket, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PgMessage from './PgMessage';
 import { PgMessage as PgMessageType } from '@/hooks/usePgChat';
 import TypingIndicator from '@/components/ai-coach/TypingIndicator';
+import { cn } from '@/lib/utils';
 
 interface PgMessageListProps {
   messages: PgMessageType[];
@@ -41,9 +42,9 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
   return (
     <div
       ref={messagesContainerRef}
-      className="flex-1 overflow-y-auto pb-32 pt-4 px-4 scroll-smooth"
+      className="flex-1 overflow-y-auto pb-28 pt-2 px-4 scroll-smooth"
     >
-      <div className="max-w-3xl mx-auto space-y-4">
+      <div className="max-w-3xl mx-auto space-y-3">
         {messages.length === 0 && (
           <div className="p-4 text-center text-muted-foreground">
             No messages yet. Start a conversation!
@@ -99,7 +100,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         
         {/* Show suggested follow-ups */}
         {messages.length > 0 && !isLoading && (
-          <div className="pt-2">
+          <div className="pt-1">
             {messages[messages.length - 1].role === 'assistant' && 
              messages[messages.length - 1].suggestedFollowUps && 
              messages[messages.length - 1].suggestedFollowUps.length > 0 && (
@@ -128,12 +129,17 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
       
       {showScrollButton && (
         <Button
-          variant="outline"
-          size="icon"
-          className="fixed bottom-24 right-8 h-10 w-10 rounded-full shadow-md border border-border/60 bg-background/80 backdrop-blur-sm z-10"
+          variant="default"
+          size="sm"
+          className={cn(
+            "fixed bottom-24 right-6 shadow-md border border-primary/20",
+            "bg-primary text-white px-4 rounded-full transition-all z-10",
+            "flex items-center gap-1.5 hover:bg-primary/90"
+          )}
           onClick={scrollToBottom}
         >
-          <ArrowDown className="h-5 w-5" />
+          <span className="text-xs font-medium">New messages</span>
+          <ChevronDown className="h-4 w-4" />
         </Button>
       )}
     </div>
