@@ -97,8 +97,54 @@ serve(async (req) => {
     const userId = user.id;
     console.log("[pg-coach] User authenticated:", { userId });
     
+    // Load settings from the database
+    console.log("[pg-coach] Loading AI settings from database");
+    const { data: settingsData, error: settingsError } = await supabaseAdmin
+      .from("ai_settings")
+      .select("name, value")
+      .in("name", ["ai_coach_follow_up_enabled", "ai_coach_follow_up_defaults"]);
+      
+    if (settingsError) {
+      console.error("[pg-coach] Error loading settings:", settingsError);
+    }
+    
+    // Default settings
+    let followUpEnabled = true;
+    let followUpDefaults = [
+      "How do I price a job properly?",
+      "What marketing strategies work best for painters?",
+      "How can I improve my crew's efficiency?",
+      "What should I include in my contracts?"
+    ];
+    
+    // Process settings if available
+    if (settingsData && settingsData.length > 0) {
+      for (const setting of settingsData) {
+        if (setting.name === "ai_coach_follow_up_enabled") {
+          followUpEnabled = setting.value === "true";
+        } else if (setting.name === "ai_coach_follow_up_defaults") {
+          try {
+            const parsed = typeof setting.value === 'string' 
+              ? JSON.parse(setting.value) 
+              : setting.value;
+              
+            if (Array.isArray(parsed)) {
+              followUpDefaults = parsed;
+            }
+          } catch (e) {
+            console.error("[pg-coach] Error parsing follow-up defaults:", e);
+          }
+        }
+      }
+    }
+    
+    console.log("[pg-coach] Follow-up settings:", {
+      enabled: followUpEnabled,
+      defaultsCount: followUpDefaults.length
+    });
+    
     // System prompt for the AI assistant
-    const systemPrompt = `You are the PainterGrowth Coach, an AI assistant specialized in helping painting professionals grow their businesses. 
+    let systemPrompt = `You are the PainterGrowth Coach, an AI assistant specialized in helping painting professionals grow their businesses. 
 You provide expert advice tailored to the painting industry, addressing challenges like pricing jobs, managing clients, 
 leading crews, and implementing effective marketing strategies.
 
@@ -106,9 +152,12 @@ Your responses should be:
 - Practical and actionable, with clear steps
 - Tailored to the painting industry context
 - Professional but conversational in tone
-- Concise but comprehensive
+- Concise but comprehensive`;
 
-After each response, suggest 2-3 follow-up questions that would be useful for the user to continue the conversation.`;
+    // Add follow-up question instruction if enabled
+    if (followUpEnabled) {
+      systemPrompt += "\n\nAfter each response, suggest 2-3 follow-up questions that would be useful for the user to continue the conversation.";
+    }
 
     // Build the conversation history for context
     let messages = [
@@ -210,14 +259,22 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
     console.log("[pg-coach] OpenAI API response received successfully");
     const aiResponse = responseData.choices[0]?.message?.content || '';
     
-    // Extract suggested follow-up questions if present (format: "1. Question? 2. Question?")
+    // Extract suggested follow-up questions if enabled
     const suggestedFollowUps: string[] = [];
-    const lines = aiResponse.split('\n');
-    for (const line of lines) {
-      // Look for numbered questions at the end of the response
-      const questionMatch = line.match(/^\d+\.\s+(.*\?)/);
-      if (questionMatch && questionMatch[1]) {
-        suggestedFollowUps.push(questionMatch[1]);
+    
+    if (followUpEnabled) {
+      const lines = aiResponse.split('\n');
+      for (const line of lines) {
+        // Look for numbered questions at the end of the response
+        const questionMatch = line.match(/^\d+\.\s+(.*\?)/);
+        if (questionMatch && questionMatch[1]) {
+          suggestedFollowUps.push(questionMatch[1]);
+        }
+      }
+      
+      // If no follow-ups were found, use defaults
+      if (suggestedFollowUps.length === 0 && followUpDefaults.length > 0) {
+        followUpDefaults.forEach(q => suggestedFollowUps.push(q));
       }
     }
     

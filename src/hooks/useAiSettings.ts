@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +19,9 @@ export const useAiSettings = () => {
           "ai_coach_system_prompt",
           "ai_coach_temperature",
           "ai_coach_max_tokens",
-          "ai_coach_models"
+          "ai_coach_models",
+          "ai_coach_follow_up_enabled",
+          "ai_coach_follow_up_defaults"
         ]);
       
       if (error) throw error;
@@ -79,7 +82,7 @@ export const useSaveAiSettings = () => {
         let processedValue = value;
         
         // Try to parse JSON fields
-        if (key === 'ai_coach_models') {
+        if (key === 'ai_coach_models' || key === 'ai_coach_follow_up_defaults') {
           try {
             processedValue = JSON.parse(value);
           } catch (e) {

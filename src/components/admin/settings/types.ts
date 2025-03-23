@@ -27,6 +27,10 @@ export const aiSettingsFormSchema = z.object({
   ai_coach_models: z.string().min(5, {
     message: "Model configuration is required",
   }),
+  ai_coach_follow_up_enabled: z.string(),
+  ai_coach_follow_up_defaults: z.string().min(5, {
+    message: "Default follow-up questions are required",
+  }),
 });
 
 // Type for form values

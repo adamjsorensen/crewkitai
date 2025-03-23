@@ -29,6 +29,8 @@ interface AISettings {
     default: string;
     think?: string;
   };
+  followUpEnabled: boolean;
+  followUpDefaults: string[];
 }
 
 // Load AI settings from database
@@ -40,14 +42,28 @@ async function loadAISettings(): Promise<AISettings> {
     models: { 
       default: "gpt-4o-mini",
       think: "gpt-4o"
-    }
+    },
+    followUpEnabled: true,
+    followUpDefaults: [
+      "How do I price a job properly?",
+      "What marketing strategies work best for painters?",
+      "How can I improve my crew's efficiency?",
+      "What should I include in my contracts?"
+    ]
   };
 
   try {
     const { data, error } = await supabaseAdmin
       .from('ai_settings')
       .select('name, value')
-      .in('name', ['ai_coach_system_prompt', 'ai_coach_temperature', 'ai_coach_max_tokens', 'ai_coach_models']);
+      .in('name', [
+        'ai_coach_system_prompt', 
+        'ai_coach_temperature', 
+        'ai_coach_max_tokens', 
+        'ai_coach_models',
+        'ai_coach_follow_up_enabled',
+        'ai_coach_follow_up_defaults'
+      ]);
     
     if (error) throw error;
     
@@ -58,7 +74,14 @@ async function loadAISettings(): Promise<AISettings> {
       models: {
         default: "gpt-4o-mini",
         think: "gpt-4o"
-      }
+      },
+      followUpEnabled: true,
+      followUpDefaults: [
+        "How do I price a job properly?",
+        "What marketing strategies work best for painters?",
+        "How can I improve my crew's efficiency?",
+        "What should I include in my contracts?"
+      ]
     };
     
     if (data) {
@@ -86,6 +109,22 @@ async function loadAISettings(): Promise<AISettings> {
           } catch (e) {
             console.error("Error parsing models JSON:", e);
           }
+        } else if (setting.name === 'ai_coach_follow_up_enabled') {
+          settings.followUpEnabled = setting.value === 'true';
+        } else if (setting.name === 'ai_coach_follow_up_defaults') {
+          try {
+            let defaults = typeof setting.value === 'string'
+              ? JSON.parse(setting.value)
+              : setting.value;
+              
+            if (Array.isArray(defaults)) {
+              settings.followUpDefaults = defaults;
+            }
+            
+            console.log('[ai-coach] Loaded follow-up defaults:', JSON.stringify(settings.followUpDefaults));
+          } catch (e) {
+            console.error("Error parsing follow-up defaults JSON:", e);
+          }
         }
       });
     }
@@ -100,7 +139,14 @@ async function loadAISettings(): Promise<AISettings> {
       models: { 
         default: "gpt-4o-mini",
         think: "gpt-4o"
-      }
+      },
+      followUpEnabled: true,
+      followUpDefaults: [
+        "How do I price a job properly?",
+        "What marketing strategies work best for painters?",
+        "How can I improve my crew's efficiency?",
+        "What should I include in my contracts?"
+      ]
     };
   }
 }
@@ -120,9 +166,14 @@ async function callOpenAI(message: string, settings: AISettings, isThinkMode = f
     // Log which model we're using
     console.log(`[ai-coach] Using model: ${model}${isThinkMode ? ' (Think Mode)' : ''}`);
     
-    const systemPrompt = isThinkMode 
+    let systemPrompt = isThinkMode 
       ? `${settings.systemPrompt}\n\nTake your time to think deeply about this question. Consider multiple angles and provide a comprehensive response.` 
       : settings.systemPrompt;
+    
+    // Add follow-up questions instruction if enabled
+    if (settings.followUpEnabled) {
+      systemPrompt += "\n\nAfter your response, suggest 2-3 follow-up questions that would be helpful for the user to continue the conversation.";
+    }
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -185,7 +236,12 @@ async function callOpenAI(message: string, settings: AISettings, isThinkMode = f
 }
 
 // Function to extract follow-up questions from text
-function extractFollowUpQuestions(text) {
+function extractFollowUpQuestions(text: string, settings: AISettings) {
+  // If follow-up questions are disabled, return an empty array
+  if (!settings.followUpEnabled) {
+    return [];
+  }
+  
   // Look for patterns like numbered lists, bullet points, or sections with "Questions to consider", etc.
   const followUpPatterns = [
     /(?:Questions to consider|Follow-up questions|You might ask|Consider asking):([\s\S]*?)(?:\n\n|$)/i,
@@ -215,14 +271,9 @@ function extractFollowUpQuestions(text) {
     followUps = matches.map(m => m[1].trim()).filter(q => q.length > 10 && q.length < 100 && q.includes('?'));
   }
   
-  // If still no follow-ups, use some default industry-relevant questions
-  if (followUps.length === 0) {
-    return [
-      "How do I price a job properly?",
-      "What marketing strategies work best for painters?",
-      "How can I improve my crew's efficiency?",
-      "What should I include in my contracts?"
-    ];
+  // If still no follow-ups, use defaults from settings
+  if (followUps.length === 0 && settings.followUpDefaults.length > 0) {
+    return settings.followUpDefaults;
   }
   
   // Limit to 4 follow-up questions
@@ -274,7 +325,9 @@ serve(async (req) => {
           systemPromptLength: settings.systemPrompt.length,
           temperature: settings.temperature,
           maxTokens: settings.maxTokens,
-          models: settings.models
+          models: settings.models,
+          followUpEnabled: settings.followUpEnabled,
+          followUpDefaultsCount: settings.followUpDefaults.length
         }));
         
         // Get AI response from OpenAI
@@ -296,7 +349,7 @@ serve(async (req) => {
         }
         
         // Extract potential follow-up questions from the response
-        const suggestedFollowUps = extractFollowUpQuestions(aiResponse);
+        const suggestedFollowUps = extractFollowUpQuestions(aiResponse, settings);
         console.log('[ai-coach] Extracted follow-ups:', suggestedFollowUps);
         
         // Prepare response data

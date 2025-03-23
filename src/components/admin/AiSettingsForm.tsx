@@ -14,9 +14,10 @@ import ContentManagement from "./settings/ContentManagement";
 import SaveButton from "./settings/SaveButton";
 import LoadingSpinner from "./settings/LoadingSpinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare, AlertTriangle } from "lucide-react";
+import { Settings, MessageSquare, AlertTriangle, HelpCircle } from "lucide-react";
 import WelcomeContentManagement from "./settings/WelcomeContentManagement";
 import ContentFilters from "./settings/ContentFilters";
+import FollowUpQuestionsField from "./settings/FollowUpQuestionsField";
 
 const AiSettingsForm = () => {
   const [activeTab, setActiveTab] = React.useState("model-settings");
@@ -30,7 +31,14 @@ const AiSettingsForm = () => {
       ai_coach_system_prompt: "",
       ai_coach_temperature: "0.7",
       ai_coach_max_tokens: "1000",
-      ai_coach_models: JSON.stringify({ default: "gpt-4o", think: "o3-mini-2025-01-31" }, null, 2),
+      ai_coach_models: JSON.stringify({ default: "gpt-4o-mini", think: "gpt-4o" }, null, 2),
+      ai_coach_follow_up_enabled: "true",
+      ai_coach_follow_up_defaults: JSON.stringify([
+        "How do I price a job properly?",
+        "What marketing strategies work best for painters?",
+        "How can I improve my crew's efficiency?",
+        "What should I include in my contracts?"
+      ], null, 2),
     },
   });
   
@@ -63,6 +71,10 @@ const AiSettingsForm = () => {
               <Settings className="h-4 w-4" />
               <span>Model Settings</span>
             </TabsTrigger>
+            <TabsTrigger value="responses" className="flex items-center gap-1.5">
+              <HelpCircle className="h-4 w-4" />
+              <span>Responses</span>
+            </TabsTrigger>
             <TabsTrigger value="welcome-content" className="flex items-center gap-1.5">
               <MessageSquare className="h-4 w-4" />
               <span>Welcome Content</span>
@@ -84,6 +96,16 @@ const AiSettingsForm = () => {
                 </div>
                 
                 <ModelsConfigField form={form} />
+                
+                <SaveButton isSaving={isSaving} />
+              </form>
+            </Form>
+          </TabsContent>
+          
+          <TabsContent value="responses">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FollowUpQuestionsField form={form} />
                 
                 <SaveButton isSaving={isSaving} />
               </form>
