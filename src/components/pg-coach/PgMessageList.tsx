@@ -135,9 +135,9 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         <div ref={messagesEndRef} />
       </div>
       
-      {/* Moved scroll button to be centered above chatbox */}
+      {/* Adjusted scroll button to be just above the chatbox */}
       {showScrollButton && (
-        <div className="sticky bottom-16 w-full flex justify-center items-center z-10">
+        <div className="fixed bottom-[72px] left-0 right-0 w-full flex justify-center items-center z-10">
           <Button
             variant="default"
             size="sm"

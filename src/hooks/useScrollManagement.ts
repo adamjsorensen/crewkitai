@@ -32,6 +32,32 @@ export const useScrollManagement = () => {
     }
   }, []);
 
+  // Add an effect to update button visibility when container content changes
+  useEffect(() => {
+    // Use a MutationObserver to detect when new content is added to the container
+    if (messagesContainerRef.current) {
+      const observer = new MutationObserver(() => {
+        // When content changes, check if we need to show the scroll button
+        if (messagesContainerRef.current) {
+          const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+          const distance = scrollHeight - scrollTop - clientHeight;
+          const isBottom = distance < 150;
+          
+          console.log(`[ScrollManagement] Content changed, distance: ${distance}px, showScrollButton: ${!isBottom}`);
+          setShowScrollButton(!isBottom);
+        }
+      });
+      
+      observer.observe(messagesContainerRef.current, { 
+        childList: true, 
+        subtree: true,
+        characterData: true 
+      });
+      
+      return () => observer.disconnect();
+    }
+  }, []);
+
   // Enhanced scrollToBottom with more reliability
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
