@@ -31,6 +31,7 @@ interface AISettings {
   };
   followUpEnabled: boolean;
   followUpDefaults: string[];
+  followUpPrompt: string;
 }
 
 // Load AI settings from database
@@ -49,7 +50,8 @@ async function loadAISettings(): Promise<AISettings> {
       "What marketing strategies work best for painters?",
       "How can I improve my crew's efficiency?",
       "What should I include in my contracts?"
-    ]
+    ],
+    followUpPrompt: "After your response, suggest 2-3 follow-up questions that would be helpful for the user to continue the conversation."
   };
 
   try {
@@ -62,7 +64,8 @@ async function loadAISettings(): Promise<AISettings> {
         'ai_coach_max_tokens', 
         'ai_coach_models',
         'ai_coach_follow_up_enabled',
-        'ai_coach_follow_up_defaults'
+        'ai_coach_follow_up_defaults',
+        'ai_coach_follow_up_prompt'
       ]);
     
     if (error) throw error;
@@ -81,7 +84,8 @@ async function loadAISettings(): Promise<AISettings> {
         "What marketing strategies work best for painters?",
         "How can I improve my crew's efficiency?",
         "What should I include in my contracts?"
-      ]
+      ],
+      followUpPrompt: "After your response, suggest 2-3 follow-up questions that would be helpful for the user to continue the conversation."
     };
     
     if (data) {
@@ -125,6 +129,9 @@ async function loadAISettings(): Promise<AISettings> {
           } catch (e) {
             console.error("Error parsing follow-up defaults JSON:", e);
           }
+        } else if (setting.name === 'ai_coach_follow_up_prompt') {
+          settings.followUpPrompt = setting.value;
+          console.log('[ai-coach] Loaded follow-up prompt:', settings.followUpPrompt);
         }
       });
     }
@@ -146,7 +153,8 @@ async function loadAISettings(): Promise<AISettings> {
         "What marketing strategies work best for painters?",
         "How can I improve my crew's efficiency?",
         "What should I include in my contracts?"
-      ]
+      ],
+      followUpPrompt: "After your response, suggest 2-3 follow-up questions that would be helpful for the user to continue the conversation."
     };
   }
 }
@@ -172,7 +180,7 @@ async function callOpenAI(message: string, settings: AISettings, isThinkMode = f
     
     // Add follow-up questions instruction if enabled
     if (settings.followUpEnabled) {
-      systemPrompt += "\n\nAfter your response, suggest 2-3 follow-up questions that would be helpful for the user to continue the conversation.";
+      systemPrompt += `\n\n${settings.followUpPrompt}`;
     }
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

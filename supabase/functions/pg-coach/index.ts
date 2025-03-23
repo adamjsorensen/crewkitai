@@ -102,7 +102,11 @@ serve(async (req) => {
     const { data: settingsData, error: settingsError } = await supabaseAdmin
       .from("ai_settings")
       .select("name, value")
-      .in("name", ["ai_coach_follow_up_enabled", "ai_coach_follow_up_defaults"]);
+      .in("name", [
+        "ai_coach_follow_up_enabled", 
+        "ai_coach_follow_up_defaults", 
+        "ai_coach_follow_up_prompt"
+      ]);
       
     if (settingsError) {
       console.error("[pg-coach] Error loading settings:", settingsError);
@@ -116,6 +120,7 @@ serve(async (req) => {
       "How can I improve my crew's efficiency?",
       "What should I include in my contracts?"
     ];
+    let followUpPrompt = "After each response, suggest 2-3 follow-up questions that would be useful for the user to continue the conversation.";
     
     // Process settings if available
     if (settingsData && settingsData.length > 0) {
@@ -134,13 +139,16 @@ serve(async (req) => {
           } catch (e) {
             console.error("[pg-coach] Error parsing follow-up defaults:", e);
           }
+        } else if (setting.name === "ai_coach_follow_up_prompt") {
+          followUpPrompt = setting.value;
         }
       }
     }
     
     console.log("[pg-coach] Follow-up settings:", {
       enabled: followUpEnabled,
-      defaultsCount: followUpDefaults.length
+      defaultsCount: followUpDefaults.length,
+      prompt: followUpPrompt.substring(0, 50) + (followUpPrompt.length > 50 ? '...' : '')
     });
     
     // System prompt for the AI assistant
@@ -156,7 +164,7 @@ Your responses should be:
 
     // Add follow-up question instruction if enabled
     if (followUpEnabled) {
-      systemPrompt += "\n\nAfter each response, suggest 2-3 follow-up questions that would be useful for the user to continue the conversation.";
+      systemPrompt += `\n\n${followUpPrompt}`;
     }
 
     // Build the conversation history for context

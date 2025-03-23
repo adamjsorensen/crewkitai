@@ -21,7 +21,8 @@ export const useAiSettings = () => {
           "ai_coach_max_tokens",
           "ai_coach_models",
           "ai_coach_follow_up_enabled",
-          "ai_coach_follow_up_defaults"
+          "ai_coach_follow_up_defaults",
+          "ai_coach_follow_up_prompt"
         ]);
       
       if (error) throw error;

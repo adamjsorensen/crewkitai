@@ -18,6 +18,7 @@ import { Settings, MessageSquare, AlertTriangle, HelpCircle } from "lucide-react
 import WelcomeContentManagement from "./settings/WelcomeContentManagement";
 import ContentFilters from "./settings/ContentFilters";
 import FollowUpQuestionsField from "./settings/FollowUpQuestionsField";
+import FollowUpPromptField from "./settings/FollowUpPromptField";
 
 const AiSettingsForm = () => {
   const [activeTab, setActiveTab] = React.useState("model-settings");
@@ -39,6 +40,7 @@ const AiSettingsForm = () => {
         "How can I improve my crew's efficiency?",
         "What should I include in my contracts?"
       ], null, 2),
+      ai_coach_follow_up_prompt: "After your response, suggest 2-3 follow-up questions that would be helpful for the user to continue the conversation.",
     },
   });
   
@@ -106,6 +108,8 @@ const AiSettingsForm = () => {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FollowUpQuestionsField form={form} />
+                
+                <FollowUpPromptField form={form} />
                 
                 <SaveButton isSaving={isSaving} />
               </form>

@@ -31,6 +31,9 @@ export const aiSettingsFormSchema = z.object({
   ai_coach_follow_up_defaults: z.string().min(5, {
     message: "Default follow-up questions are required",
   }),
+  ai_coach_follow_up_prompt: z.string().min(10, {
+    message: "Follow-up prompt must be at least 10 characters",
+  }),
 });
 
 // Type for form values
