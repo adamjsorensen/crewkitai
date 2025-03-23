@@ -10,17 +10,40 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("[pg-coach] Function invoked:", {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log("[pg-coach] Handling CORS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     // Get request body
-    const { message, conversationId, imageUrl = null, isThinkMode = false } = await req.json();
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log("[pg-coach] Request body parsed successfully:", {
+        hasMessage: !!requestBody.message,
+        messageLength: requestBody.message?.length,
+        hasConversationId: !!requestBody.conversationId,
+        hasImageUrl: !!requestBody.imageUrl,
+        isThinkMode: !!requestBody.isThinkMode
+      });
+    } catch (parseError) {
+      console.error("[pg-coach] Error parsing request body:", parseError);
+      throw new Error('Invalid JSON: ' + parseError.message);
+    }
+    
+    const { message, conversationId, imageUrl = null, isThinkMode = false } = requestBody;
     
     // Validate required fields
     if (!message) {
+      console.error("[pg-coach] Missing required field: message");
       throw new Error('Message is required');
     }
 
@@ -30,11 +53,20 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
+    console.log("[pg-coach] Environment check:", {
+      hasOpenAiKey: !!openAiApiKey,
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseAnonKey: !!supabaseAnonKey,
+      hasSupabaseServiceKey: !!supabaseServiceKey
+    });
+    
     if (!openAiApiKey) {
+      console.error("[pg-coach] OpenAI API key not configured");
       throw new Error('OpenAI API key not configured');
     }
     
     if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("[pg-coach] Supabase configuration missing");
       throw new Error('Supabase configuration missing');
     }
     
@@ -44,17 +76,26 @@ serve(async (req) => {
     // Get the user ID from the JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error("[pg-coach] Missing Authorization header");
       throw new Error('Missing Authorization header');
     }
     
     const token = authHeader.replace('Bearer ', '');
+    console.log("[pg-coach] Verifying user token...");
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
-    if (userError || !user) {
-      throw new Error('Invalid user token');
+    if (userError) {
+      console.error("[pg-coach] User token verification failed:", userError);
+      throw new Error('Invalid user token: ' + userError.message);
+    }
+    
+    if (!user) {
+      console.error("[pg-coach] No user found in token");
+      throw new Error('Invalid user token: No user found');
     }
     
     const userId = user.id;
+    console.log("[pg-coach] User authenticated:", { userId });
     
     // System prompt for the AI assistant
     const systemPrompt = `You are the PainterGrowth Coach, an AI assistant specialized in helping painting professionals grow their businesses. 
@@ -77,6 +118,7 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
     
     // If this is part of an existing conversation, fetch previous messages for context
     if (conversationId) {
+      console.log("[pg-coach] Fetching conversation history for ID:", conversationId);
       const { data: historyData, error: historyError } = await supabaseAdmin
         .from('pg_messages')
         .select('role, content')
@@ -84,7 +126,12 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
         .order('created_at', { ascending: true })
         .limit(10); // Limit to last 10 messages for context
       
+      if (historyError) {
+        console.error("[pg-coach] Error fetching conversation history:", historyError);
+      }
+      
       if (!historyError && historyData && historyData.length > 0) {
+        console.log("[pg-coach] Retrieved conversation history:", { messageCount: historyData.length });
         const contextMessages = historyData.map(msg => ({
           role: msg.role,
           content: msg.content
@@ -96,11 +143,14 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
           ...contextMessages,
           messages[1] // Current user message last
         ];
+      } else {
+        console.log("[pg-coach] No conversation history found or error occurred");
       }
     }
     
     // If thinking mode is enabled, use a more analytical approach
     if (isThinkMode) {
+      console.log("[pg-coach] Think mode enabled, adding additional system instruction");
       messages.unshift({
         role: "system",
         content: "For this response, I want you to think deeply and provide a more thorough analysis. Consider multiple perspectives, weigh pros and cons, and provide strategic insights."
@@ -110,6 +160,7 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
     // If an image was provided, use the Vision model and include the image in the message
     let model = "gpt-4o-mini";
     if (imageUrl) {
+      console.log("[pg-coach] Image provided, using vision model");
       model = "gpt-4o"; // Use vision model
       // Replace the last user message with one that includes the image
       messages[messages.length-1] = {
@@ -120,6 +171,13 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
         ]
       };
     }
+    
+    console.log("[pg-coach] Calling OpenAI API:", {
+      model,
+      messageCount: messages.length,
+      temperature: 0.7,
+      maxTokens: 1000
+    });
     
     // Call the OpenAI API
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -136,13 +194,20 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
       }),
     });
     
+    console.log("[pg-coach] OpenAI API response status:", {
+      status: openAIResponse.status,
+      statusText: openAIResponse.statusText,
+      ok: openAIResponse.ok
+    });
+    
     if (!openAIResponse.ok) {
       const errorData = await openAIResponse.json();
-      console.error('OpenAI API error:', errorData);
+      console.error('[pg-coach] OpenAI API error:', errorData);
       throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }
     
     const responseData = await openAIResponse.json();
+    console.log("[pg-coach] OpenAI API response received successfully");
     const aiResponse = responseData.choices[0]?.message?.content || '';
     
     // Extract suggested follow-up questions if present (format: "1. Question? 2. Question?")
@@ -156,9 +221,15 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
       }
     }
     
+    console.log("[pg-coach] Extracted follow-up suggestions:", {
+      count: suggestedFollowUps.length,
+      suggestions: suggestedFollowUps
+    });
+    
     // If this is a new conversation, create it first
     let actualConversationId = conversationId;
     if (!conversationId) {
+      console.log("[pg-coach] Creating new conversation");
       const { data: newConversation, error: conversationError } = await supabaseAdmin
         .from('pg_conversations')
         .insert({
@@ -168,14 +239,22 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
         .select('id')
         .single();
       
-      if (conversationError || !newConversation) {
-        throw new Error(`Failed to create conversation: ${conversationError?.message || 'Unknown error'}`);
+      if (conversationError) {
+        console.error("[pg-coach] Error creating conversation:", conversationError);
+        throw new Error(`Failed to create conversation: ${conversationError.message || 'Unknown error'}`);
+      }
+      
+      if (!newConversation) {
+        console.error("[pg-coach] No conversation data returned after insert");
+        throw new Error('Failed to create conversation: No data returned');
       }
       
       actualConversationId = newConversation.id;
+      console.log("[pg-coach] New conversation created with ID:", actualConversationId);
     }
     
     // Save the user message
+    console.log("[pg-coach] Saving user message");
     const { error: userMsgError } = await supabaseAdmin
       .from('pg_messages')
       .insert({
@@ -186,10 +265,11 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
       });
     
     if (userMsgError) {
-      console.error('Error saving user message:', userMsgError);
+      console.error('[pg-coach] Error saving user message:', userMsgError);
     }
     
     // Save the AI response
+    console.log("[pg-coach] Saving AI response");
     const { error: aiMsgError } = await supabaseAdmin
       .from('pg_messages')
       .insert({
@@ -200,7 +280,7 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
       });
     
     if (aiMsgError) {
-      console.error('Error saving AI message:', aiMsgError);
+      console.error('[pg-coach] Error saving AI message:', aiMsgError);
     }
     
     // Update the conversation timestamp
@@ -208,6 +288,8 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
       .from('pg_conversations')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', actualConversationId);
+    
+    console.log("[pg-coach] Function completed successfully");
     
     // Return the AI response and conversation ID
     return new Response(
@@ -225,7 +307,7 @@ After each response, suggest 2-3 follow-up questions that would be useful for th
     );
     
   } catch (error) {
-    console.error('Edge function error:', error);
+    console.error('[pg-coach] Edge function error:', error);
     
     return new Response(
       JSON.stringify({ 

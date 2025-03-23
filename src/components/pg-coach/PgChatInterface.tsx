@@ -45,14 +45,11 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  // Initialize with welcome message for new chats or load conversation history
   useEffect(() => {
     if (initialConversationId) {
-      // Load conversation history
       loadConversationHistory(initialConversationId);
       setHasStartedChat(true);
     } else if (hasStartedChat) {
-      // New conversation, show welcome message
       setMessages([
         {
           id: 'welcome',
@@ -91,7 +88,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         
         setMessages(formattedMessages);
       } else {
-        // Fallback if no messages found
         setMessages([
           {
             id: 'welcome',
@@ -146,7 +142,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     
     if (!hasStartedChat) {
       setHasStartedChat(true);
-      // Add initial welcome message from assistant
       setMessages([
         {
           id: 'welcome',
@@ -197,11 +192,23 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         imageUrl = publicUrl;
       }
       
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      console.log("[PgChatInterface] Preparing to call edge function:", {
+        endpoint: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pg-coach`,
+        hasToken: !!accessToken,
+        messageLength: messageText.length,
+        hasImage: !!imageUrl,
+        isThinkMode,
+        existingConversationId: conversationId
+      });
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pg-coach`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           message: messageText,
@@ -211,17 +218,36 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         }),
       });
       
+      console.log("[PgChatInterface] Edge function response status:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+      
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`API error: ${errorData}`);
+        const errorText = await response.text();
+        console.error("[PgChatInterface] API error response:", errorText);
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error("[PgChatInterface] Parsed API error:", errorJson);
+          throw new Error(`API error: ${errorJson.error || errorJson.message || 'Unknown error'}`);
+        } catch (parseError) {
+          throw new Error(`API error (${response.status}): ${errorText || 'No error details available'}`);
+        }
       }
       
       const data = await response.json();
+      console.log("[PgChatInterface] Edge function success response:", {
+        hasConversationId: !!data.conversationId,
+        responseLength: data.response?.length || 0,
+        hasSuggestedFollowUps: Array.isArray(data.suggestedFollowUps)
+      });
       
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId);
+        console.log("[PgChatInterface] New conversation created:", data.conversationId);
         
-        // Notify parent component about the new conversation
         if (onConversationStart) {
           onConversationStart(data.conversationId);
         }
@@ -243,6 +269,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error("[PgChatInterface] Error sending message:", err);
       setError(errorMessage);
       toast({
         title: "Error",
@@ -287,7 +314,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     setMessages([]);
     setConversationId(null);
     
-    // If parent needs to know about new chat
     if (onConversationStart) {
       onConversationStart('');
     }
