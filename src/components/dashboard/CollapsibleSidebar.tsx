@@ -13,7 +13,8 @@ import {
   Sparkles,
   Shield,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Brush
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -38,7 +39,6 @@ const CollapsibleSidebar = () => {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
   
-  // Store collapsed state in localStorage
   useEffect(() => {
     const savedState = localStorage.getItem('sidebar-collapsed');
     if (savedState !== null) {
@@ -62,16 +62,11 @@ const CollapsibleSidebar = () => {
     { name: "Content", icon: FileText, path: "/dashboard/content" },
     { name: "Financial", icon: BarChart4, path: "/dashboard/financial" },
     { name: "AI Coach", icon: Sparkles, path: "/dashboard/ai-coach" },
+    { name: "PainterGrowth", icon: Brush, path: "/dashboard/pg-coach" },
     { name: "Profile", icon: User, path: "/dashboard/profile" },
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
 
-  // Admin menu items - only shown to admin users
-  const adminItems = [
-    { name: "Admin", icon: Shield, path: "/dashboard/admin/ai-settings" },
-  ];
-
-  // Mobile sidebar implementation
   if (isMobile) {
     return (
       <div className="fixed top-0 left-0 z-40 w-full bg-background/95 backdrop-blur-sm border-b flex items-center justify-between p-3">
@@ -155,7 +150,6 @@ const CollapsibleSidebar = () => {
     );
   }
 
-  // Desktop sidebar implementation
   return (
     <TooltipProvider delayDuration={0}>
       <aside

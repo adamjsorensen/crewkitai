@@ -19,6 +19,7 @@ import BusinessProfilePage from "./pages/profile/BusinessProfilePage";
 import PersonalProfilePage from "./pages/profile/PersonalProfilePage";
 import SettingsPage from "./pages/profile/SettingsPage";
 import AiCoach from "./pages/AiCoach";
+import PgCoachPage from "./pages/PgCoachPage"; // New PainterGrowth Coach page
 import AiSettingsPage from "./pages/admin/AiSettingsPage";
 import FeatureFlagsPage from "./pages/admin/FeatureFlagsPage";
 import { useEffect } from "react";
@@ -59,6 +60,7 @@ const AppContent = () => {
         <Route path="/dashboard/profile/personal" element={<PersonalProfilePage />} />
         <Route path="/dashboard/settings" element={<SettingsPage />} />
         <Route path="/dashboard/ai-coach" element={<AiCoach />} />
+        <Route path="/dashboard/pg-coach" element={<PgCoachPage />} />
         
         {/* Admin Routes */}
         <Route path="/dashboard/admin/ai-settings" element={<AiSettingsPage />} />
