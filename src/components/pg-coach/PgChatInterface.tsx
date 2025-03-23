@@ -1,11 +1,11 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import PgMessageList from './PgMessageList';
 import PgChatInput from './PgChatInput';
 import PgWelcomeSection from './PgWelcomeSection';
 import PgChatHeader from './PgChatHeader';
-import { usePgChatInterface } from '@/hooks/usePgChatInterface';
+import { usePgChat, PgMessage } from '@/hooks/usePgChat';
 
 interface PgChatInterfaceProps {
   conversationId?: string | null;
@@ -18,9 +18,13 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
 }) => {
   const isMobile = useIsMobile();
   
+  // State for tracking UI transition
+  const [hasStartedChat, setHasStartedChat] = useState(() => !!initialConversationId);
+  
+  // Initialize chat with API functionality
   const {
-    hasStartedChat,
     messages,
+    setMessages,
     isLoading,
     isLoadingHistory,
     error,
@@ -28,16 +32,160 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     showScrollButton,
     messagesEndRef,
     messagesContainerRef,
-    handleSendMessage,
+    handleSendMessage: apiSendMessage,
     handleRetry,
-    handleExampleClick,
     handleToggleThinkMode,
-    handleNewChat,
+    handleNewChat: apiNewChat,
     scrollToBottom,
-  } = usePgChatInterface({
+  } = usePgChat({
     initialConversationId,
     onConversationStart
   });
+
+  // Update hasStartedChat when initialConversationId changes
+  useEffect(() => {
+    if (initialConversationId && !hasStartedChat) {
+      setHasStartedChat(true);
+    }
+  }, [initialConversationId, hasStartedChat]);
+
+  // Handles sending a message with proper UI transition
+  const handleSendMessage = (messageText: string, imageFile?: File | null) => {
+    if (!messageText.trim() && !imageFile) return;
+    
+    // If first message, prepare UI transition
+    if (!hasStartedChat) {
+      // Create welcome message
+      const welcomeMessage: PgMessage = {
+        id: 'welcome',
+        role: 'assistant',
+        content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
+        timestamp: new Date(),
+      };
+      
+      // Create user message
+      const userMessage: PgMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: messageText,
+        timestamp: new Date(),
+        imageUrl: null, // Will be updated after upload if needed
+      };
+      
+      // Create placeholder for loading
+      const placeholderMessage: PgMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isPlaceholder: true,
+      };
+      
+      // First update UI to show messages
+      setMessages([welcomeMessage, userMessage, placeholderMessage]);
+      // Then transition to chat UI
+      setHasStartedChat(true);
+      
+      // Then handle API call after UI has updated
+      setTimeout(() => {
+        apiSendMessage(messageText, imageFile);
+      }, 10);
+    } else {
+      // Regular message flow for subsequent messages
+      const userMessage: PgMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: messageText,
+        timestamp: new Date(),
+        imageUrl: null,
+      };
+      
+      const placeholderMessage: PgMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isPlaceholder: true,
+      };
+      
+      // Add messages to UI first
+      setMessages(prev => [...prev, userMessage, placeholderMessage]);
+      
+      // Then make API call
+      setTimeout(() => {
+        apiSendMessage(messageText, imageFile);
+      }, 10);
+    }
+  };
+
+  // Handle example question clicks
+  const handleExampleClick = (question: string) => {
+    if (!hasStartedChat) {
+      // Create welcome message
+      const welcomeMessage: PgMessage = {
+        id: 'welcome',
+        role: 'assistant',
+        content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
+        timestamp: new Date(),
+      };
+      
+      // Create user message
+      const userMessage: PgMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: question,
+        timestamp: new Date(),
+      };
+      
+      // Create placeholder for loading
+      const placeholderMessage: PgMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isPlaceholder: true,
+      };
+      
+      // Update UI first
+      setMessages([welcomeMessage, userMessage, placeholderMessage]);
+      setHasStartedChat(true);
+      
+      // Then handle API call
+      setTimeout(() => {
+        apiSendMessage(question);
+      }, 10);
+    } else {
+      // For subsequent examples
+      const userMessage: PgMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: question,
+        timestamp: new Date(),
+      };
+      
+      const placeholderMessage: PgMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isPlaceholder: true,
+      };
+      
+      // Add to UI first
+      setMessages(prev => [...prev, userMessage, placeholderMessage]);
+      
+      // Then make API call
+      setTimeout(() => {
+        apiSendMessage(question);
+      }, 10);
+    }
+  };
+
+  // Handle new chat
+  const handleNewChat = () => {
+    setHasStartedChat(false);
+    apiNewChat();
+  };
 
   // Render welcome UI if chat hasn't started
   if (!hasStartedChat) {

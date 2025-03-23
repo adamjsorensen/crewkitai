@@ -35,6 +35,9 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
   const regularMessages = messages.filter(message => !message.isPlaceholder);
   const placeholderMessages = messages.filter(message => message.isPlaceholder);
   
+  // Create a fallback loading indicator if no placeholder exists but isLoading is true
+  const shouldShowFallbackIndicator = isLoading && placeholderMessages.length === 0 && regularMessages.length > 0;
+  
   return (
     <div
       ref={messagesContainerRef}
@@ -67,6 +70,18 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
             </div>
           </div>
         ))}
+        
+        {/* Fallback loading indicator when needed */}
+        {shouldShowFallbackIndicator && (
+          <div className="flex items-start space-x-3 animate-fade-in">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <PaintBucket className="h-4 w-4 text-primary" />
+            </div>
+            <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
+              <TypingIndicator withIcon={false} />
+            </div>
+          </div>
+        )}
         
         {error && (
           <div className="p-4 bg-red-50 text-red-800 rounded-md">
