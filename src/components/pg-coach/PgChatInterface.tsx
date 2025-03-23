@@ -87,7 +87,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
           if (msg.metadata && typeof msg.metadata === 'object' && 'suggestedFollowUps' in msg.metadata) {
             const followUps = msg.metadata.suggestedFollowUps;
             if (Array.isArray(followUps)) {
-              suggestedFollowUps = followUps;
+              suggestedFollowUps = followUps.map(item => String(item));
             }
           }
           
@@ -270,7 +270,9 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         }
       }
       
-      const suggestedFollowUps = Array.isArray(data.suggestedFollowUps) ? data.suggestedFollowUps : [];
+      const suggestedFollowUps = Array.isArray(data.suggestedFollowUps) 
+        ? data.suggestedFollowUps.map(item => String(item)) 
+        : [];
       
       setMessages((prev) => 
         prev.map((msg) =>
