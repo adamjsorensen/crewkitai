@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowDown, PaintBucket, ChevronDown } from 'lucide-react';
+import { ChevronDown, PaintBucket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PgMessage from './PgMessage';
 import { PgMessage as PgMessageType } from '@/hooks/usePgChat';
@@ -39,10 +39,17 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
   // Create a fallback loading indicator if no placeholder exists but isLoading is true
   const shouldShowFallbackIndicator = isLoading && placeholderMessages.length === 0 && regularMessages.length > 0;
   
+  // Handle the scroll button click with logging
+  const handleScrollClick = () => {
+    console.log('[PgMessageList] Scroll button clicked');
+    scrollToBottom();
+  };
+  
   return (
     <div
       ref={messagesContainerRef}
       className="flex-1 overflow-y-auto pb-28 pt-2 px-4 scroll-smooth"
+      onScroll={() => console.log('[PgMessageList] Container scrolled')}
     >
       <div className="max-w-3xl mx-auto space-y-3">
         {messages.length === 0 && (
@@ -124,6 +131,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
           </div>
         )}
         
+        {/* This is the invisible element that we scroll to */}
         <div ref={messagesEndRef} />
       </div>
       
@@ -136,7 +144,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
             "bg-primary text-white px-4 rounded-full transition-all z-10",
             "flex items-center gap-1.5 hover:bg-primary/90"
           )}
-          onClick={scrollToBottom}
+          onClick={handleScrollClick}
         >
           <span className="text-xs font-medium">New messages</span>
           <ChevronDown className="h-4 w-4" />

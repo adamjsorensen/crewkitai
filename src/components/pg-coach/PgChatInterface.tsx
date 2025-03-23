@@ -49,11 +49,32 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   });
 
   // Effect to scroll to bottom when new messages arrive, but only if user is near bottom
+  // Update the dependencies to be more specific about when to trigger auto-scrolling
   useEffect(() => {
     if (messages.length > 0 && !isLoadingHistory) {
-      scrollToBottomIfNeeded();
+      console.log('[PgChatInterface] Messages or loading state changed - checking if scroll needed');
+      // We're adding a slight delay to ensure the DOM has updated with new content
+      setTimeout(() => {
+        scrollToBottomIfNeeded();
+      }, 100);
     }
-  }, [messages, isLoadingHistory, scrollToBottomIfNeeded]);
+  }, [
+    // Only consider the length of messages to prevent excessive scrolling
+    messages.length, 
+    isLoadingHistory, 
+    scrollToBottomIfNeeded
+  ]);
+
+  // Manually scroll to bottom when a conversation first loads or when starting a new chat
+  useEffect(() => {
+    if (initialConversationId && !isLoadingHistory) {
+      console.log('[PgChatInterface] Initial conversation loaded - scrolling to bottom');
+      // Add a delay to ensure content is rendered
+      setTimeout(() => {
+        scrollToBottom();
+      }, 300);
+    }
+  }, [initialConversationId, isLoadingHistory, scrollToBottom]);
 
   // Update hasStartedChat when initialConversationId changes
   useEffect(() => {
@@ -99,10 +120,16 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       // Then transition to chat UI
       setHasStartedChat(true);
       
+      // Since this is the first message, we want to scroll to bottom regardless of position
+      setTimeout(() => {
+        console.log('[PgChatInterface] First message sent - forcing scroll to bottom');
+        scrollToBottom();
+      }, 100);
+      
       // Then handle API call after UI has updated
       setTimeout(() => {
         apiSendMessage(messageText, imageFile);
-      }, 10);
+      }, 150);
     } else {
       // Regular message flow for subsequent messages
       const userMessage: PgMessage = {
@@ -127,7 +154,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       // Then make API call
       setTimeout(() => {
         apiSendMessage(messageText, imageFile);
-      }, 10);
+      }, 100);
     }
   };
 
@@ -163,10 +190,16 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       setMessages([welcomeMessage, userMessage, placeholderMessage]);
       setHasStartedChat(true);
       
+      // Force scroll to bottom for first message
+      setTimeout(() => {
+        console.log('[PgChatInterface] First example clicked - forcing scroll to bottom');
+        scrollToBottom();
+      }, 100);
+      
       // Then handle API call
       setTimeout(() => {
         apiSendMessage(question);
-      }, 10);
+      }, 150);
     } else {
       // For subsequent examples
       const userMessage: PgMessage = {
@@ -190,7 +223,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       // Then make API call
       setTimeout(() => {
         apiSendMessage(question);
-      }, 10);
+      }, 100);
     }
   };
 
