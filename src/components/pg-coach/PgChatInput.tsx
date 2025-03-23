@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { SendIcon, ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -92,7 +91,7 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
   };
   
   return (
-    <div className="relative border-t border-border/40 bg-background py-2 px-3">
+    <div className="border-t border-border/40 bg-background py-2 px-3">
       <div className="mx-auto max-w-3xl">
         {/* Image preview */}
         {imagePreview && (

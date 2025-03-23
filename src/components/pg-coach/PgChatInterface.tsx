@@ -47,9 +47,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     onConversationStart
   });
 
-  // Remove the useEffect for auto-scrolling on initial conversation load
-  // We're removing all auto-scrolling functionality
-
   // Update hasStartedChat when initialConversationId changes
   useEffect(() => {
     if (initialConversationId && !hasStartedChat) {
@@ -206,30 +203,39 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <PgChatHeader 
-        isThinkMode={isThinkMode}
-        onToggleThinkMode={handleToggleThinkMode}
-        onNewChat={handleNewChat}
-      />
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10">
+        <PgChatHeader 
+          isThinkMode={isThinkMode}
+          onToggleThinkMode={handleToggleThinkMode}
+          onNewChat={handleNewChat}
+        />
+      </div>
       
-      <PgMessageList
-        messages={messages}
-        isLoading={isLoading || isLoadingHistory}
-        error={error}
-        handleRetry={handleRetry}
-        showScrollButton={showScrollButton}
-        scrollToBottom={scrollToBottom}
-        messagesEndRef={messagesEndRef}
-        messagesContainerRef={messagesContainerRef}
-        handleExampleClick={handleExampleClick}
-        isMobile={isMobile}
-      />
+      {/* Scrollable message area with flex-1 to take available space */}
+      <div className="flex-1 overflow-hidden">
+        <PgMessageList
+          messages={messages}
+          isLoading={isLoading || isLoadingHistory}
+          error={error}
+          handleRetry={handleRetry}
+          showScrollButton={showScrollButton}
+          scrollToBottom={scrollToBottom}
+          messagesEndRef={messagesEndRef}
+          messagesContainerRef={messagesContainerRef}
+          handleExampleClick={handleExampleClick}
+          isMobile={isMobile}
+        />
+      </div>
       
-      <PgChatInput 
-        onSendMessage={handleSendMessage} 
-        isLoading={isLoading} 
-        isMobile={isMobile}
-      />
+      {/* Sticky footer */}
+      <div className="sticky bottom-0 z-10">
+        <PgChatInput 
+          onSendMessage={handleSendMessage} 
+          isLoading={isLoading} 
+          isMobile={isMobile}
+        />
+      </div>
     </div>
   );
 };

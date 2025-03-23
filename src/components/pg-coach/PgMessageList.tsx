@@ -48,7 +48,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
   return (
     <div
       ref={messagesContainerRef}
-      className="flex-1 overflow-y-auto pb-1 px-2.5 scroll-smooth relative"
+      className="h-full overflow-y-auto pb-1 px-2.5 scroll-smooth"
       onScroll={() => console.log('[PgMessageList] Container scrolled')}
     >
       <div className="max-w-3xl mx-auto space-y-1.5 mt-1">
@@ -135,9 +135,9 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         <div ref={messagesEndRef} className="h-1" />
       </div>
       
-      {/* Adjusted scroll button to be just above the chatbox */}
+      {/* Scroll button */}
       {showScrollButton && (
-        <div className="fixed bottom-[45px] left-0 right-0 w-full flex justify-center items-center z-10">
+        <div className="fixed bottom-[70px] left-0 right-0 w-full flex justify-center items-center z-10">
           <Button
             variant="default"
             size="sm"

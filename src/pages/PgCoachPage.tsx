@@ -42,21 +42,19 @@ const PgCoachPage = () => {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)] overflow-hidden">
-        <div className="flex h-full overflow-hidden">
-          <div className="flex-1 flex flex-col relative overflow-hidden">
-            <Card className={`overflow-hidden border-none shadow-sm flex-1 ${isMobile ? '-mx-3 rounded-none' : 'mx-0'}`}>
-              <PgChatInterface 
-                key={selectedConversationId || 'new'} 
-                conversationId={selectedConversationId}
-                onConversationStart={(id) => {
-                  if (isNewChat && id) {
-                    selectConversation(id);
-                  }
-                }}
-              />
-            </Card>
-          </div>
+      <div className="h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Card className={`overflow-hidden border-none shadow-sm flex-1 ${isMobile ? '-mx-3 rounded-none' : 'mx-0'}`}>
+            <PgChatInterface 
+              key={selectedConversationId || 'new'} 
+              conversationId={selectedConversationId}
+              onConversationStart={(id) => {
+                if (isNewChat && id) {
+                  selectConversation(id);
+                }
+              }}
+            />
+          </Card>
         </div>
       </div>
     </DashboardLayout>
