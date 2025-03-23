@@ -148,6 +148,10 @@ export default {
 				'pulse-soft': {
 					'0%, 100%': { opacity: '1' },
 					'50%': { opacity: '0.8' }
+				},
+				'bounce-light': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-4px)' }
 				}
 			},
 			animation: {
@@ -160,7 +164,8 @@ export default {
 				'slide-in': 'slide-in 0.6s ease-out',
 				'slide-up': 'slide-up 0.6s ease-out',
 				'float': 'float 6s ease-in-out infinite',
-				'pulse-soft': 'pulse-soft 3s infinite'
+				'pulse-soft': 'pulse-soft 3s infinite',
+				'bounce-light': 'bounce-light 2s ease-in-out infinite'
 			}
 		}
 	},

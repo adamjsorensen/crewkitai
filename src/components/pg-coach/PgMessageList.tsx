@@ -48,7 +48,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
   return (
     <div
       ref={messagesContainerRef}
-      className="flex-1 overflow-y-auto pb-28 pt-2 px-4 scroll-smooth"
+      className="flex-1 overflow-y-auto pb-28 pt-2 px-4 scroll-smooth relative"
       onScroll={() => console.log('[PgMessageList] Container scrolled')}
     >
       <div className="max-w-3xl mx-auto space-y-3">
@@ -135,20 +135,23 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         <div ref={messagesEndRef} />
       </div>
       
+      {/* Moved scroll button to be centered above chatbox */}
       {showScrollButton && (
-        <Button
-          variant="default"
-          size="sm"
-          className={cn(
-            "fixed bottom-24 right-6 shadow-md border border-primary/20",
-            "bg-primary text-white px-4 rounded-full transition-all z-10",
-            "flex items-center gap-1.5 hover:bg-primary/90"
-          )}
-          onClick={handleScrollClick}
-        >
-          <span className="text-xs font-medium">New messages</span>
-          <ChevronDown className="h-4 w-4" />
-        </Button>
+        <div className="sticky bottom-16 w-full flex justify-center items-center z-10">
+          <Button
+            variant="default"
+            size="sm"
+            className={cn(
+              "shadow-md border border-primary/20",
+              "bg-primary text-white px-4 rounded-full transition-all",
+              "flex items-center gap-1.5 hover:bg-primary/90 animate-bounce-light"
+            )}
+            onClick={handleScrollClick}
+          >
+            <span className="text-xs font-medium">New messages</span>
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
       )}
     </div>
   );
