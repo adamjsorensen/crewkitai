@@ -144,8 +144,47 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
     }
   }, [messages, isLoadingHistory]);
 
-  // New function to prepare user message UI instantly
+  // Create initial chat messages with welcome, user message, and placeholder
+  const createInitialChatMessages = (messageText: string, imageUrl: string | null = null) => {
+    console.log("[PgChatInterface] Creating initial chat messages");
+    
+    // Welcome message
+    const welcomeMessage: PgMessage = {
+      id: 'welcome',
+      role: 'assistant',
+      content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
+      timestamp: new Date(),
+    };
+    
+    // User message
+    const userMessage: PgMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: messageText,
+      timestamp: new Date(),
+      imageUrl,
+    };
+    
+    // Placeholder for AI response
+    const placeholderId = crypto.randomUUID();
+    const placeholderMessage: PgMessage = {
+      id: placeholderId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isPlaceholder: true,
+    };
+    
+    // Update state with all three messages at once
+    setMessages([welcomeMessage, userMessage, placeholderMessage]);
+    
+    return { userMessage, placeholderId };
+  };
+
+  // Function to prepare user message UI for subsequent messages
   const prepareUserMessageUI = (messageText: string, imageUrl: string | null = null) => {
+    console.log("[PgChatInterface] Preparing UI for user message");
+    
     // Create user message
     const userMessage: PgMessage = {
       id: crypto.randomUUID(),
@@ -171,60 +210,87 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
     return { userMessage, placeholderId };
   };
 
-  // Modified to split UI update from API call
+  // Handle send message
   const handleSendMessage = async (messageText: string, imageFile?: File | null) => {
     if (!messageText.trim() && !imageFile) return;
-    
-    if (!hasStartedChat) {
-      setHasStartedChat(true);
-      setMessages([
-        {
-          id: 'welcome',
-          role: 'assistant',
-          content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
-          timestamp: new Date(),
-        }
-      ]);
-    }
     
     try {
       setError(null);
       setIsLoading(true);
       
-      // Step 1: Prepare and display user message immediately
-      let imageUrl = null;
-      if (imageFile) {
-        const filePath = `chat_images/${user!.id}/${crypto.randomUUID()}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('chat_images')
-          .upload(filePath, imageFile);
-        
-        if (uploadError) {
-          throw new Error(`Image upload failed: ${uploadError.message}`);
-        }
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('chat_images')
-          .getPublicUrl(filePath);
-          
-        imageUrl = publicUrl;
+      // Step 1: Handle the UI updates first (before any async operations)
+      const isFirstMessage = !hasStartedChat;
+      let userMessage: PgMessage;
+      let placeholderId: string;
+      
+      // First-time chat initialization
+      if (isFirstMessage) {
+        console.log("[PgChatInterface] Starting first chat - creating welcome message, user message, and placeholder");
+        setHasStartedChat(true);
+        // For first message, we need to include the welcome message
+        const result = createInitialChatMessages(messageText);
+        userMessage = result.userMessage;
+        placeholderId = result.placeholderId;
+      } else {
+        // For subsequent messages, just add the user message and placeholder
+        console.log("[PgChatInterface] Adding user message and placeholder to existing chat");
+        const result = prepareUserMessageUI(messageText);
+        userMessage = result.userMessage;
+        placeholderId = result.placeholderId;
       }
       
-      // Prepare UI with user message and AI placeholder
-      const { userMessage, placeholderId } = prepareUserMessageUI(messageText, imageUrl);
+      // Step 2: Handle image upload if needed (after UI is updated)
+      let imageUrl = null;
+      if (imageFile) {
+        console.log("[PgChatInterface] Uploading image file...");
+        try {
+          const filePath = `chat_images/${user!.id}/${crypto.randomUUID()}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('chat_images')
+            .upload(filePath, imageFile);
+          
+          if (uploadError) {
+            throw new Error(`Image upload failed: ${uploadError.message}`);
+          }
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('chat_images')
+            .getPublicUrl(filePath);
+            
+          imageUrl = publicUrl;
+          console.log("[PgChatInterface] Image uploaded successfully:", imageUrl);
+          
+          // Update the user message with the image URL
+          setMessages((prev) => 
+            prev.map((msg) =>
+              msg.id === userMessage.id
+                ? { ...msg, imageUrl }
+                : msg
+            )
+          );
+        } catch (imageError) {
+          console.error("[PgChatInterface] Image upload error:", imageError);
+          // Continue with the message even if image upload fails
+          toast({
+            title: "Image Upload Failed",
+            description: "We couldn't upload your image, but your message will still be sent.",
+            variant: "destructive",
+          });
+        }
+      }
       
-      // Step 2: Fetch AI response asynchronously
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-      
+      // Step 3: Fetch AI response asynchronously
       console.log("[PgChatInterface] Preparing to call edge function:", {
         endpoint: `${SUPABASE_URL}/functions/v1/pg-coach`,
-        hasToken: !!accessToken,
+        hasToken: true, // Don't log the actual token
         messageLength: messageText.length,
         hasImage: !!imageUrl,
         isThinkMode,
         existingConversationId: conversationId
       });
+      
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
       
       const response = await fetch(`${SUPABASE_URL}/functions/v1/pg-coach`, {
         method: 'POST',
@@ -304,6 +370,10 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
         description: errorMessage,
         variant: "destructive",
       });
+      
+      // Make sure hasStartedChat stays true even if there's an error
+      // to prevent UI flicker on retries
+      setHasStartedChat(true);
       
       // Remove placeholder on error
       setMessages((prev) => prev.filter(msg => !msg.isPlaceholder));
