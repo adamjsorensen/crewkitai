@@ -47,16 +47,8 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     onConversationStart
   });
 
-  // Manually scroll to bottom when a conversation first loads or when starting a new chat
-  useEffect(() => {
-    if (initialConversationId && !isLoadingHistory) {
-      console.log('[PgChatInterface] Initial conversation loaded - scrolling to bottom');
-      // Add a delay to ensure content is rendered
-      setTimeout(() => {
-        scrollToBottom();
-      }, 300);
-    }
-  }, [initialConversationId, isLoadingHistory, scrollToBottom]);
+  // Remove the useEffect for auto-scrolling on initial conversation load
+  // We're removing all auto-scrolling functionality
 
   // Update hasStartedChat when initialConversationId changes
   useEffect(() => {
@@ -102,11 +94,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       // Then transition to chat UI
       setHasStartedChat(true);
       
-      // Since this is the first message, we want to scroll to bottom regardless of position
-      setTimeout(() => {
-        console.log('[PgChatInterface] First message sent - forcing scroll to bottom');
-        scrollToBottom();
-      }, 100);
+      // Removed forced scroll to bottom for first message
       
       // Then handle API call after UI has updated
       setTimeout(() => {
@@ -172,11 +160,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       setMessages([welcomeMessage, userMessage, placeholderMessage]);
       setHasStartedChat(true);
       
-      // Force scroll to bottom for first message
-      setTimeout(() => {
-        console.log('[PgChatInterface] First example clicked - forcing scroll to bottom');
-        scrollToBottom();
-      }, 100);
+      // Removed forced scroll to bottom for first example
       
       // Then handle API call
       setTimeout(() => {
