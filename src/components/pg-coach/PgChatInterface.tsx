@@ -192,9 +192,9 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       
       let imageUrl = null;
       if (imageFile) {
-        const filePath = `pg-coach/${user!.id}/${crypto.randomUUID()}`;
+        const filePath = `chat_images/${user!.id}/${crypto.randomUUID()}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('user-uploads')
+          .from('chat_images')
           .upload(filePath, imageFile);
         
         if (uploadError) {
@@ -202,7 +202,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         }
         
         const { data: { publicUrl } } = supabase.storage
-          .from('user-uploads')
+          .from('chat_images')
           .getPublicUrl(filePath);
           
         imageUrl = publicUrl;
