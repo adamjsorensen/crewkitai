@@ -32,6 +32,12 @@ import {
   TooltipTrigger
 } from "@/components/ui/tooltip";
 
+// Define the admin navigation items
+const adminItems = [
+  { name: "AI Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
+  { name: "Feature Flags", icon: Shield, path: "/dashboard/admin/feature-flags" }
+];
+
 const CollapsibleSidebar = () => {
   const location = useLocation();
   const { signOut, isAdmin } = useAuth();

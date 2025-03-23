@@ -1,9 +1,8 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { useSupabaseClient } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 import PgMessageList from './PgMessageList';
 import PgChatInput from './PgChatInput';
 import { PaintBucket, ListPlus } from 'lucide-react';
@@ -31,12 +30,10 @@ const PgChatInterface = () => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   
-  const supabase = useSupabaseClient();
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  // Add welcome message when component mounts
   useEffect(() => {
     setMessages([
       {
@@ -48,7 +45,6 @@ const PgChatInterface = () => {
     ]);
   }, []);
 
-  // Scroll handling
   useEffect(() => {
     const handleScroll = () => {
       if (!messagesContainerRef.current) return;
@@ -82,7 +78,6 @@ const PgChatInterface = () => {
     try {
       setError(null);
       
-      // Add user message to the UI
       const userMessage: PgMessage = {
         id: crypto.randomUUID(),
         role: 'user',
@@ -90,7 +85,6 @@ const PgChatInterface = () => {
         timestamp: new Date(),
       };
       
-      // Add placeholder for assistant response
       const placeholderId = crypto.randomUUID();
       const placeholderMessage: PgMessage = {
         id: placeholderId,
@@ -103,7 +97,6 @@ const PgChatInterface = () => {
       setMessages((prev) => [...prev, userMessage, placeholderMessage]);
       setIsLoading(true);
       
-      // Process image if provided
       let imageUrl = null;
       if (imageFile) {
         const filePath = `pg-coach/${user!.id}/${crypto.randomUUID()}`;
@@ -122,7 +115,6 @@ const PgChatInterface = () => {
         imageUrl = publicUrl;
       }
       
-      // Call the edge function to get the AI response
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pg-coach`, {
         method: 'POST',
         headers: {
@@ -144,12 +136,10 @@ const PgChatInterface = () => {
       
       const data = await response.json();
       
-      // Update the conversation ID if this is a new conversation
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId);
       }
       
-      // Replace the placeholder with the actual response
       setMessages((prev) => 
         prev.map((msg) =>
           msg.id === placeholderId
@@ -173,7 +163,6 @@ const PgChatInterface = () => {
         variant: "destructive",
       });
       
-      // Remove the placeholder message
       setMessages((prev) => prev.filter(msg => !msg.isPlaceholder));
     } finally {
       setIsLoading(false);
