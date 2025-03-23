@@ -27,8 +27,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     showScrollButton,
     messagesEndRef,
     messagesContainerRef,
-    scrollToBottom,
-    scrollToBottomIfNeeded
+    scrollToBottom
   } = useScrollManagement();
   
   // Initialize chat with API functionality
@@ -47,23 +46,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     initialConversationId,
     onConversationStart
   });
-
-  // Effect to scroll to bottom when new messages arrive, but only if user is near bottom
-  // Update the dependencies to be more specific about when to trigger auto-scrolling
-  useEffect(() => {
-    if (messages.length > 0 && !isLoadingHistory) {
-      console.log('[PgChatInterface] Messages or loading state changed - checking if scroll needed');
-      // We're adding a slight delay to ensure the DOM has updated with new content
-      setTimeout(() => {
-        scrollToBottomIfNeeded();
-      }, 100);
-    }
-  }, [
-    // Only consider the length of messages to prevent excessive scrolling
-    messages.length, 
-    isLoadingHistory, 
-    scrollToBottomIfNeeded
-  ]);
 
   // Manually scroll to bottom when a conversation first loads or when starting a new chat
   useEffect(() => {
