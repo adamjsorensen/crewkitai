@@ -144,6 +144,34 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
     }
   }, [messages, isLoadingHistory]);
 
+  // New function to prepare user message UI instantly
+  const prepareUserMessageUI = (messageText: string, imageUrl: string | null = null) => {
+    // Create user message
+    const userMessage: PgMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: messageText,
+      timestamp: new Date(),
+      imageUrl,
+    };
+    
+    // Create placeholder for AI response
+    const placeholderId = crypto.randomUUID();
+    const placeholderMessage: PgMessage = {
+      id: placeholderId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isPlaceholder: true,
+    };
+    
+    // Immediately update UI with user message and placeholder
+    setMessages((prev) => [...prev, userMessage, placeholderMessage]);
+    
+    return { userMessage, placeholderId };
+  };
+
+  // Modified to split UI update from API call
   const handleSendMessage = async (messageText: string, imageFile?: File | null) => {
     if (!messageText.trim() && !imageFile) return;
     
@@ -161,26 +189,9 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
     
     try {
       setError(null);
-      
-      const userMessage: PgMessage = {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content: messageText,
-        timestamp: new Date(),
-      };
-      
-      const placeholderId = crypto.randomUUID();
-      const placeholderMessage: PgMessage = {
-        id: placeholderId,
-        role: 'assistant',
-        content: '',
-        timestamp: new Date(),
-        isPlaceholder: true,
-      };
-      
-      setMessages((prev) => [...prev, userMessage, placeholderMessage]);
       setIsLoading(true);
       
+      // Step 1: Prepare and display user message immediately
       let imageUrl = null;
       if (imageFile) {
         const filePath = `chat_images/${user!.id}/${crypto.randomUUID()}`;
@@ -199,6 +210,10 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
         imageUrl = publicUrl;
       }
       
+      // Prepare UI with user message and AI placeholder
+      const { userMessage, placeholderId } = prepareUserMessageUI(messageText, imageUrl);
+      
+      // Step 2: Fetch AI response asynchronously
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
       
@@ -265,6 +280,7 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
         ? data.suggestedFollowUps.map(item => String(item)) 
         : [];
       
+      // Update placeholder with actual AI response
       setMessages((prev) => 
         prev.map((msg) =>
           msg.id === placeholderId
@@ -289,6 +305,7 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
         variant: "destructive",
       });
       
+      // Remove placeholder on error
       setMessages((prev) => prev.filter(msg => !msg.isPlaceholder));
     } finally {
       setIsLoading(false);
