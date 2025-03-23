@@ -48,12 +48,12 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
   return (
     <div
       ref={messagesContainerRef}
-      className="flex-1 overflow-y-auto pb-28 pt-2 px-4 scroll-smooth relative"
+      className="flex-1 overflow-y-auto pb-14 pt-1 px-3 scroll-smooth relative"
       onScroll={() => console.log('[PgMessageList] Container scrolled')}
     >
-      <div className="max-w-3xl mx-auto space-y-3">
+      <div className="max-w-3xl mx-auto space-y-2">
         {messages.length === 0 && (
-          <div className="p-4 text-center text-muted-foreground">
+          <div className="p-3 text-center text-muted-foreground">
             No messages yet. Start a conversation!
           </div>
         )}
@@ -92,12 +92,12 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         )}
         
         {error && (
-          <div className="p-4 bg-red-50 text-red-800 rounded-md">
+          <div className="p-3 bg-red-50 text-red-800 rounded-md">
             <p className="font-medium">Error</p>
             <p className="text-sm">{error}</p>
             <Button 
               variant="outline" 
-              className="mt-2" 
+              className="mt-1" 
               onClick={handleRetry}
             >
               Retry
@@ -137,19 +137,19 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
       
       {/* Adjusted scroll button to be just above the chatbox */}
       {showScrollButton && (
-        <div className="fixed bottom-[72px] left-0 right-0 w-full flex justify-center items-center z-10">
+        <div className="fixed bottom-[56px] left-0 right-0 w-full flex justify-center items-center z-10">
           <Button
             variant="default"
             size="sm"
             className={cn(
               "shadow-md border border-primary/20",
-              "bg-primary text-white px-4 rounded-full transition-all",
-              "flex items-center gap-1.5 hover:bg-primary/90 animate-bounce-light"
+              "bg-primary text-white px-3 py-1 rounded-full transition-all",
+              "flex items-center gap-1 hover:bg-primary/90 animate-bounce-light"
             )}
             onClick={handleScrollClick}
           >
             <span className="text-xs font-medium">New messages</span>
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-3 w-3" />
           </Button>
         </div>
       )}

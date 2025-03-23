@@ -92,11 +92,11 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
   };
   
   return (
-    <div className="relative border-t bg-background p-4">
+    <div className="relative border-t bg-background p-3">
       <div className="mx-auto max-w-3xl">
         {/* Image preview */}
         {imagePreview && (
-          <div className="mb-3 relative w-24 h-24">
+          <div className="mb-2 relative w-24 h-24">
             <img 
               src={imagePreview} 
               alt="Preview" 
@@ -120,10 +120,10 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask a question..."
-              className="min-h-[60px] max-h-[200px] resize-none pr-12 py-3"
+              className="min-h-[50px] max-h-[160px] resize-none pr-12 py-2"
               disabled={isLoading}
             />
-            <div className="absolute right-3 bottom-3">
+            <div className="absolute right-3 bottom-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -133,8 +133,8 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
                 id="image-upload"
               />
               <Label htmlFor="image-upload" className="cursor-pointer">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-accent">
-                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-accent">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
                 </div>
               </Label>
             </div>
@@ -143,15 +143,15 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
           <Button
             onClick={handleSendMessage}
             disabled={isLoading || (!message.trim() && !imageFile)}
-            className={`shrink-0 ${isMobile ? 'h-[60px]' : ''}`}
+            className={`shrink-0 ${isMobile ? 'h-[50px]' : ''}`}
             aria-label="Send message"
           >
-            <SendIcon className="h-5 w-5" />
-            {!isMobile && <span className="ml-2">Send</span>}
+            <SendIcon className="h-4 w-4" />
+            {!isMobile && <span className="ml-1 text-sm">Send</span>}
           </Button>
         </div>
         
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-muted-foreground mt-1">
           PainterGrowth Coach provides industry-specific advice for painters.
         </p>
       </div>
