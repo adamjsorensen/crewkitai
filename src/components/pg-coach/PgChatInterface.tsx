@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +9,6 @@ import PgWelcomeSection from './PgWelcomeSection';
 import { PaintBucket, ListPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Types for our messages
 export interface PgMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -45,6 +43,8 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  const SUPABASE_URL = "https://cicnpivviiqycyudgxxg.supabase.co";
 
   useEffect(() => {
     if (initialConversationId) {
@@ -82,7 +82,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       
       if (messagesData && messagesData.length > 0) {
         const formattedMessages: PgMessage[] = messagesData.map(msg => {
-          // Safe access to suggestedFollowUps with type checking
           let suggestedFollowUps: string[] | undefined = undefined;
           
           if (msg.metadata && typeof msg.metadata === 'object' && 'suggestedFollowUps' in msg.metadata) {
@@ -213,7 +212,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       const accessToken = session.data.session?.access_token;
       
       console.log("[PgChatInterface] Preparing to call edge function:", {
-        endpoint: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pg-coach`,
+        endpoint: `${SUPABASE_URL}/functions/v1/pg-coach`,
         hasToken: !!accessToken,
         messageLength: messageText.length,
         hasImage: !!imageUrl,
@@ -221,7 +220,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         existingConversationId: conversationId
       });
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pg-coach`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/pg-coach`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -271,7 +270,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         }
       }
       
-      // Safely handle suggestedFollowUps
       const suggestedFollowUps = Array.isArray(data.suggestedFollowUps) ? data.suggestedFollowUps : [];
       
       setMessages((prev) => 
