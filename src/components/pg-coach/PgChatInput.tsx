@@ -92,20 +92,20 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
   };
   
   return (
-    <div className="relative border-t bg-background p-3">
+    <div className="relative border-t bg-background py-2 px-3">
       <div className="mx-auto max-w-3xl">
         {/* Image preview */}
         {imagePreview && (
-          <div className="mb-2 relative w-24 h-24">
+          <div className="mb-2 relative w-20 h-20">
             <img 
               src={imagePreview} 
               alt="Preview" 
-              className="w-24 h-24 object-cover rounded-md border" 
+              className="w-20 h-20 object-cover rounded-md border" 
             />
             <Button
               variant="outline"
               size="icon"
-              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background"
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background"
               onClick={handleClearImage}
             >
               <X className="h-3 w-3" />
@@ -120,10 +120,10 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask a question..."
-              className="min-h-[50px] max-h-[160px] resize-none pr-12 py-2"
+              className="min-h-[40px] max-h-[120px] resize-none pr-10 py-1.5 text-sm"
               disabled={isLoading}
             />
-            <div className="absolute right-3 bottom-2">
+            <div className="absolute right-2 bottom-1.5">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -133,8 +133,8 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
                 id="image-upload"
               />
               <Label htmlFor="image-upload" className="cursor-pointer">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-accent">
-                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-accent">
+                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
               </Label>
             </div>
@@ -143,15 +143,15 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
           <Button
             onClick={handleSendMessage}
             disabled={isLoading || (!message.trim() && !imageFile)}
-            className={`shrink-0 ${isMobile ? 'h-[50px]' : ''}`}
+            className={`shrink-0 h-[40px] ${isMobile ? 'w-[40px] p-0' : ''}`}
             aria-label="Send message"
           >
             <SendIcon className="h-4 w-4" />
-            {!isMobile && <span className="ml-1 text-sm">Send</span>}
+            {!isMobile && <span className="ml-1 text-xs">Send</span>}
           </Button>
         </div>
         
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-[10px] text-muted-foreground mt-1">
           PainterGrowth Coach provides industry-specific advice for painters.
         </p>
       </div>
