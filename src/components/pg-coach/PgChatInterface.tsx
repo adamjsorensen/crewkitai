@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -6,6 +5,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import PgMessageList from './PgMessageList';
 import PgChatInput from './PgChatInput';
+import PgWelcomeSection from './PgWelcomeSection';
 import { PaintBucket, ListPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -35,6 +35,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId || null);
   const [isThinkMode, setIsThinkMode] = useState(false);
+  const [hasStartedChat, setHasStartedChat] = useState(!!initialConversationId);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -49,7 +50,8 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     if (initialConversationId) {
       // Load conversation history
       loadConversationHistory(initialConversationId);
-    } else {
+      setHasStartedChat(true);
+    } else if (hasStartedChat) {
       // New conversation, show welcome message
       setMessages([
         {
@@ -60,7 +62,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         }
       ]);
     }
-  }, [initialConversationId]);
+  }, [initialConversationId, hasStartedChat]);
 
   const loadConversationHistory = async (convoId: string) => {
     setIsLoadingHistory(true);
@@ -141,6 +143,19 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
 
   const handleSendMessage = async (messageText: string, imageFile?: File | null) => {
     if (!messageText.trim() && !imageFile) return;
+    
+    if (!hasStartedChat) {
+      setHasStartedChat(true);
+      // Add initial welcome message from assistant
+      setMessages([
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
+          timestamp: new Date(),
+        }
+      ]);
+    }
     
     try {
       setError(null);
@@ -252,6 +267,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   };
 
   const handleExampleClick = (question: string) => {
+    setHasStartedChat(true);
     handleSendMessage(question);
   };
 
@@ -267,14 +283,8 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   };
 
   const handleNewChat = () => {
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
-        timestamp: new Date(),
-      }
-    ]);
+    setHasStartedChat(false);
+    setMessages([]);
     setConversationId(null);
     
     // If parent needs to know about new chat
@@ -282,6 +292,10 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       onConversationStart('');
     }
   };
+
+  if (!hasStartedChat) {
+    return <PgWelcomeSection onExampleClick={handleExampleClick} onNewChat={handleNewChat} />;
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -304,16 +318,14 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
           >
             {isThinkMode ? 'Thinking...' : 'Think Mode'}
           </Button>
-          {!isMobile && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleNewChat}
-            >
-              <ListPlus className="h-4 w-4 mr-2" />
-              New Chat
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleNewChat}
+          >
+            <ListPlus className="h-4 w-4 mr-2" />
+            New Chat
+          </Button>
         </div>
       </div>
       
