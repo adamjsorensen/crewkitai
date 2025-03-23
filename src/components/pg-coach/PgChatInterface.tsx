@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -19,11 +20,20 @@ export interface PgMessage {
   suggestedFollowUps?: string[];
 }
 
-const PgChatInterface = () => {
+interface PgChatInterfaceProps {
+  conversationId?: string | null;
+  onConversationStart?: (id: string) => void;
+}
+
+const PgChatInterface: React.FC<PgChatInterfaceProps> = ({ 
+  conversationId: initialConversationId,
+  onConversationStart
+}) => {
   const [messages, setMessages] = useState<PgMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(initialConversationId || null);
   const [isThinkMode, setIsThinkMode] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -34,16 +44,73 @@ const PgChatInterface = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
+  // Initialize with welcome message for new chats or load conversation history
   useEffect(() => {
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
-        timestamp: new Date(),
+    if (initialConversationId) {
+      // Load conversation history
+      loadConversationHistory(initialConversationId);
+    } else {
+      // New conversation, show welcome message
+      setMessages([
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
+          timestamp: new Date(),
+        }
+      ]);
+    }
+  }, [initialConversationId]);
+
+  const loadConversationHistory = async (convoId: string) => {
+    setIsLoadingHistory(true);
+    setError(null);
+    
+    try {
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('pg_messages')
+        .select('*')
+        .eq('conversation_id', convoId)
+        .order('created_at', { ascending: true });
+      
+      if (messagesError) {
+        throw messagesError;
       }
-    ]);
-  }, []);
+      
+      if (messagesData && messagesData.length > 0) {
+        const formattedMessages: PgMessage[] = messagesData.map(msg => ({
+          id: msg.id,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          timestamp: new Date(msg.created_at),
+          imageUrl: msg.image_url,
+          suggestedFollowUps: msg.metadata?.suggestedFollowUps,
+        }));
+        
+        setMessages(formattedMessages);
+      } else {
+        // Fallback if no messages found
+        setMessages([
+          {
+            id: 'welcome',
+            role: 'assistant',
+            content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
+            timestamp: new Date(),
+          }
+        ]);
+      }
+    } catch (err) {
+      console.error("Error loading conversation history:", err);
+      setError("Failed to load conversation history");
+      toast({
+        title: "Error",
+        description: "Failed to load conversation history",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,10 +134,10 @@ const PgChatInterface = () => {
   };
 
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && !isLoadingHistory) {
       scrollToBottom();
     }
-  }, [messages]);
+  }, [messages, isLoadingHistory]);
 
   const handleSendMessage = async (messageText: string, imageFile?: File | null) => {
     if (!messageText.trim() && !imageFile) return;
@@ -138,6 +205,11 @@ const PgChatInterface = () => {
       
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId);
+        
+        // Notify parent component about the new conversation
+        if (onConversationStart) {
+          onConversationStart(data.conversationId);
+        }
       }
       
       setMessages((prev) => 
@@ -194,6 +266,23 @@ const PgChatInterface = () => {
     });
   };
 
+  const handleNewChat = () => {
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
+        timestamp: new Date(),
+      }
+    ]);
+    setConversationId(null);
+    
+    // If parent needs to know about new chat
+    if (onConversationStart) {
+      onConversationStart('');
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between border-b p-3">
@@ -216,17 +305,11 @@ const PgChatInterface = () => {
             {isThinkMode ? 'Thinking...' : 'Think Mode'}
           </Button>
           {!isMobile && (
-            <Button variant="outline" size="sm" onClick={() => {
-              setMessages([
-                {
-                  id: 'welcome',
-                  role: 'assistant',
-                  content: 'Hi there! I\'m the PainterGrowth Coach, ready to help you grow your painting business. What can I help you with today?',
-                  timestamp: new Date(),
-                }
-              ]);
-              setConversationId(null);
-            }}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleNewChat}
+            >
               <ListPlus className="h-4 w-4 mr-2" />
               New Chat
             </Button>
@@ -236,7 +319,7 @@ const PgChatInterface = () => {
       
       <PgMessageList
         messages={messages}
-        isLoading={isLoading}
+        isLoading={isLoading || isLoadingHistory}
         error={error}
         handleRetry={handleRetry}
         showScrollButton={showScrollButton}
