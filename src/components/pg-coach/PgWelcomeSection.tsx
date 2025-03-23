@@ -27,7 +27,7 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
   // Dynamic icon component renderer
   const renderIcon = (iconName: string, colorClass: string) => {
     const IconComponent = (LucideIcons as any)[iconName] || LucideIcons.MessageSquare;
-    return <IconComponent className={`h-5 w-5 text-${colorClass}`} />;
+    return <IconComponent className={`h-4.5 w-4.5 text-${colorClass}`} />;
   };
 
   useEffect(() => {
@@ -40,11 +40,11 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
   if (isLoading) {
     return (
       <ScrollArea className="h-full px-2">
-        <div className="space-y-6 py-4 mb-6">
-          <Skeleton className="h-14 w-4/5 mx-auto mb-6" />
-          <div className="space-y-3">
+        <div className="space-y-4 py-3 mb-4">
+          <Skeleton className="h-12 w-4/5 mx-auto mb-4" />
+          <div className="space-y-2">
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+              <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
         </div>
@@ -54,7 +54,7 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+      <div className="flex flex-col items-center justify-center h-full p-4 text-center">
         <div className="text-destructive mb-2">Failed to load welcome content</div>
         <p className="text-muted-foreground text-sm mb-4">
           Please try refreshing the page or contact support if the issue persists.
@@ -67,15 +67,15 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
   const activeCategory = categories.find(cat => cat.id === activeTab) || categories[0];
 
   return (
-    <ScrollArea className="h-full px-2 pt-2 w-full overflow-x-hidden">
-      <div className="py-4 mb-6 max-w-4xl mx-auto w-full overflow-x-hidden">
-        <Card className="overflow-hidden border-border/40 shadow-md">
-          <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-border/30 bg-background/50">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold text-foreground">PainterGrowth Coach</h2>
+    <ScrollArea className="h-full px-2 pt-1 w-full overflow-x-hidden">
+      <div className="py-3 mb-4 max-w-4xl mx-auto w-full overflow-x-hidden">
+        <Card className="overflow-hidden border-border/40 shadow-sm">
+          <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-border/30 bg-background/50">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Sparkles className="h-4.5 w-4.5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">PainterGrowth Coach</h2>
             </div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground mt-3 mb-2">
+            <h3 className="text-2xl sm:text-2xl font-extrabold tracking-tight text-foreground mt-2 mb-1.5">
               How can I help with your painting business today?
             </h3>
             <p className="text-muted-foreground text-sm sm:text-base">
@@ -99,18 +99,18 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
           >
             {!isMobile && (
               <div className="border-b border-border/30 overflow-auto">
-                <TabsList className="w-full h-auto bg-muted/30 px-6 flex justify-start overflow-x-auto gap-1">
+                <TabsList className="w-full h-auto bg-muted/30 px-5 flex justify-start overflow-x-auto gap-0.5">
                   {categories.map((category) => (
                     <TabsTrigger 
                       key={category.id} 
                       value={category.id}
-                      className="py-3 px-4 data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none"
+                      className="py-2.5 px-3.5 data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <div className="flex-shrink-0">
                           {renderIcon(category.icon, category.iconColor)}
                         </div>
-                        <span className="font-medium">{category.title}</span>
+                        <span className="font-medium text-sm">{category.title}</span>
                       </div>
                     </TabsTrigger>
                   ))}
@@ -118,14 +118,14 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
               </div>
             )}
             
-            <div className="p-3 sm:p-6">
+            <div className="p-2.5 sm:p-4">
               {categories.map((category) => (
                 <TabsContent 
                   key={category.id} 
                   value={category.id}
                   className="mt-0 focus-visible:outline-none focus-visible:ring-0"
                 >
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <p className="text-muted-foreground text-sm sm:text-base">{category.description}</p>
                   </div>
                   
@@ -134,15 +134,15 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
                       <button 
                         key={example.id}
                         className={cn(
-                          "flex items-start gap-3 group w-full text-left p-3 sm:p-4 rounded-lg",
+                          "flex items-start gap-2.5 group w-full text-left p-2.5 sm:p-3 rounded-lg",
                           "transition-all duration-200 ease-in-out",
-                          "bg-accent/30 hover:bg-accent border border-border/30 hover:border-border/60",
-                          "focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-1",
-                          "active:scale-[0.98] touch-callout-none",
+                          "bg-accent/30 hover:bg-accent/50 border border-border/30 hover:border-border/60",
+                          "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1",
+                          "active:scale-[0.98] touch-callout-none shadow-sm",
                         )}
                         onClick={() => onExampleClick(example.title)}
                       >
-                        <MessageSquare className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                        <MessageSquare className="h-4.5 w-4.5 text-primary mt-0.5 flex-shrink-0" />
                         <p className="text-sm font-medium group-hover:text-primary transition-colors">
                           {example.title}
                         </p>

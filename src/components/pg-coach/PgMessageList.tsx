@@ -48,12 +48,12 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
   return (
     <div
       ref={messagesContainerRef}
-      className="flex-1 overflow-y-auto pb-1 px-3 scroll-smooth relative"
+      className="flex-1 overflow-y-auto pb-1 px-2.5 scroll-smooth relative"
       onScroll={() => console.log('[PgMessageList] Container scrolled')}
     >
-      <div className="max-w-3xl mx-auto space-y-1.5">
+      <div className="max-w-3xl mx-auto space-y-1.5 mt-1">
         {messages.length === 0 && (
-          <div className="p-2 text-center text-muted-foreground text-sm">
+          <div className="p-1.5 text-center text-muted-foreground text-sm">
             No messages yet. Start a conversation!
           </div>
         )}
@@ -69,11 +69,11 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         
         {/* Render typing indicators for placeholder messages */}
         {placeholderMessages.map((message) => (
-          <div key={`placeholder-${message.id}`} className="flex items-start space-x-3 animate-fade-in">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-              <PaintBucket className="h-4 w-4 text-primary" />
+          <div key={`placeholder-${message.id}`} className="flex items-start space-x-2.5 animate-fade-in">
+            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+              <PaintBucket className="h-3.5 w-3.5 text-primary" />
             </div>
-            <div className="rounded-2xl py-2 px-4 bg-muted max-w-[75%]">
+            <div className="rounded-2xl py-2.5 px-3.5 bg-muted max-w-[75%] border border-border/30 shadow-sm">
               <TypingIndicator withIcon={false} />
             </div>
           </div>
@@ -81,23 +81,23 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         
         {/* Fallback loading indicator when needed */}
         {shouldShowFallbackIndicator && (
-          <div className="flex items-start space-x-3 animate-fade-in">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-              <PaintBucket className="h-4 w-4 text-primary" />
+          <div className="flex items-start space-x-2.5 animate-fade-in">
+            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+              <PaintBucket className="h-3.5 w-3.5 text-primary" />
             </div>
-            <div className="rounded-2xl py-2 px-4 bg-muted max-w-[75%]">
+            <div className="rounded-2xl py-2.5 px-3.5 bg-muted max-w-[75%] border border-border/30 shadow-sm">
               <TypingIndicator withIcon={false} />
             </div>
           </div>
         )}
         
         {error && (
-          <div className="p-2 bg-red-50 text-red-800 rounded-md text-sm">
+          <div className="p-2 bg-red-50 text-red-800 rounded-md text-sm border border-red-200 shadow-sm">
             <p className="font-medium">Error</p>
             <p className="text-xs">{error}</p>
             <Button 
               variant="outline" 
-              className="mt-1 h-7 text-xs py-0" 
+              className="mt-1 h-7 text-xs py-0 border-red-300 hover:bg-red-50" 
               onClick={handleRetry}
             >
               Retry
@@ -111,7 +111,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
             {messages[messages.length - 1].role === 'assistant' && 
              messages[messages.length - 1].suggestedFollowUps && 
              messages[messages.length - 1].suggestedFollowUps.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1">
+              <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1">
                 <div className="w-full text-xs font-medium text-muted-foreground mb-0.5">
                   Suggested questions:
                 </div>
@@ -120,7 +120,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
                     key={index}
                     variant="outline"
                     size="sm"
-                    className="text-xs h-7 py-0"
+                    className="text-xs h-6 py-0 px-2 border-border/50 bg-muted/50 hover:bg-primary/5 hover:border-primary/30 transition-colors"
                     onClick={() => handleExampleClick(question)}
                   >
                     {question}
@@ -132,18 +132,18 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         )}
         
         {/* This is the invisible element that we scroll to */}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="h-1" />
       </div>
       
       {/* Adjusted scroll button to be just above the chatbox */}
       {showScrollButton && (
-        <div className="fixed bottom-[50px] left-0 right-0 w-full flex justify-center items-center z-10">
+        <div className="fixed bottom-[45px] left-0 right-0 w-full flex justify-center items-center z-10">
           <Button
             variant="default"
             size="sm"
             className={cn(
               "shadow-md border border-primary/20",
-              "bg-primary text-white px-3 py-0.5 h-7 rounded-full transition-all",
+              "bg-primary text-white px-3 py-0.5 h-6 rounded-full transition-all",
               "flex items-center gap-1 hover:bg-primary/90 animate-bounce-light"
             )}
             onClick={handleScrollClick}

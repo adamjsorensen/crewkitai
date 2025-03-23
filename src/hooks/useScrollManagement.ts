@@ -13,10 +13,10 @@ export const useScrollManagement = () => {
       
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
       const distance = scrollHeight - scrollTop - clientHeight;
-      const isBottom = distance < 150;
+      const isNearBottom = distance < 100;
       
-      console.log(`[ScrollManagement] Distance from bottom: ${distance}px, showScrollButton: ${!isBottom}`);
-      setShowScrollButton(!isBottom);
+      console.log(`[ScrollManagement] Distance from bottom: ${distance}px, showScrollButton: ${!isNearBottom}`);
+      setShowScrollButton(!isNearBottom && distance > 10);
     };
     
     const container = messagesContainerRef.current;
@@ -41,10 +41,10 @@ export const useScrollManagement = () => {
         if (messagesContainerRef.current) {
           const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
           const distance = scrollHeight - scrollTop - clientHeight;
-          const isBottom = distance < 150;
+          const isNearBottom = distance < 100;
           
-          console.log(`[ScrollManagement] Content changed, distance: ${distance}px, showScrollButton: ${!isBottom}`);
-          setShowScrollButton(!isBottom);
+          console.log(`[ScrollManagement] Content changed, distance: ${distance}px, showScrollButton: ${!isNearBottom}`);
+          setShowScrollButton(!isNearBottom && distance > 10);
         }
       });
       
@@ -68,6 +68,15 @@ export const useScrollManagement = () => {
           behavior: 'smooth',
           block: 'end',
         });
+        
+        // Double-check scroll position after animation
+        setTimeout(() => {
+          const container = messagesContainerRef.current;
+          if (container) {
+            const { scrollHeight, clientHeight } = container;
+            container.scrollTop = scrollHeight - clientHeight;
+          }
+        }, 500);
       }, 50);
     }
   }, []);
