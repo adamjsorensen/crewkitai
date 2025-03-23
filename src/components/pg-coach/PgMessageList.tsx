@@ -4,6 +4,7 @@ import { ArrowDown, PaintBucket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PgMessage from './PgMessage';
 import { PgMessage as PgMessageType } from '@/hooks/usePgChat';
+import TypingIndicator from '@/components/ai-coach/TypingIndicator';
 
 interface PgMessageListProps {
   messages: PgMessageType[];
@@ -62,11 +63,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
               <PaintBucket className="h-4 w-4 text-primary" />
             </div>
             <div className="rounded-2xl py-3 px-4 bg-muted max-w-[75%]">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse" />
-                <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse [animation-delay:0.2s]" />
-                <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse [animation-delay:0.4s]" />
-              </div>
+              <TypingIndicator withIcon={false} />
             </div>
           </div>
         ))}
