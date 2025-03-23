@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -66,6 +67,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     setError(null);
     
     try {
+      console.log("[PgChatInterface] Loading conversation history for ID:", convoId);
       const { data: messagesData, error: messagesError } = await supabase
         .from('pg_messages')
         .select('*')
@@ -76,16 +78,31 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         throw messagesError;
       }
       
+      console.log("[PgChatInterface] Received message data:", messagesData);
+      
       if (messagesData && messagesData.length > 0) {
-        const formattedMessages: PgMessage[] = messagesData.map(msg => ({
-          id: msg.id,
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content,
-          timestamp: new Date(msg.created_at),
-          imageUrl: msg.image_url,
-          suggestedFollowUps: msg.metadata?.suggestedFollowUps,
-        }));
+        const formattedMessages: PgMessage[] = messagesData.map(msg => {
+          // Safe access to suggestedFollowUps with type checking
+          let suggestedFollowUps: string[] | undefined = undefined;
+          
+          if (msg.metadata && typeof msg.metadata === 'object' && 'suggestedFollowUps' in msg.metadata) {
+            const followUps = msg.metadata.suggestedFollowUps;
+            if (Array.isArray(followUps)) {
+              suggestedFollowUps = followUps;
+            }
+          }
+          
+          return {
+            id: msg.id,
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content,
+            timestamp: new Date(msg.created_at),
+            imageUrl: msg.image_url,
+            suggestedFollowUps: suggestedFollowUps,
+          };
+        });
         
+        console.log("[PgChatInterface] Formatted messages:", formattedMessages);
         setMessages(formattedMessages);
       } else {
         setMessages([
@@ -98,7 +115,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         ]);
       }
     } catch (err) {
-      console.error("Error loading conversation history:", err);
+      console.error("[PgChatInterface] Error loading conversation history:", err);
       setError("Failed to load conversation history");
       toast({
         title: "Error",
@@ -241,7 +258,8 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       console.log("[PgChatInterface] Edge function success response:", {
         hasConversationId: !!data.conversationId,
         responseLength: data.response?.length || 0,
-        hasSuggestedFollowUps: Array.isArray(data.suggestedFollowUps)
+        hasSuggestedFollowUps: Array.isArray(data.suggestedFollowUps),
+        suggestedFollowUps: data.suggestedFollowUps
       });
       
       if (!conversationId && data.conversationId) {
@@ -253,6 +271,9 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         }
       }
       
+      // Safely handle suggestedFollowUps
+      const suggestedFollowUps = Array.isArray(data.suggestedFollowUps) ? data.suggestedFollowUps : [];
+      
       setMessages((prev) => 
         prev.map((msg) =>
           msg.id === placeholderId
@@ -261,7 +282,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
                 role: 'assistant',
                 content: data.response,
                 timestamp: new Date(),
-                suggestedFollowUps: data.suggestedFollowUps || [],
+                suggestedFollowUps: suggestedFollowUps,
               }
             : msg
         )
