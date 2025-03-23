@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -144,11 +143,9 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
     }
   }, [messages, isLoadingHistory]);
 
-  // Create initial chat messages with welcome, user message, and placeholder
   const createInitialChatMessages = (messageText: string, imageUrl: string | null = null) => {
-    console.log("[PgChatInterface] Creating initial chat messages");
+    console.log("[usePgChat] Creating initial chat messages");
     
-    // Welcome message
     const welcomeMessage: PgMessage = {
       id: 'welcome',
       role: 'assistant',
@@ -156,7 +153,6 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       timestamp: new Date(),
     };
     
-    // User message
     const userMessage: PgMessage = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -165,7 +161,6 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       imageUrl,
     };
     
-    // Placeholder for AI response
     const placeholderId = crypto.randomUUID();
     const placeholderMessage: PgMessage = {
       id: placeholderId,
@@ -175,17 +170,14 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       isPlaceholder: true,
     };
     
-    // Update state with all three messages at once
     setMessages([welcomeMessage, userMessage, placeholderMessage]);
     
     return { userMessage, placeholderId };
   };
 
-  // Function to prepare user message UI for subsequent messages
   const prepareUserMessageUI = (messageText: string, imageUrl: string | null = null) => {
-    console.log("[PgChatInterface] Preparing UI for user message");
+    console.log("[usePgChat] Preparing UI for user message");
     
-    // Create user message
     const userMessage: PgMessage = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -194,7 +186,6 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       imageUrl,
     };
     
-    // Create placeholder for AI response
     const placeholderId = crypto.randomUUID();
     const placeholderMessage: PgMessage = {
       id: placeholderId,
@@ -204,13 +195,11 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       isPlaceholder: true,
     };
     
-    // Immediately update UI with user message and placeholder
     setMessages((prev) => [...prev, userMessage, placeholderMessage]);
     
     return { userMessage, placeholderId };
   };
 
-  // Handle send message
   const handleSendMessage = async (messageText: string, imageFile?: File | null) => {
     if (!messageText.trim() && !imageFile) return;
     
@@ -218,31 +207,11 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       setError(null);
       setIsLoading(true);
       
-      // Step 1: Handle the UI updates first (before any async operations)
-      const isFirstMessage = !hasStartedChat;
-      let userMessage: PgMessage;
-      let placeholderId: string;
+      const isFirstMessage = !conversationId;
       
-      // First-time chat initialization
-      if (isFirstMessage) {
-        console.log("[PgChatInterface] Starting first chat - creating welcome message, user message, and placeholder");
-        setHasStartedChat(true);
-        // For first message, we need to include the welcome message
-        const result = createInitialChatMessages(messageText);
-        userMessage = result.userMessage;
-        placeholderId = result.placeholderId;
-      } else {
-        // For subsequent messages, just add the user message and placeholder
-        console.log("[PgChatInterface] Adding user message and placeholder to existing chat");
-        const result = prepareUserMessageUI(messageText);
-        userMessage = result.userMessage;
-        placeholderId = result.placeholderId;
-      }
-      
-      // Step 2: Handle image upload if needed (after UI is updated)
       let imageUrl = null;
       if (imageFile) {
-        console.log("[PgChatInterface] Uploading image file...");
+        console.log("[usePgChat] Uploading image file...");
         try {
           const filePath = `chat_images/${user!.id}/${crypto.randomUUID()}`;
           const { data: uploadData, error: uploadError } = await supabase.storage
@@ -258,19 +227,9 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
             .getPublicUrl(filePath);
             
           imageUrl = publicUrl;
-          console.log("[PgChatInterface] Image uploaded successfully:", imageUrl);
-          
-          // Update the user message with the image URL
-          setMessages((prev) => 
-            prev.map((msg) =>
-              msg.id === userMessage.id
-                ? { ...msg, imageUrl }
-                : msg
-            )
-          );
+          console.log("[usePgChat] Image uploaded successfully:", imageUrl);
         } catch (imageError) {
-          console.error("[PgChatInterface] Image upload error:", imageError);
-          // Continue with the message even if image upload fails
+          console.error("[usePgChat] Image upload error:", imageError);
           toast({
             title: "Image Upload Failed",
             description: "We couldn't upload your image, but your message will still be sent.",
@@ -279,10 +238,9 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
         }
       }
       
-      // Step 3: Fetch AI response asynchronously
-      console.log("[PgChatInterface] Preparing to call edge function:", {
+      console.log("[usePgChat] Preparing to call edge function:", {
         endpoint: `${SUPABASE_URL}/functions/v1/pg-coach`,
-        hasToken: true, // Don't log the actual token
+        hasToken: true,
         messageLength: messageText.length,
         hasImage: !!imageUrl,
         isThinkMode,
@@ -306,7 +264,7 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
         }),
       });
       
-      console.log("[PgChatInterface] Edge function response status:", {
+      console.log("[usePgChat] Edge function response status:", {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok
@@ -314,11 +272,11 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("[PgChatInterface] API error response:", errorText);
+        console.error("[usePgChat] API error response:", errorText);
         
         try {
           const errorJson = JSON.parse(errorText);
-          console.error("[PgChatInterface] Parsed API error:", errorJson);
+          console.error("[usePgChat] Parsed API error:", errorJson);
           throw new Error(`API error: ${errorJson.error || errorJson.message || 'Unknown error'}`);
         } catch (parseError) {
           throw new Error(`API error (${response.status}): ${errorText || 'No error details available'}`);
@@ -326,16 +284,15 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       }
       
       const data = await response.json();
-      console.log("[PgChatInterface] Edge function success response:", {
+      console.log("[usePgChat] Edge function success response:", {
         hasConversationId: !!data.conversationId,
         responseLength: data.response?.length || 0,
         hasSuggestedFollowUps: Array.isArray(data.suggestedFollowUps),
-        suggestedFollowUps: data.suggestedFollowUps
       });
       
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId);
-        console.log("[PgChatInterface] New conversation created:", data.conversationId);
+        console.log("[usePgChat] New conversation created:", data.conversationId);
         
         if (onConversationStart) {
           onConversationStart(data.conversationId);
@@ -346,12 +303,11 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
         ? data.suggestedFollowUps.map(item => String(item)) 
         : [];
       
-      // Update placeholder with actual AI response
       setMessages((prev) => 
         prev.map((msg) =>
-          msg.id === placeholderId
+          msg.isPlaceholder
             ? {
-                id: placeholderId,
+                id: msg.id,
                 role: 'assistant',
                 content: data.response,
                 timestamp: new Date(),
@@ -363,7 +319,7 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-      console.error("[PgChatInterface] Error sending message:", err);
+      console.error("[usePgChat] Error sending message:", err);
       setError(errorMessage);
       toast({
         title: "Error",
@@ -371,11 +327,6 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
         variant: "destructive",
       });
       
-      // Make sure hasStartedChat stays true even if there's an error
-      // to prevent UI flicker on retries
-      setHasStartedChat(true);
-      
-      // Remove placeholder on error
       setMessages((prev) => prev.filter(msg => !msg.isPlaceholder));
     } finally {
       setIsLoading(false);
@@ -420,6 +371,7 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
 
   return {
     messages,
+    setMessages,
     isLoading,
     isLoadingHistory,
     error,
