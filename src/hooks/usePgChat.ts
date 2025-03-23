@@ -27,10 +27,6 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
   const [isThinkMode, setIsThinkMode] = useState(false);
   const [hasStartedChat, setHasStartedChat] = useState(!!initialConversationId);
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const [showScrollButton, setShowScrollButton] = useState(false);
-  
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -115,33 +111,6 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
       setIsLoadingHistory(false);
     }
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!messagesContainerRef.current) return;
-      
-      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-      const isBottom = scrollHeight - scrollTop - clientHeight < 100;
-      
-      setShowScrollButton(!isBottom);
-    };
-
-    const container = messagesContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
-    }
-  }, []);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    if (messages.length > 0 && !isLoadingHistory) {
-      scrollToBottom();
-    }
-  }, [messages, isLoadingHistory]);
 
   const createInitialChatMessages = (messageText: string, imageUrl: string | null = null) => {
     console.log("[usePgChat] Creating initial chat messages");
@@ -377,14 +346,10 @@ export const usePgChat = ({ initialConversationId, onConversationStart }: UsePgC
     error,
     isThinkMode,
     hasStartedChat,
-    showScrollButton,
-    messagesEndRef,
-    messagesContainerRef,
     handleSendMessage,
     handleRetry,
     handleExampleClick,
     handleToggleThinkMode,
     handleNewChat,
-    scrollToBottom,
   };
 };
