@@ -5,7 +5,7 @@ import PgMessageList from './PgMessageList';
 import PgChatInput from './PgChatInput';
 import PgWelcomeSection from './PgWelcomeSection';
 import PgChatHeader from './PgChatHeader';
-import { usePgChat } from '@/hooks/usePgChat';
+import { usePgChatInterface } from '@/hooks/usePgChatInterface';
 
 interface PgChatInterfaceProps {
   conversationId?: string | null;
@@ -19,12 +19,12 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   const isMobile = useIsMobile();
   
   const {
+    hasStartedChat,
     messages,
     isLoading,
     isLoadingHistory,
     error,
     isThinkMode,
-    hasStartedChat,
     showScrollButton,
     messagesEndRef,
     messagesContainerRef,
@@ -34,7 +34,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     handleToggleThinkMode,
     handleNewChat,
     scrollToBottom,
-  } = usePgChat({
+  } = usePgChatInterface({
     initialConversationId,
     onConversationStart
   });
