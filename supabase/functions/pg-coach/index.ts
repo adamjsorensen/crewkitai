@@ -393,7 +393,22 @@ serve(async (req) => {
       model,
       messageCount: messages.length,
       temperature: settings.temperature,
-      maxTokens: settings.maxTokens
+      maxCompletionTokens: settings.maxTokens,
+    });
+    
+    // Prepare the OpenAI API request body
+    const openAIRequestBody = {
+      model: model,
+      messages: messages,
+      temperature: settings.temperature,
+      max_completion_tokens: settings.maxTokens, // Using max_completion_tokens instead of max_tokens
+    };
+    
+    console.log("[pg-coach] OpenAI request payload:", {
+      model: openAIRequestBody.model,
+      messagesCount: openAIRequestBody.messages.length,
+      temperature: openAIRequestBody.temperature,
+      max_completion_tokens: openAIRequestBody.max_completion_tokens
     });
     
     // Call the OpenAI API
@@ -403,12 +418,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${openAiApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        temperature: settings.temperature,
-        max_tokens: settings.maxTokens,
-      }),
+      body: JSON.stringify(openAIRequestBody),
     });
     
     console.log("[pg-coach] OpenAI API response status:", {
@@ -418,9 +428,16 @@ serve(async (req) => {
     });
     
     if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json();
-      console.error('[pg-coach] OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      let errorMessage = '';
+      try {
+        const errorData = await openAIResponse.json();
+        console.error('[pg-coach] OpenAI API error:', errorData);
+        errorMessage = errorData.error?.message || 'Unknown error';
+      } catch (e) {
+        console.error('[pg-coach] Could not parse OpenAI error response', e);
+        errorMessage = await openAIResponse.text() || 'Unknown error parsing response';
+      }
+      throw new Error(`OpenAI API error: ${errorMessage}`);
     }
     
     const responseData = await openAIResponse.json();

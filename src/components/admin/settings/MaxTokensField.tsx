@@ -23,7 +23,7 @@ const MaxTokensField = ({ form }: MaxTokensFieldProps) => {
       name="ai_coach_max_tokens"
       render={({ field }) => (
         <FormItem>
-          <FormLabel>Max Tokens</FormLabel>
+          <FormLabel>Max Completion Tokens</FormLabel>
           <FormDescription>
             Maximum tokens in the AI response (1 to 4000)
           </FormDescription>
