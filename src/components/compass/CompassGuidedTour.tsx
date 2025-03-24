@@ -10,7 +10,7 @@ const CompassGuidedTour: React.FC = () => {
     const { status } = data;
     
     // End the tour when it's finished or skipped
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
       endTour();
     }
   };
