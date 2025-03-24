@@ -39,7 +39,7 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcess
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="compass-input-form">
       <CardContent>
         <div className="space-y-4">
           <div className="relative">
@@ -94,7 +94,7 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcess
         <Button 
           type="submit" 
           disabled={isProcessing || !input.trim()}
-          className="flex items-center gap-2 px-4"
+          className="flex items-center gap-2 px-4 compass-submit-button"
         >
           {isProcessing ? (
             <>

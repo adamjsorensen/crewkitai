@@ -47,7 +47,7 @@ const TaskActions: React.FC<TaskActionsProps> = ({
               size="sm" 
               variant="ghost" 
               className={`
-                h-9 w-9 p-0 rounded-full
+                h-9 w-9 p-0 rounded-full task-action-complete
                 ${isHighPriority 
                   ? 'text-green-600 hover:text-green-700 hover:bg-green-50 animate-pulse' 
                   : 'text-green-600 hover:text-green-700 hover:bg-green-50'}
