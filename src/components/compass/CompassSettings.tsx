@@ -3,7 +3,6 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CategoriesManagement from './CategoriesManagement';
 import TagsManagement from './TagsManagement';
-import RemindersSettings from './RemindersSettings';
 
 const CompassSettings = () => {
   return (
@@ -14,16 +13,12 @@ const CompassSettings = () => {
         <TabsList className="mb-4">
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="tags">Tags</TabsTrigger>
-          <TabsTrigger value="reminders">Reminders</TabsTrigger>
         </TabsList>
         <TabsContent value="categories">
           <CategoriesManagement />
         </TabsContent>
         <TabsContent value="tags">
           <TagsManagement />
-        </TabsContent>
-        <TabsContent value="reminders">
-          <RemindersSettings />
         </TabsContent>
       </Tabs>
     </div>
