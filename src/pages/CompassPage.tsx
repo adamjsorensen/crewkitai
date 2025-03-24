@@ -1,261 +1,187 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import CompassInput from '@/components/compass/CompassInput';
+import TaskList from '@/components/compass/TaskList';
+import { CompassTask } from '@/types/compass';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
-import { Card } from '@/components/ui/card';
-import { useCompassTasks } from '@/hooks/useCompassTasks';
-import CompassOnboarding from '@/components/compass/CompassOnboarding';
-import { Skeleton } from '@/components/ui/skeleton';
-import { TaskViewProvider, useTaskView } from '@/contexts/TaskViewContext';
-import { CompassTaskDisplay } from '@/types/compass';
-import TaskViewSwitcher from '@/components/compass/TaskViewSwitcher';
-import TaskFilters from '@/components/compass/TaskFilters';
-import ListView from '@/components/compass/ListView';
-import KanbanView from '@/components/compass/KanbanView';
-import CalendarView from '@/components/compass/CalendarView';
-import CompletedTasksList from '@/components/compass/CompletedTasksList';
 import { supabase } from '@/integrations/supabase/client';
-import { useFilteredTasks } from '@/hooks/useFilteredTasks';
-import CreatePlanDialog from '@/components/compass/CreatePlanDialog';
-import ReminderDialog from '@/components/compass/ReminderDialog';
-import CalendarDialog from '@/components/compass/CalendarDialog';
-import CategoryDialog from '@/components/compass/CategoryDialog';
-import TagDialog from '@/components/compass/TagDialog';
-import ClarificationDialog from '@/components/compass/ClarificationDialog';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import { useCompassOnboarding } from '@/hooks/tasks/useCompassOnboarding';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
-const TasksContainer = () => {
-  const {
-    activeTasks,
-    completedTasks,
-    isLoading,
-    loadTasks
-  } = useCompassTasks();
-  
-  const { viewType } = useTaskView();
+const CompassPage = () => {
+  const [tasks, setTasks] = useState<CompassTask[]>([]);
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
   const { toast } = useToast();
+  const { hasOnboarded } = useCompassOnboarding();
+  const navigate = useNavigate();
   
-  const filteredTasks = useFilteredTasks(activeTasks);
+  useEffect(() => {
+    if (user && hasOnboarded !== null) {
+      if (!hasOnboarded) {
+        navigate('/onboarding');
+      } else {
+        loadLatestPlan();
+      }
+    }
+  }, [user, hasOnboarded, navigate]);
   
-  // Dialog states
-  const [reminderTask, setReminderTask] = useState<CompassTaskDisplay | null>(null);
-  const [calendarTask, setCalendarTask] = useState<CompassTaskDisplay | null>(null);
-  const [categoryTask, setCategoryTask] = useState<CompassTaskDisplay | null>(null);
-  const [tagTask, setTagTask] = useState<CompassTaskDisplay | null>(null);
-  const [clarifyTask, setClarifyTask] = useState<CompassTaskDisplay | null>(null);
-
-  const markTaskComplete = async (task: CompassTaskDisplay) => {
+  const loadLatestPlan = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      // Get the most recent plan
+      const { data: planData, error: planError } = await supabase
+        .from('compass_plans')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (planError && planError.code !== 'PGRST116') {
+        throw planError;
+      }
+      
+      if (planData) {
+        setCurrentPlanId(planData.id);
+        await loadTasksForPlan(planData.id);
+      } else {
+        setTasks([]);
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error('Error loading plan:', err);
+      setIsLoading(false);
+      toast({
+        title: "Error",
+        description: "Failed to load your strategic plan. Please try refreshing the page.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const loadTasksForPlan = async (planId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('compass_tasks')
+        .select('*')
+        .eq('plan_id', planId)
+        .order('priority', { ascending: false }) // High priority first
+        .order('created_at', { ascending: true });
+        
+      if (error) {
+        throw error;
+      }
+      
+      setTasks(data || []);
+    } catch (err) {
+      console.error('Error loading tasks:', err);
+      toast({
+        title: "Error",
+        description: "Failed to load your tasks. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handlePlanCreated = async (planId: string) => {
+    setCurrentPlanId(planId);
+    await loadTasksForPlan(planId);
+  };
+  
+  const handleCompleteTask = async (taskId: string) => {
     try {
       const { error } = await supabase
         .from('compass_tasks')
         .update({ completed_at: new Date().toISOString() })
-        .eq('id', task.id);
-
+        .eq('id', taskId);
+        
       if (error) {
-        console.error('Error completing task:', error);
-        toast({
-          title: "Error",
-          description: "Failed to mark task as complete. Please try again.",
-          variant: "destructive",
-        });
-        return;
+        throw error;
       }
-
-      toast({
-        title: "Task Completed",
-        description: "The task has been marked as complete.",
-      });
       
-      loadTasks();
+      // Update the local state
+      setTasks(tasks.map(task => 
+        task.id === taskId 
+          ? { ...task, completed_at: new Date().toISOString() } 
+          : task
+      ));
+      
+      toast({
+        title: "Task completed!",
+        description: "Great job completing this task."
+      });
     } catch (err) {
-      console.error('Error in mark complete:', err);
+      console.error('Error completing task:', err);
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
+        description: "Failed to mark task as complete. Please try again.",
+        variant: "destructive"
       });
     }
   };
-
-  const openReminderDialog = (task: CompassTaskDisplay) => {
-    setReminderTask(task);
-  };
-
-  const openCalendarDialog = (task: CompassTaskDisplay) => {
-    setCalendarTask(task);
-  };
-
-  const openClarificationDialog = (task: CompassTaskDisplay) => {
-    setClarifyTask(task);
-  };
-
-  const openCategoryDialog = (task: CompassTaskDisplay) => {
-    setCategoryTask(task);
-  };
-
-  const openTagDialog = (task: CompassTaskDisplay) => {
-    setTagTask(task);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-24 w-full rounded-xl" />
-        <Skeleton className="h-24 w-full rounded-xl" />
-        <Skeleton className="h-24 w-full rounded-xl" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-        <TaskViewSwitcher />
-        <TaskFilters />
-      </div>
-      
-      {viewType === 'list' && (
-        <ListView 
-          tasks={filteredTasks}
-          onTaskUpdate={loadTasks}
-          onComplete={markTaskComplete}
-          onReminder={openReminderDialog}
-          onCalendar={openCalendarDialog}
-          onCategory={openCategoryDialog}
-          onTag={openTagDialog}
-          onClarify={openClarificationDialog}
-        />
-      )}
-      
-      {viewType === 'kanban' && (
-        <KanbanView 
-          tasks={filteredTasks}
-          onTaskUpdate={loadTasks}
-          onComplete={markTaskComplete}
-          onReminder={openReminderDialog}
-          onCalendar={openCalendarDialog}
-          onCategory={openCategoryDialog}
-          onTag={openTagDialog}
-          onClarify={openClarificationDialog}
-        />
-      )}
-      
-      {viewType === 'calendar' && (
-        <CalendarView 
-          tasks={filteredTasks}
-          onTaskUpdate={loadTasks}
-          onComplete={markTaskComplete}
-          onReminder={openReminderDialog}
-          onCalendar={openCalendarDialog}
-          onCategory={openCategoryDialog}
-          onTag={openTagDialog}
-          onClarify={openClarificationDialog}
-        />
-      )}
-      
-      <CompletedTasksList tasks={completedTasks} />
-      
-      {/* Dialogs */}
-      {reminderTask && (
-        <ReminderDialog
-          task={reminderTask}
-          open={!!reminderTask}
-          onOpenChange={(open) => !open && setReminderTask(null)}
-          onSuccess={loadTasks}
-        />
-      )}
-      
-      {calendarTask && (
-        <CalendarDialog
-          task={calendarTask}
-          open={!!calendarTask}
-          onOpenChange={(open) => !open && setCalendarTask(null)}
-          onSuccess={loadTasks}
-        />
-      )}
-      
-      {categoryTask && (
-        <CategoryDialog
-          task={categoryTask}
-          open={!!categoryTask}
-          onOpenChange={(open) => !open && setCategoryTask(null)}
-          onSuccess={loadTasks}
-        />
-      )}
-      
-      {tagTask && (
-        <TagDialog
-          task={tagTask}
-          open={!!tagTask}
-          onOpenChange={(open) => !open && setTagTask(null)}
-          onSuccess={loadTasks}
-        />
-      )}
-      
-      {clarifyTask && (
-        <ClarificationDialog
-          task={clarifyTask}
-          open={!!clarifyTask}
-          onOpenChange={(open) => !open && setClarifyTask(null)}
-          onSuccess={loadTasks}
-        />
-      )}
-    </div>
-  );
-};
-
-const CompassPage = () => {
-  const { user, isLoading: isAuthLoading } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
   
-  const {
-    hasOnboarded,
-    handleNewTasks,
-    handleOnboardingComplete,
-  } = useCompassTasks();
-
-  React.useEffect(() => {
-    if (!isAuthLoading && !user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to use the Strategic Compass",
-        variant: "destructive",
-      });
-      navigate("/auth");
-    }
-  }, [user, isAuthLoading, navigate, toast]);
-
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
+  const handleSetReminder = (taskId: string) => {
+    toast({
+      title: "Coming soon!",
+      description: "Reminders will be available in a future update."
+    });
+  };
+  
+  const handleAddToCalendar = (taskId: string) => {
+    toast({
+      title: "Coming soon!",
+      description: "Calendar integration will be available in a future update."
+    });
+  };
+  
   return (
     <DashboardLayout>
-      <div className="container max-w-4xl mx-auto py-6">
-        <h1 className="text-3xl font-extrabold tracking-tight mb-6">Strategic Compass</h1>
+      <div className="container max-w-4xl mx-auto py-8 px-4">
+        <h1 className="text-3xl font-extrabold tracking-tight mb-6">
+          Strategic Planner (Compass)
+        </h1>
         
-        {hasOnboarded === null ? (
-          <div className="space-y-4">
-            <Skeleton className="h-[300px] w-full rounded-xl" />
+        {hasOnboarded === false && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-2">Complete Your Profile</h3>
+            <p className="mb-3">
+              To get the most out of the Strategic Planner, we need some information about your business.
+            </p>
+            <Button
+              onClick={() => navigate('/onboarding')}
+            >
+              Complete Profile
+            </Button>
           </div>
-        ) : hasOnboarded === false ? (
-          <CompassOnboarding onComplete={handleOnboardingComplete} />
-        ) : (
-          <TaskViewProvider>
-            <div className="space-y-4">
-              <div className="flex justify-end">
-                <CreatePlanDialog onTasksGenerated={handleNewTasks} />
-              </div>
-              <TasksContainer />
-            </div>
-          </TaskViewProvider>
         )}
+        
+        <div className="space-y-8">
+          <CompassInput onPlanCreated={handlePlanCreated} />
+          
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">Loading your plan...</span>
+            </div>
+          ) : (
+            <TaskList 
+              tasks={tasks.filter(task => !task.completed_at)} 
+              onCompleteTask={handleCompleteTask}
+              onSetReminder={handleSetReminder}
+              onAddToCalendar={handleAddToCalendar}
+            />
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

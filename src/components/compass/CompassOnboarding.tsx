@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +21,7 @@ const basicFormSchema = z.object({
   business_stage: z.enum(['early', 'growth', 'maturity', 'exit']),
   crew_size: z.enum(['1-3', '4-10', '10+']),
   phone: z.string().optional(),
+  full_name: z.string().min(1, 'Full name is required'),
 });
 
 const detailsFormSchema = z.object({
@@ -81,7 +81,7 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
   buttonIcon,
 }) => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
   // Initialize the basic info form
   const basicForm = useForm<BasicFormValues>({
@@ -91,6 +91,7 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
       business_stage: (existingProfile?.workload as any) || 'early',
       crew_size: existingProfile?.crew_size || '1-3',
       phone: '',
+      full_name: profile?.full_name || '',
     }
   });
   
@@ -127,6 +128,7 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
           // Update form values with existing profile data
           basicForm.setValue('business_name', profileData.company_name || '');
           basicForm.setValue('phone', profileData.phone || '');
+          basicForm.setValue('full_name', profileData.full_name || '');
           
           detailsForm.setValue('business_address', profileData.business_address || '');
           detailsForm.setValue('company_description', profileData.company_description || '');
@@ -190,6 +192,7 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
           id: user.id,
           company_name: values.business_name,
           phone: values.phone,
+          full_name: values.full_name,
         }, { onConflict: 'id' });
         
       if (profileError) {
@@ -306,6 +309,23 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
       <CardContent>
         <Form {...basicForm}>
           <form onSubmit={basicForm.handleSubmit(onSubmitBasic)} className="space-y-6">
+            <FormField 
+              control={basicForm.control} 
+              name="full_name" 
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Your Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John Doe" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Your full name.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField 
               control={basicForm.control} 
               name="business_name" 
