@@ -30,6 +30,7 @@ import ContentPage from "./pages/content/ContentPage"; // New Content page
 import { useEffect } from "react";
 import { prefetchWelcomeContent } from "./hooks/useWelcomeContent";
 import { useNeedsOnboarding } from "./hooks/useNeedsOnboarding";
+import { useOnboardingSteps } from "./hooks/useOnboardingSteps";
 
 // Create query client with optimal settings for caching
 const queryClient = new QueryClient({
@@ -61,6 +62,9 @@ const AuthenticatedRoute = ({ element }: { element: React.ReactNode }) => {
 };
 
 const AppContent = () => {
+  // Initialize onboarding steps
+  useOnboardingSteps();
+  
   useEffect(() => {
     // Start prefetching the welcome content as soon as the app loads
     prefetchWelcomeContent(queryClient);

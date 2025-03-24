@@ -5,6 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
+import { BusinessProfileStep } from '@/components/onboarding/BusinessProfileStep';
+import { FeatureTourStep } from '@/components/onboarding/FeatureTourStep';
+import { CompassIntroStep } from '@/components/onboarding/CompassIntroStep';
+import { AiCoachIntroStep } from '@/components/onboarding/AiCoachIntroStep';
+import { CompletionStep } from '@/components/onboarding/CompletionStep';
 import { Loader2 } from 'lucide-react';
 
 const StepSelector = () => {
@@ -14,7 +19,16 @@ const StepSelector = () => {
   switch (currentStepKey) {
     case 'welcome':
       return <WelcomeStep />;
-    // Additional steps will be added here as we implement them
+    case 'business_profile':
+      return <BusinessProfileStep />;
+    case 'feature_tour':
+      return <FeatureTourStep />;
+    case 'compass_intro':
+      return <CompassIntroStep />;
+    case 'ai_coach_intro':
+      return <AiCoachIntroStep />;
+    case 'completion':
+      return <CompletionStep />;
     default:
       return <div>Step not found</div>;
   }
