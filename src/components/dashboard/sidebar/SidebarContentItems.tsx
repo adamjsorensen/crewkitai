@@ -63,10 +63,9 @@ const SidebarContentItems = () => {
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
 
-  // Admin menu items - only shown to admin users
+  // Simplified to a single admin menu item
   const adminItems = [
-    { name: "Admin", icon: Shield, path: "/dashboard/admin/ai-settings" },
-    { name: "Compass Settings", icon: Compass, path: "/dashboard/admin/compass-settings" },
+    { name: "Admin Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
   ];
 
   // Helper to check if a menu item is active

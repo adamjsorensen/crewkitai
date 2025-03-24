@@ -17,7 +17,6 @@ import {
   Shield,
   PaintBucket,
   Compass,
-  BrainCircuit,
   Brush
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -62,9 +61,9 @@ const CollapsibleSidebar = () => {
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
 
+  // Simplified to a single admin menu item
   const adminItems = [
-    { name: "AI Settings", icon: BrainCircuit, path: "/dashboard/admin/ai-settings" },
-    { name: "Compass Settings", icon: Compass, path: "/dashboard/admin/compass-settings" },
+    { name: "Admin Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
   ];
 
   return (
