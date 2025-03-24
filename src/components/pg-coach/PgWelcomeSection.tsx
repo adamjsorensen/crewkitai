@@ -10,17 +10,27 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileCategoryDrawer from '@/components/ai-coach/chat/MobileCategoryDrawer';
+import PgChatInput from './PgChatInput';
+import { Separator } from '@/components/ui/separator';
 
 interface PgWelcomeSectionProps {
   onExampleClick: (example: string) => void;
+  onSendMessage: (message: string, imageFile?: File | null) => void;
+  isLoading?: boolean;
   onNewChat?: () => void;
+  isThinkMode?: boolean;
+  onToggleThinkMode?: () => void;
 }
 
 const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({ 
   onExampleClick,
-  onNewChat
+  onSendMessage,
+  isLoading = false,
+  onNewChat,
+  isThinkMode = false,
+  onToggleThinkMode = () => {}
 }) => {
-  const { categories, isLoading, error } = useWelcomeContent();
+  const { categories, isLoading: isContentLoading, error } = useWelcomeContent();
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const isMobile = useIsMobile();
   
@@ -37,7 +47,7 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
     }
   }, [categories, activeTab]);
 
-  if (isLoading) {
+  if (isContentLoading) {
     return (
       <ScrollArea className="h-full px-2">
         <div className="space-y-4 py-3 mb-4">
@@ -153,6 +163,21 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
               ))}
             </div>
           </Tabs>
+          
+          {/* Chat input section */}
+          <div className="mt-4 border-t border-border/30">
+            <div className="px-4 py-3">
+              <Separator className="my-2" />
+              <p className="text-center text-sm text-muted-foreground mb-2">Or ask your own question</p>
+              <PgChatInput 
+                onSendMessage={onSendMessage}
+                isLoading={isLoading}
+                isMobile={isMobile}
+                isThinkMode={isThinkMode}
+                onToggleThinkMode={onToggleThinkMode}
+              />
+            </div>
+          </div>
         </Card>
       </div>
     </ScrollArea>

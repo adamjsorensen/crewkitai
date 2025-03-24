@@ -194,7 +194,16 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
 
   // Render welcome UI if chat hasn't started
   if (!hasStartedChat) {
-    return <PgWelcomeSection onExampleClick={handleExampleClick} onNewChat={handleNewChat} />;
+    return (
+      <PgWelcomeSection 
+        onExampleClick={handleExampleClick} 
+        onSendMessage={handleSendMessage}
+        isLoading={isLoading}
+        onNewChat={handleNewChat}
+        isThinkMode={isThinkMode}
+        onToggleThinkMode={handleToggleThinkMode}
+      />
+    );
   }
 
   return (

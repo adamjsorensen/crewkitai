@@ -13,6 +13,7 @@ interface PgChatInputProps {
   isMobile: boolean;
   isThinkMode: boolean;
   onToggleThinkMode: () => void;
+  className?: string;
 }
 
 const PgChatInput: React.FC<PgChatInputProps> = ({ 
@@ -20,7 +21,8 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
   isLoading,
   isMobile,
   isThinkMode,
-  onToggleThinkMode
+  onToggleThinkMode,
+  className = ""
 }) => {
   const [message, setMessage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -97,7 +99,7 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
   };
   
   return (
-    <div className="border-t border-border/40 bg-background py-2 px-3">
+    <div className={`bg-background py-2 ${className}`}>
       <div className="mx-auto max-w-3xl">
         {/* Image preview */}
         {imagePreview && (
