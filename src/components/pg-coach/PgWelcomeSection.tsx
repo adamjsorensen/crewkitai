@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,12 +11,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import MobileCategoryDrawer from '@/components/ai-coach/chat/MobileCategoryDrawer';
 import PgChatInput from './PgChatInput';
 import { Separator } from '@/components/ui/separator';
+import PgConversationDrawer from './PgConversationDrawer';
 
 interface PgWelcomeSectionProps {
   onExampleClick: (example: string) => void;
   onSendMessage: (message: string, imageFile?: File | null) => void;
   isLoading?: boolean;
   onNewChat?: () => void;
+  onOpenHistory: () => void;
   isThinkMode?: boolean;
   onToggleThinkMode?: () => void;
 }
@@ -27,6 +28,7 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
   onSendMessage,
   isLoading = false,
   onNewChat,
+  onOpenHistory,
   isThinkMode = false,
   onToggleThinkMode = () => {}
 }) => {
@@ -34,14 +36,12 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const isMobile = useIsMobile();
   
-  // Dynamic icon component renderer
   const renderIcon = (iconName: string, colorClass: string) => {
     const IconComponent = (LucideIcons as any)[iconName] || LucideIcons.MessageSquare;
     return <IconComponent className={`h-4.5 w-4.5 text-${colorClass}`} />;
   };
 
   useEffect(() => {
-    // Set the first category as active by default once loaded
     if (categories.length > 0 && !activeTab) {
       setActiveTab(categories[0].id);
     }
@@ -73,7 +73,6 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
     );
   }
 
-  // Find the active category
   const activeCategory = categories.find(cat => cat.id === activeTab) || categories[0];
 
   return (
@@ -81,9 +80,14 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
       <div className="py-3 mb-4 max-w-4xl mx-auto w-full overflow-x-hidden">
         <Card className="overflow-hidden border-border/40 shadow-sm">
           <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-border/30 bg-background/50">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Sparkles className="h-4.5 w-4.5 text-primary" />
-              <h2 className="text-lg font-semibold text-foreground">PainterGrowth Coach</h2>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4.5 w-4.5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">PainterGrowth Coach</h2>
+              </div>
+              <div>
+                <PgConversationDrawer onClick={onOpenHistory} />
+              </div>
             </div>
             <h3 className="text-2xl sm:text-2xl font-extrabold tracking-tight text-foreground mt-2 mb-1.5">
               How can I help with your painting business today?
@@ -164,7 +168,6 @@ const PgWelcomeSection: React.FC<PgWelcomeSectionProps> = ({
             </div>
           </Tabs>
           
-          {/* Chat input section */}
           <div className="mt-4 border-t border-border/30">
             <div className="px-4 py-3">
               <Separator className="my-2" />

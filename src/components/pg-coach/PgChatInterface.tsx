@@ -11,12 +11,14 @@ interface PgChatInterfaceProps {
   conversationId?: string | null;
   onConversationStart?: (id: string) => void;
   onNewChat?: () => void;
+  onOpenHistory: () => void;
 }
 
 const PgChatInterface: React.FC<PgChatInterfaceProps> = ({ 
   conversationId: initialConversationId,
   onConversationStart,
-  onNewChat
+  onNewChat,
+  onOpenHistory
 }) => {
   const isMobile = useIsMobile();
   
@@ -208,6 +210,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
         onNewChat={handleNewChat}
+        onOpenHistory={onOpenHistory}
         isThinkMode={isThinkMode}
         onToggleThinkMode={handleToggleThinkMode}
       />
@@ -220,6 +223,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       <div className="sticky top-0 z-10 bg-background">
         <PgChatHeader 
           onNewChat={handleNewChat}
+          onOpenHistory={onOpenHistory}
         />
       </div>
       

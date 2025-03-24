@@ -1,13 +1,15 @@
 
 import React from 'react';
-import { PaintBucket, ListPlus } from 'lucide-react';
+import { PaintBucket, ListPlus, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PgConversationDrawer from './PgConversationDrawer';
 
 interface PgChatHeaderProps {
   onNewChat: () => void;
+  onOpenHistory: () => void;
 }
 
-const PgChatHeader: React.FC<PgChatHeaderProps> = ({ onNewChat }) => {
+const PgChatHeader: React.FC<PgChatHeaderProps> = ({ onNewChat, onOpenHistory }) => {
   return (
     <div className="flex items-center justify-between border-b border-border/40 p-2 bg-background shadow-sm">
       <div className="flex items-center gap-2">
@@ -19,7 +21,8 @@ const PgChatHeader: React.FC<PgChatHeaderProps> = ({ onNewChat }) => {
           <p className="text-xs text-muted-foreground leading-tight mt-0.5">Your painting business advisor</p>
         </div>
       </div>
-      <div>
+      <div className="flex items-center gap-2">
+        <PgConversationDrawer onClick={onOpenHistory} />
         <Button 
           variant="outline" 
           size="sm"

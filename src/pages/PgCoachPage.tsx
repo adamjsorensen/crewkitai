@@ -1,12 +1,13 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useConversations } from '@/hooks/useConversations';
+import { usePgConversations } from '@/hooks/usePgConversations';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Card } from '@/components/ui/card';
 import PgChatInterface from '@/components/pg-coach/PgChatInterface';
+import PgConversationDialog from '@/components/pg-coach/PgConversationDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const PgCoachPage = () => {
@@ -14,18 +15,29 @@ const PgCoachPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [showConversations, setShowConversations] = useState(false);
   
   const {
+    conversations,
     selectedConversationId,
     isNewChat,
+    isLoading: isConversationsLoading,
     selectConversation,
     createNewConversation,
-  } = useConversations();
+    deleteConversation,
+    togglePinConversation
+  } = usePgConversations();
 
   // Handler for creating a new chat
   const handleNewChat = () => {
     console.log("[PgCoachPage] Creating new chat");
     createNewConversation();
+  };
+
+  // Handler for opening the conversation history
+  const handleOpenHistory = () => {
+    console.log("[PgCoachPage] Opening conversation history");
+    setShowConversations(true);
   };
 
   useEffect(() => {
@@ -61,10 +73,23 @@ const PgCoachPage = () => {
                 }
               }}
               onNewChat={handleNewChat}
+              onOpenHistory={handleOpenHistory}
             />
           </Card>
         </div>
       </div>
+
+      {/* Conversation History Dialog */}
+      <PgConversationDialog
+        open={showConversations}
+        onOpenChange={setShowConversations}
+        conversations={conversations}
+        selectedConversationId={selectedConversationId}
+        onSelectConversation={selectConversation}
+        onDeleteConversation={deleteConversation}
+        onNewConversation={handleNewChat}
+        onTogglePinConversation={togglePinConversation}
+      />
     </DashboardLayout>
   );
 };
