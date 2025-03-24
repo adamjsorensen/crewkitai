@@ -13,8 +13,8 @@ export const useScrollManagement = () => {
       
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
       const distance = scrollHeight - scrollTop - clientHeight;
-      // Make this more sensitive - show the button when we're more than 50px from bottom
-      const isNearBottom = distance < 50;
+      // Make this even more sensitive - show the button when we're more than 30px from bottom
+      const isNearBottom = distance < 30;
       
       console.log(`[ScrollManagement] Distance from bottom: ${distance}px, showScrollButton: ${!isNearBottom}`);
       setShowScrollButton(!isNearBottom && distance > 10);
@@ -43,7 +43,7 @@ export const useScrollManagement = () => {
           const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
           const distance = scrollHeight - scrollTop - clientHeight;
           // Match the same threshold as in the scroll handler
-          const isNearBottom = distance < 50;
+          const isNearBottom = distance < 30;
           
           console.log(`[ScrollManagement] Content changed, distance: ${distance}px, showScrollButton: ${!isNearBottom}`);
           setShowScrollButton(!isNearBottom && distance > 10);

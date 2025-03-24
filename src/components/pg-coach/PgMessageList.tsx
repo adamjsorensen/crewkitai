@@ -139,9 +139,9 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         <div ref={messagesEndRef} className="h-1" />
       </div>
       
-      {/* Scroll button - fixed positioning and high z-index */}
+      {/* Scroll button - positioned in the center above chat input and higher up */}
       {showScrollButton && (
-        <div className="fixed bottom-20 right-4 w-auto z-50">
+        <div className="fixed left-1/2 transform -translate-x-1/2 bottom-36 w-auto z-50">
           <Button
             variant="default"
             size="sm"
