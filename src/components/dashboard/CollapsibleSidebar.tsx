@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 import { 
   BarChart3, 
   FileText, 
@@ -11,20 +11,22 @@ import {
   ChevronLeft, 
   Settings, 
   LogOut, 
-  Home, 
+  LayoutDashboard, 
   User, 
-  Briefcase, 
-  Clock,
+  Brush,
   MessageSquare,
   BrainCircuit,
-  ClipboardList
+  ClipboardList,
+  Shield,
+  PaintBucket,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CollapsibleSidebar = () => {
-  const { signOut, profile, isAdmin } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -34,20 +36,38 @@ const CollapsibleSidebar = () => {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
+  const navItems = [
+    { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { name: "Content", icon: FileText, path: "/dashboard/content" },
+    { name: "Financial", icon: BarChart3, path: "/dashboard/financial" },
+    { name: "AI Coach", icon: Sparkles, path: "/dashboard/ai-coach" },
+    { name: "PainterGrowth", icon: Brush, path: "/dashboard/pg-coach" },
+    { name: "Strategic Planner", icon: ClipboardList, path: "/dashboard/compass" },
+    { name: "Profile", icon: User, path: "/dashboard/profile" },
+    { name: "Settings", icon: Settings, path: "/dashboard/settings" },
+  ];
+
+  const adminItems = [
+    { name: "AI Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "Feature Flags", icon: Shield, path: "/dashboard/admin/feature-flags" },
+  ];
+
   return (
-    <div
-      className={cn(
-        "h-screen fixed left-0 top-0 z-40 bg-background border-r border-border flex flex-col transition-all duration-300",
-        isCollapsed ? "w-[4.5rem]" : "w-64"
-      )}
-    >
-      {/* Logo Area */}
-      <div className="p-4 flex justify-between items-center h-16 border-b border-border">
-        <Link to="/dashboard" className="flex items-center">
-          <span className="font-bold text-xl">
-            {isCollapsed ? "PG" : "PainterGrowth"}
+    <aside className={cn(
+      "fixed inset-y-0 left-0 z-20 flex flex-col border-r bg-background transition-all duration-300",
+      isCollapsed ? "w-[4.5rem]" : "w-[16rem]"
+    )}>
+      {/* Header */}
+      <div className="flex h-14 items-center justify-between border-b px-4">
+        <div className="flex items-center gap-2 overflow-hidden">
+          <PaintBucket className="h-6 w-6 text-primary" />
+          <span className={cn(
+            "font-display text-lg font-semibold transition-opacity",
+            isCollapsed ? "opacity-0" : "opacity-100"
+          )}>
+            CrewkitAI
           </span>
-        </Link>
+        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -62,157 +82,84 @@ const CollapsibleSidebar = () => {
         </Button>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 py-4 overflow-y-auto">
-        <TooltipProvider>
-          <ul className="space-y-1 px-2">
-            <NavItem
-              to="/dashboard"
-              icon={<Home className="h-5 w-5" />}
-              label="Dashboard"
-              isActive={isActive("/dashboard") && location.pathname === "/dashboard"}
-              isCollapsed={isCollapsed}
-            />
-            
-            <NavItem
-              to="/dashboard/ai-coach"
-              icon={<BrainCircuit className="h-5 w-5" />}
-              label="AI Coach"
-              isActive={isActive("/dashboard/ai-coach")}
-              isCollapsed={isCollapsed}
-            />
-            
-            <NavItem
-              to="/dashboard/pg-coach"
-              icon={<MessageSquare className="h-5 w-5" />}
-              label="PG Coach"
-              isActive={isActive("/dashboard/pg-coach")}
-              isCollapsed={isCollapsed}
-            />
-            
-            <NavItem
-              to="/dashboard/compass"
-              icon={<ClipboardList className="h-5 w-5" />}
-              label="Strategic Planner"
-              isActive={isActive("/dashboard/compass")}
-              isCollapsed={isCollapsed}
-            />
-            
-            <NavItem
-              to="/dashboard/financial"
-              icon={<BarChart3 className="h-5 w-5" />}
-              label="Financial"
-              isActive={isActive("/dashboard/financial")}
-              isCollapsed={isCollapsed}
-            />
-            
-            <NavItem
-              to="/dashboard/profile"
-              icon={<User className="h-5 w-5" />}
-              label="Profile"
-              isActive={isActive("/dashboard/profile")}
-              isCollapsed={isCollapsed}
-            />
-          </ul>
-        </TooltipProvider>
-      </nav>
-
-      {/* User Profile & Settings */}
-      <div className="p-4 border-t border-border">
-        <TooltipProvider>
-          <div className="space-y-1">
-            {/* Admin Settings (conditional) */}
-            {isAdmin && (
-              <NavItem
-                to="/dashboard/admin/ai-settings"
-                icon={<Settings className="h-5 w-5" />}
-                label="Admin Settings"
-                isActive={isActive("/dashboard/admin")}
-                isCollapsed={isCollapsed}
-              />
-            )}
-            
-            {/* Settings */}
-            <NavItem
-              to="/dashboard/settings"
-              icon={<Settings className="h-5 w-5" />}
-              label="Settings"
-              isActive={isActive("/dashboard/settings")}
-              isCollapsed={isCollapsed}
-            />
-            
-            {/* Logout Button */}
-            <div>
-              {isCollapsed ? (
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-full justify-start"
-                      onClick={signOut}
-                    >
-                      <LogOut className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Logout</TooltipContent>
-                </Tooltip>
-              ) : (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={signOut}
-                >
-                  <LogOut className="h-5 w-5 mr-2" />
-                  Logout
-                </Button>
+      {/* Main Navigation */}
+      <div className="flex-1 overflow-auto py-2">
+        <nav className="grid gap-1 px-2">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                isActive(item.path)
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
-            </div>
-          </div>
-        </TooltipProvider>
-      </div>
-    </div>
-  );
-};
-
-interface NavItemProps {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  isActive: boolean;
-  isCollapsed: boolean;
-}
-
-const NavItem = ({ to, icon, label, isActive, isCollapsed }: NavItemProps) => {
-  return isCollapsed ? (
-    <li>
-      <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>
-          <Link to={to}>
-            <Button
-              variant={isActive ? "default" : "ghost"}
-              size="icon"
-              className="w-full justify-start"
             >
-              {icon}
-            </Button>
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
-      </Tooltip>
-    </li>
-  ) : (
-    <li>
-      <Link to={to}>
+              <item.icon className="h-5 w-5" />
+              <span className={cn(
+                "transition-opacity",
+                isCollapsed ? "opacity-0" : "opacity-100"
+              )}>
+                {item.name}
+              </span>
+            </Link>
+          ))}
+        </nav>
+
+        {/* Admin section */}
+        {isAdmin && (
+          <>
+            <Separator className="my-4 mx-2" />
+            <div className={cn(
+              "px-4 text-xs font-semibold text-muted-foreground mb-2",
+              isCollapsed ? "opacity-0" : "opacity-100"
+            )}>
+              Admin
+            </div>
+            <nav className="grid gap-1 px-2">
+              {adminItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                    isActive(item.path)
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className={cn(
+                    "transition-opacity",
+                    isCollapsed ? "opacity-0" : "opacity-100"
+                  )}>
+                    {item.name}
+                  </span>
+                </Link>
+              ))}
+            </nav>
+          </>
+        )}
+      </div>
+
+      {/* Footer with Sign Out */}
+      <div className="border-t p-4">
         <Button
-          variant={isActive ? "default" : "ghost"}
-          className="w-full justify-start"
+          variant="ghost"
+          onClick={signOut}
+          className="h-10 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground justify-start hover:bg-accent hover:text-accent-foreground"
         >
-          {icon}
-          <span className="ml-2">{label}</span>
+          <LogOut className="h-5 w-5" />
+          <span className={cn(
+            "transition-opacity",
+            isCollapsed ? "opacity-0" : "opacity-100"
+          )}>
+            Sign Out
+          </span>
         </Button>
-      </Link>
-    </li>
+      </div>
+    </aside>
   );
 };
 
