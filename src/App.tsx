@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +22,7 @@ import PgCoachPage from "./pages/PgCoachPage"; // PainterGrowth Coach page
 import CompassPage from "./pages/CompassPage"; // Strategic Planner page
 import AiSettingsPage from "./pages/admin/AiSettingsPage";
 import FeatureFlagsPage from "./pages/admin/FeatureFlagsPage";
+import CompassSettingsPage from "./pages/admin/CompassSettingsPage"; // Add CompassSettingsPage import
 import { useEffect } from "react";
 import { prefetchWelcomeContent } from "./hooks/useWelcomeContent";
 
@@ -67,6 +67,7 @@ const AppContent = () => {
         {/* Admin Routes */}
         <Route path="/dashboard/admin/ai-settings" element={<AiSettingsPage />} />
         <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
+        <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
         
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />

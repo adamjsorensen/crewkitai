@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -14,7 +13,8 @@ import {
   Sparkles,
   Shield,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Compass
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -75,6 +75,7 @@ const DashboardSidebar = () => {
   // Admin menu items - only shown to admin users
   const adminItems = [
     { name: "Admin", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "Compass Settings", icon: Compass, path: "/dashboard/admin/compass-settings" },
   ];
 
   // Renamed the function to SidebarContentItems to avoid conflict with the imported component

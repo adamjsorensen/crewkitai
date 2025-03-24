@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Shield, Settings, Users, Database, BrainCircuit, ToggleLeft } from "lucide-react";
+import { Shield, Settings, Users, Database, BrainCircuit, ToggleLeft, Compass } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface AdminLayoutProps {
@@ -66,6 +66,10 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
               <TabsTrigger value="ai-settings" className="flex items-center gap-1.5">
                 <BrainCircuit className="h-4 w-4" />
                 <span>AI Settings</span>
+              </TabsTrigger>
+              <TabsTrigger value="compass-settings" className="flex items-center gap-1.5">
+                <Compass className="h-4 w-4" />
+                <span>Compass Settings</span>
               </TabsTrigger>
               <TabsTrigger value="feature-flags" className="flex items-center gap-1.5">
                 <ToggleLeft className="h-4 w-4" />

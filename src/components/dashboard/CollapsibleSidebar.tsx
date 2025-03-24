@@ -19,7 +19,8 @@ import {
   ClipboardList,
   Shield,
   PaintBucket,
-  Sparkles
+  Sparkles,
+  Compass
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +49,8 @@ const CollapsibleSidebar = () => {
   ];
 
   const adminItems = [
-    { name: "AI Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "AI Settings", icon: BrainCircuit, path: "/dashboard/admin/ai-settings" },
+    { name: "Compass Settings", icon: Compass, path: "/dashboard/admin/compass-settings" },
   ];
 
   return (
