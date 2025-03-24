@@ -4,16 +4,10 @@ import { PaintBucket, ListPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface PgChatHeaderProps {
-  isThinkMode: boolean;
-  onToggleThinkMode: () => void;
   onNewChat: () => void;
 }
 
-const PgChatHeader: React.FC<PgChatHeaderProps> = ({
-  isThinkMode,
-  onToggleThinkMode,
-  onNewChat
-}) => {
+const PgChatHeader: React.FC<PgChatHeaderProps> = ({ onNewChat }) => {
   return (
     <div className="flex items-center justify-between border-b border-border/40 p-2 bg-background shadow-sm">
       <div className="flex items-center gap-2">
@@ -25,15 +19,7 @@ const PgChatHeader: React.FC<PgChatHeaderProps> = ({
           <p className="text-xs text-muted-foreground leading-tight mt-0.5">Your painting business advisor</p>
         </div>
       </div>
-      <div className="flex gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onToggleThinkMode}
-          className={`text-xs py-0.5 px-2 h-6 ${isThinkMode ? 'bg-primary/10 text-primary border-primary/30' : 'hover:bg-primary/5'}`}
-        >
-          {isThinkMode ? 'Thinking...' : 'Think Mode'}
-        </Button>
+      <div>
         <Button 
           variant="outline" 
           size="sm"

@@ -202,8 +202,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       {/* Sticky header */}
       <div className="sticky top-0 z-10 bg-background">
         <PgChatHeader 
-          isThinkMode={isThinkMode}
-          onToggleThinkMode={handleToggleThinkMode}
           onNewChat={handleNewChat}
         />
       </div>
@@ -230,6 +228,8 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
           onSendMessage={handleSendMessage} 
           isLoading={isLoading} 
           isMobile={isMobile}
+          isThinkMode={isThinkMode}
+          onToggleThinkMode={handleToggleThinkMode}
         />
       </div>
     </div>

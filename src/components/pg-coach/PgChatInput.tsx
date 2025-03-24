@@ -1,21 +1,26 @@
 
 import React, { useState, useRef } from 'react';
-import { SendIcon, ImageIcon, X } from 'lucide-react';
+import { SendIcon, ImageIcon, X, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Toggle } from '@/components/ui/toggle';
 
 interface PgChatInputProps {
   onSendMessage: (message: string, image?: File | null) => void;
   isLoading: boolean;
   isMobile: boolean;
+  isThinkMode: boolean;
+  onToggleThinkMode: () => void;
 }
 
 const PgChatInput: React.FC<PgChatInputProps> = ({ 
   onSendMessage, 
   isLoading,
-  isMobile 
+  isMobile,
+  isThinkMode,
+  onToggleThinkMode
 }) => {
   const [message, setMessage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -119,11 +124,11 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask a question..."
+              placeholder={isThinkMode ? "Ask a deeper question..." : "Ask a question..."}
               className="min-h-[38px] max-h-[120px] resize-none pr-10 py-1.5 text-sm rounded-md border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 shadow-sm"
               disabled={isLoading}
             />
-            <div className="absolute right-2 bottom-1.5">
+            <div className="absolute right-2 bottom-1.5 flex items-center gap-1">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -151,9 +156,21 @@ const PgChatInput: React.FC<PgChatInputProps> = ({
           </Button>
         </div>
         
-        <p className="text-[10px] text-muted-foreground mt-1 opacity-70">
-          PainterGrowth Coach provides industry-specific advice for painters.
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onToggleThinkMode}
+            className={`text-xs py-0.5 px-2 h-6 gap-1 ${isThinkMode ? 'bg-primary/10 text-primary border-primary/30' : 'hover:bg-primary/5'}`}
+          >
+            <Brain className="h-3.5 w-3.5" />
+            {isThinkMode ? 'Thinking Mode' : 'Think Mode'}
+          </Button>
+          
+          <p className="text-[10px] text-muted-foreground opacity-70">
+            PainterGrowth Coach provides industry-specific advice for painters.
+          </p>
+        </div>
       </div>
     </div>
   );
