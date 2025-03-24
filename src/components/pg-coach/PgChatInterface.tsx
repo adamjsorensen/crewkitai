@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useScrollManagement } from '@/hooks/useScrollManagement';
@@ -11,11 +10,13 @@ import { usePgChat, PgMessage } from '@/hooks/usePgChat';
 interface PgChatInterfaceProps {
   conversationId?: string | null;
   onConversationStart?: (id: string) => void;
+  onNewChat?: () => void;
 }
 
 const PgChatInterface: React.FC<PgChatInterfaceProps> = ({ 
   conversationId: initialConversationId,
-  onConversationStart
+  onConversationStart,
+  onNewChat
 }) => {
   const isMobile = useIsMobile();
   
@@ -186,10 +187,17 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
     }
   };
 
-  // Handle new chat - now reset UI state too
+  // Handle new chat - now uses the page-level handler if provided
   const handleNewChat = () => {
+    console.log("[PgChatInterface] New chat button clicked");
     setHasStartedChat(false);
     apiNewChat();
+    
+    // Call the parent handler if provided - this is key to reset page-level state
+    if (onNewChat) {
+      console.log("[PgChatInterface] Calling parent onNewChat handler");
+      onNewChat();
+    }
   };
 
   // Render welcome UI if chat hasn't started

@@ -19,7 +19,14 @@ const PgCoachPage = () => {
     selectedConversationId,
     isNewChat,
     selectConversation,
+    createNewConversation,
   } = useConversations();
+
+  // Handler for creating a new chat
+  const handleNewChat = () => {
+    console.log("[PgCoachPage] Creating new chat");
+    createNewConversation();
+  };
 
   useEffect(() => {
     if (!isAuthLoading && !user) {
@@ -46,13 +53,14 @@ const PgCoachPage = () => {
         <div className="flex-1 flex flex-col overflow-hidden">
           <Card className={`overflow-hidden border-none shadow-sm flex-1 h-full flex flex-col ${isMobile ? '-mx-3 rounded-none' : 'mx-0'}`}>
             <PgChatInterface 
-              key={selectedConversationId || 'new'} 
+              key={isNewChat ? 'new-chat' : selectedConversationId || 'new'} 
               conversationId={selectedConversationId}
               onConversationStart={(id) => {
                 if (isNewChat && id) {
                   selectConversation(id);
                 }
               }}
+              onNewChat={handleNewChat}
             />
           </Card>
         </div>
