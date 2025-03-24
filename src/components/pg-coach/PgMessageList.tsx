@@ -4,7 +4,7 @@ import { ChevronDown, PaintBucket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PgMessage from './PgMessage';
 import { PgMessage as PgMessageType } from '@/hooks/usePgChat';
-import TypingIndicator from '@/components/ai-coach/TypingIndicator';
+import TypingIndicator from './TypingIndicator';
 import { cn } from '@/lib/utils';
 
 interface PgMessageListProps {

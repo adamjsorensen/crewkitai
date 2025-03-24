@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,7 +9,7 @@ import * as LucideIcons from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import MobileCategoryDrawer from '@/components/ai-coach/chat/MobileCategoryDrawer';
+import MobileCategoryDrawer from './chat/MobileCategoryDrawer';
 import PgChatInput from './PgChatInput';
 import { Separator } from '@/components/ui/separator';
 import PgConversationDrawer from './PgConversationDrawer';
