@@ -24,7 +24,7 @@ export const useOnboardingSteps = () => {
         if (!existingSteps || existingSteps.length === 0) {
           setIsInitializing(true);
           
-          // Define the default steps
+          // Define the default steps - now only 4 steps
           const defaultSteps = [
             {
               step_key: 'welcome',

@@ -111,18 +111,15 @@ export const FeaturesIntroStep = () => {
           </div>
           
           <div className="flex justify-center">
-            <Link to="/dashboard/compass">
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveTab("coach");
-                }}
-              >
-                Next: AI Coach <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => {
+                setActiveTab("coach");
+              }}
+            >
+              Next: AI Coach <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
         </TabsContent>
         
@@ -156,18 +153,15 @@ export const FeaturesIntroStep = () => {
           </div>
           
           <div className="flex justify-center">
-            <Link to="/dashboard/compass">
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveTab("overview");
-                }}
-              >
-                Back to Overview
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => {
+                setActiveTab("overview");
+              }}
+            >
+              Back to Overview
+            </Button>
           </div>
         </TabsContent>
       </Tabs>
