@@ -1,69 +1,64 @@
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useEffect, useRef } from 'react';
+import { useForm, UseFormReturn, FieldValues } from 'react-hook-form';
 import { debounce } from '@/lib/utils';
 
-interface UseFormAutoSaveOptions<T> {
-  values: T;
-  onSave: (values: T) => Promise<any>;
-  debounceMs?: number;
-  enableAutoSave?: boolean;
-  saveMessage?: string;
+interface UseFormAutoSaveProps<T extends FieldValues> {
+  form: UseFormReturn<T>;
+  onSave: (data: T) => void;
+  debounceTime?: number;
 }
 
-export function useFormAutoSave<T>({
-  values,
+/**
+ * Custom hook for auto-saving form data
+ * @param form The react-hook-form instance
+ * @param onSave Function to call when saving data
+ * @param debounceTime Debounce time in milliseconds (default: 1000ms)
+ */
+export const useFormAutoSave = <T extends FieldValues>({
+  form,
   onSave,
-  debounceMs = 2000,
-  enableAutoSave = true,
-  saveMessage = "Progress auto-saved"
-}: UseFormAutoSaveOptions<T>) {
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  // Create a debounced save function
-  const debouncedSave = debounce(async (data: T) => {
-    if (!user) return;
-    
-    try {
-      setIsSaving(true);
-      await onSave(data);
-      setLastSaved(new Date());
-      
-      toast({
-        title: saveMessage,
-        description: `Last saved at ${new Date().toLocaleTimeString()}`,
-        duration: 2000,
-      });
-    } catch (error) {
-      console.error('Auto-save failed:', error);
-      toast({
-        title: "Auto-save failed",
-        description: "Your changes couldn't be saved automatically",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }, debounceMs);
-
-  // Effect to trigger save when values change
+  debounceTime = 1000,
+}: UseFormAutoSaveProps<T>) => {
+  const { watch, getValues, formState } = form;
+  const { isDirty } = formState;
+  
+  // Use useRef to persist the debounced function across renders
+  const debouncedSave = useRef<ReturnType<typeof debounce>>();
+  
+  // Initialize the debounced function once
   useEffect(() => {
-    if (enableAutoSave && user) {
-      debouncedSave(values);
-    }
+    debouncedSave.current = debounce((data: T) => {
+      console.log('Auto-saving form data...', data);
+      onSave(data);
+    }, debounceTime);
     
+    // Clean up the debounce timer when the component unmounts
     return () => {
-      debouncedSave.cancel();
+      if (debouncedSave.current && 'cancel' in debouncedSave.current) {
+        (debouncedSave.current as { cancel: () => void }).cancel();
+      }
     };
-  }, [values, enableAutoSave, user]);
-
-  return {
-    isSaving,
-    lastSaved,
-    saveNow: () => debouncedSave(values, true)
+  }, [onSave, debounceTime]);
+  
+  // Watch for changes and trigger the save
+  useEffect(() => {
+    if (!isDirty) return;
+    
+    const subscription = watch((formData) => {
+      if (debouncedSave.current) {
+        debouncedSave.current(getValues());
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [watch, isDirty, getValues]);
+  
+  const save = () => {
+    if (isDirty) {
+      onSave(getValues());
+    }
   };
-}
+  
+  return { save };
+};

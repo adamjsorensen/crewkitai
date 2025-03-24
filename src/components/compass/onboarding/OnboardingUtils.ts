@@ -215,7 +215,8 @@ export const loadProfileData = async (userId: string, setBasicValues: (values: P
         business_name: compassData?.business_name || profileData?.company_name || '',
         phone: profileData?.phone || '',
         full_name: profileData?.full_name || '',
-        crew_size: compassData?.crew_size || '1-3',
+        // Type assertion to ensure the crew_size is one of the valid options
+        crew_size: (compassData?.crew_size as '1-3' | '4-10' | '10+') || '1-3',
         // Infer business stage from workload if possible
         ...(compassData?.workload && {
           business_stage: 
@@ -232,7 +233,8 @@ export const loadProfileData = async (userId: string, setBasicValues: (values: P
         company_description: profileData?.company_description || '',
         website: profileData?.website || '',
         specialties: compassData?.specialties || [],
-        workload: compassData?.workload || 'Medium',
+        // Type assertion to ensure workload is one of the valid options
+        workload: (compassData?.workload as 'High' | 'Medium' | 'Low') || 'Medium',
       });
     }
     
