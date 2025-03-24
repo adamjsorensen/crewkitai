@@ -20,6 +20,12 @@ interface TaskViewContextType {
   saveViewPreference: () => Promise<void>;
 }
 
+// Define a type for our view preferences structure
+interface ViewPreferences {
+  viewType?: ViewType;
+  filters?: FilterCriteria;
+}
+
 const defaultFilters: FilterCriteria = {};
 
 const TaskViewContext = createContext<TaskViewContextType>({
@@ -62,12 +68,15 @@ export const TaskViewProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       if (data?.view_preferences) {
-        const prefs = data.view_preferences;
+        // Type check and safely access the properties
+        const prefs = data.view_preferences as ViewPreferences;
+        
         if (prefs.viewType) {
-          setViewType(prefs.viewType as ViewType);
+          setViewType(prefs.viewType);
         }
+        
         if (prefs.filters) {
-          setFilters(prefs.filters as FilterCriteria);
+          setFilters(prefs.filters);
         }
       }
     } catch (err) {
@@ -81,13 +90,16 @@ export const TaskViewProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return;
     
     try {
+      // Create a properly typed view preferences object
+      const viewPreferences: ViewPreferences = {
+        viewType,
+        filters
+      };
+      
       const { error } = await supabase
         .from('compass_user_profiles')
         .update({
-          view_preferences: {
-            viewType,
-            filters
-          },
+          view_preferences: viewPreferences,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
