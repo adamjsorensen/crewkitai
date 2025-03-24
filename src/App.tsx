@@ -1,14 +1,15 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { FeatureFlagsProvider } from "./contexts/FeatureFlagsContext";
+import { OnboardingProvider } from "./contexts/OnboardingContext";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
+import OnboardingPage from "./pages/OnboardingPage";
 import NotFound from "./pages/NotFound";
 import FinancialDashboard from "./pages/financial/FinancialDashboard";
 import JobAnalysis from "./pages/financial/JobAnalysis";
@@ -28,6 +29,7 @@ import UsersPage from "./pages/admin/UsersPage"; // New Users page import
 import ContentPage from "./pages/content/ContentPage"; // New Content page
 import { useEffect } from "react";
 import { prefetchWelcomeContent } from "./hooks/useWelcomeContent";
+import { useNeedsOnboarding } from "./hooks/useNeedsOnboarding";
 
 // Create query client with optimal settings for caching
 const queryClient = new QueryClient({
@@ -41,6 +43,23 @@ const queryClient = new QueryClient({
 });
 
 // Initial prefetching for commonly used data
+const AuthenticatedRoute = ({ element }: { element: React.ReactNode }) => {
+  const { needsOnboarding, isLoading } = useNeedsOnboarding();
+  
+  // If still loading, render nothing (or a loader)
+  if (isLoading) {
+    return null;
+  }
+  
+  // If user needs onboarding, redirect to onboarding
+  if (needsOnboarding) {
+    return <Navigate to="/onboarding" replace />;
+  }
+  
+  // Otherwise, render the protected component
+  return <>{element}</>;
+};
+
 const AppContent = () => {
   useEffect(() => {
     // Start prefetching the welcome content as soon as the app loads
@@ -54,25 +73,28 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/dashboard/content" element={<ContentPage />} />
-        <Route path="/dashboard/financial" element={<FinancialDashboard />} />
-        <Route path="/dashboard/financial/jobs" element={<JobAnalysis />} />
-        <Route path="/dashboard/financial/reports" element={<FinancialReports />} />
-        <Route path="/dashboard/financial/upload" element={<DataUpload />} />
-        <Route path="/dashboard/profile" element={<ProfilePage />} />
-        <Route path="/dashboard/profile/business" element={<BusinessProfilePage />} />
-        <Route path="/dashboard/profile/personal" element={<PersonalProfilePage />} />
-        <Route path="/dashboard/settings" element={<SettingsPage />} />
-        <Route path="/dashboard/ai-coach" element={<AiCoach />} />
-        <Route path="/dashboard/pg-coach" element={<PgCoachPage />} />
-        <Route path="/dashboard/compass" element={<CompassPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        
+        {/* Protected Routes */}
+        <Route path="/dashboard" element={<AuthenticatedRoute element={<Dashboard />} />} />
+        <Route path="/dashboard/content" element={<AuthenticatedRoute element={<ContentPage />} />} />
+        <Route path="/dashboard/financial" element={<AuthenticatedRoute element={<FinancialDashboard />} />} />
+        <Route path="/dashboard/financial/jobs" element={<AuthenticatedRoute element={<JobAnalysis />} />} />
+        <Route path="/dashboard/financial/reports" element={<AuthenticatedRoute element={<FinancialReports />} />} />
+        <Route path="/dashboard/financial/upload" element={<AuthenticatedRoute element={<DataUpload />} />} />
+        <Route path="/dashboard/profile" element={<AuthenticatedRoute element={<ProfilePage />} />} />
+        <Route path="/dashboard/profile/business" element={<AuthenticatedRoute element={<BusinessProfilePage />} />} />
+        <Route path="/dashboard/profile/personal" element={<AuthenticatedRoute element={<PersonalProfilePage />} />} />
+        <Route path="/dashboard/settings" element={<AuthenticatedRoute element={<SettingsPage />} />} />
+        <Route path="/dashboard/ai-coach" element={<AuthenticatedRoute element={<AiCoach />} />} />
+        <Route path="/dashboard/pg-coach" element={<AuthenticatedRoute element={<PgCoachPage />} />} />
+        <Route path="/dashboard/compass" element={<AuthenticatedRoute element={<CompassPage />} />} />
         
         {/* Admin Routes */}
-        <Route path="/dashboard/admin/ai-settings" element={<AiSettingsPage />} />
-        <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
-        <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
-        <Route path="/dashboard/admin/users" element={<UsersPage />} />
+        <Route path="/dashboard/admin/ai-settings" element={<AuthenticatedRoute element={<AiSettingsPage />} />} />
+        <Route path="/dashboard/admin/feature-flags" element={<AuthenticatedRoute element={<FeatureFlagsPage />} />} />
+        <Route path="/dashboard/admin/compass-settings" element={<AuthenticatedRoute element={<CompassSettingsPage />} />} />
+        <Route path="/dashboard/admin/users" element={<AuthenticatedRoute element={<UsersPage />} />} />
         
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
@@ -86,9 +108,11 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <FeatureFlagsProvider>
-          <Toaster />
-          <Sonner />
-          <AppContent />
+          <OnboardingProvider>
+            <Toaster />
+            <Sonner />
+            <AppContent />
+          </OnboardingProvider>
         </FeatureFlagsProvider>
       </AuthProvider>
     </TooltipProvider>

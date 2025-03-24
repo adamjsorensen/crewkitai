@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { PaintBucket, Loader2 } from "lucide-react";
+import { PaintBucket, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -97,7 +97,7 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50/50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center">
@@ -158,7 +158,10 @@ const AuthPage = () => {
                         Signing in...
                       </>
                     ) : (
-                      "Sign In"
+                      <div className="flex items-center justify-center w-full">
+                        Sign In
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </div>
                     )}
                   </Button>
                 </CardFooter>
@@ -227,7 +230,10 @@ const AuthPage = () => {
                         Creating account...
                       </>
                     ) : (
-                      "Create Account"
+                      <div className="flex items-center justify-center w-full">
+                        Create Account
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </div>
                     )}
                   </Button>
                 </CardFooter>

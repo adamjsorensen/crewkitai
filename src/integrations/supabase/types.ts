@@ -590,6 +590,75 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_progress: {
+        Row: {
+          completed_at: string | null
+          completed_steps: Json
+          created_at: string
+          current_step: number
+          id: string
+          is_completed: boolean
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_steps?: Json
+          created_at?: string
+          current_step?: number
+          id?: string
+          is_completed?: boolean
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_steps?: Json
+          created_at?: string
+          current_step?: number
+          id?: string
+          is_completed?: boolean
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      onboarding_steps: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_required: boolean
+          order_index: number
+          step_key: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_required?: boolean
+          order_index: number
+          step_key: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_required?: boolean
+          order_index?: number
+          step_key?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pg_conversations: {
         Row: {
           created_at: string
