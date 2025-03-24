@@ -1,18 +1,54 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import CompassOnboarding from '@/components/compass/CompassOnboarding';
 import { CompassUserProfile } from '@/types/compass';
-import { Building2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Building2, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const BusinessProfileStep = () => {
   const { completeStep } = useOnboarding();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('basic');
+  const [loading, setLoading] = useState(false);
+  const [existingProfile, setExistingProfile] = useState<CompassUserProfile | undefined>(undefined);
+  
+  useEffect(() => {
+    // Load existing profile data when component mounts
+    const loadExistingProfile = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('compass_user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error loading profile:', error);
+          return;
+        }
+        
+        if (data) {
+          setExistingProfile(data as CompassUserProfile);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadExistingProfile();
+  }, [user]);
   
   const handleProfileComplete = (profile: CompassUserProfile) => {
     // When the profile is completed, move to the next step
@@ -52,29 +88,40 @@ export const BusinessProfileStep = () => {
         <TabsContent value="basic">
           <CompassOnboarding 
             onComplete={(profile) => {
+              setExistingProfile(profile);
               toast({
                 title: "Information saved",
                 description: "Your basic information has been saved. Let's add some additional details."
               });
               goToNextTab();
             }}
-            existingProfile={undefined}
+            existingProfile={existingProfile}
             formMode="basic"
             showSaveButton={true}
             buttonText="Continue to Additional Details"
             buttonIcon={<ArrowRight className="h-4 w-4" />}
+            enableAutoSave={true}
           />
+          
+          <div className="mt-4 text-center text-sm text-muted-foreground">
+            <p>Your progress is automatically saved as you type</p>
+          </div>
         </TabsContent>
         
         <TabsContent value="details">
           <CompassOnboarding 
             onComplete={handleProfileComplete}
-            existingProfile={undefined}
+            existingProfile={existingProfile}
             formMode="details"
             showBackButton={true}
             onBackClick={goToPreviousTab}
             buttonText="Complete Profile"
+            enableAutoSave={true}
           />
+          
+          <div className="mt-4 text-center text-sm text-muted-foreground">
+            <p>Your progress is automatically saved as you type</p>
+          </div>
         </TabsContent>
       </Tabs>
       

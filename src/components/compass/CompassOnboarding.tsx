@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import BasicForm, { BasicFormValues } from './onboarding/BasicForm';
 import DetailsForm, { DetailsFormValues } from './onboarding/DetailsForm';
 import { saveBasicFormData, saveDetailsFormData, loadProfileData } from './onboarding/OnboardingUtils';
+import { useFormAutoSave } from '@/hooks/useFormAutoSave';
 
 interface CompassOnboardingProps {
   onComplete: (profile: CompassUserProfile) => void;
@@ -17,6 +18,7 @@ interface CompassOnboardingProps {
   onBackClick?: () => void;
   buttonText?: string;
   buttonIcon?: React.ReactNode;
+  enableAutoSave?: boolean;
 }
 
 const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
@@ -28,6 +30,7 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
   onBackClick,
   buttonText = 'Save Profile',
   buttonIcon,
+  enableAutoSave = true,
 }) => {
   const { toast } = useToast();
   const { user, profile } = useAuth();
@@ -41,6 +44,36 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
       loadProfileData(user.id, setBasicValues, setDetailsValues);
     }
   }, [user]);
+
+  // Auto-save for basic form
+  const { isSaving: isSavingBasic } = useFormAutoSave({
+    values: basicValues,
+    onSave: async (values) => {
+      if (!user || Object.keys(values).length === 0) return null;
+      // Only auto-save if we have at least business_name or full_name
+      if (!values.business_name && !values.full_name) return null;
+      
+      return await saveBasicFormData(values as BasicFormValues, user.id, toast);
+    },
+    enableAutoSave: enableAutoSave && formMode !== 'details',
+    saveMessage: "Profile information saved",
+    debounceMs: 3000,
+  });
+
+  // Auto-save for details form
+  const { isSaving: isSavingDetails } = useFormAutoSave({
+    values: detailsValues,
+    onSave: async (values) => {
+      if (!user || Object.keys(values).length === 0) return null;
+      // Only auto-save if we have at least specialties
+      if (!values.specialties || values.specialties.length === 0) return null;
+      
+      return await saveDetailsFormData(values as DetailsFormValues, user.id, toast);
+    },
+    enableAutoSave: enableAutoSave && formMode !== 'basic',
+    saveMessage: "Additional details saved",
+    debounceMs: 3000,
+  });
 
   const handleBasicSubmit = async (values: BasicFormValues) => {
     if (!user) {
@@ -92,6 +125,7 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
           buttonText={buttonText}
           buttonIcon={buttonIcon}
           defaultValues={basicValues}
+          isAutosaving={isSavingBasic}
         />
       </CardContent>
     </Card>
@@ -113,6 +147,7 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
           onBackClick={onBackClick}
           buttonText={buttonText}
           defaultValues={detailsValues}
+          isAutosaving={isSavingDetails}
         />
       </CardContent>
     </Card>

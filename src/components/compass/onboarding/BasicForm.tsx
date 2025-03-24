@@ -8,12 +8,20 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { CompassUserProfile } from '@/types/compass';
+import { Info, ArrowRight } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export const basicFormSchema = z.object({
-  business_name: z.string().min(1, 'Business name is required'),
+  business_name: z.string()
+    .min(1, 'Business name is required')
+    .max(100, 'Business name should be less than 100 characters'),
   business_stage: z.enum(['early', 'growth', 'maturity', 'exit']),
   crew_size: z.enum(['1-3', '4-10', '10+']),
-  phone: z.string().optional(),
+  phone: z.string()
+    .optional()
+    .refine(val => !val || /^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(val), {
+      message: 'Please enter a valid phone number',
+    }),
   full_name: z.string().min(1, 'Full name is required'),
 });
 
@@ -26,7 +34,23 @@ interface BasicFormProps {
   buttonText?: string;
   buttonIcon?: React.ReactNode;
   defaultValues?: Partial<BasicFormValues>;
+  isAutosaving?: boolean;
 }
+
+const HelpTooltip = ({ content }: { content: string }) => (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="ml-1 inline-flex cursor-help">
+          <Info className="h-4 w-4 text-muted-foreground" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-80">
+        <p>{content}</p>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
 
 const BasicForm: React.FC<BasicFormProps> = ({
   onSubmit,
@@ -35,6 +59,7 @@ const BasicForm: React.FC<BasicFormProps> = ({
   buttonText = 'Save Profile',
   buttonIcon,
   defaultValues,
+  isAutosaving = false,
 }) => {
   const form = useForm<BasicFormValues>({
     resolver: zodResolver(basicFormSchema),
@@ -44,7 +69,8 @@ const BasicForm: React.FC<BasicFormProps> = ({
       crew_size: existingProfile?.crew_size || defaultValues?.crew_size || '1-3',
       phone: defaultValues?.phone || '',
       full_name: defaultValues?.full_name || '',
-    }
+    },
+    mode: 'onChange' // Enable validation on change
   });
 
   return (
@@ -55,12 +81,15 @@ const BasicForm: React.FC<BasicFormProps> = ({
           name="full_name" 
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Your Name</FormLabel>
+              <FormLabel className="flex items-center">
+                Your Name
+                <HelpTooltip content="This will be used in communications and your profile" />
+              </FormLabel>
               <FormControl>
                 <Input placeholder="John Doe" {...field} />
               </FormControl>
               <FormDescription>
-                Your full name.
+                Enter your full name as you'd like to be addressed by CrewkitAI.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -72,12 +101,15 @@ const BasicForm: React.FC<BasicFormProps> = ({
           name="business_name" 
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Business Name</FormLabel>
+              <FormLabel className="flex items-center">
+                Business Name
+                <HelpTooltip content="The name of your painting company or business" />
+              </FormLabel>
               <FormControl>
                 <Input placeholder="Pro Painters LLC" {...field} />
               </FormControl>
               <FormDescription>
-                Enter the name of your painting business.
+                This will be used to identify your business in reports and communications.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -89,7 +121,10 @@ const BasicForm: React.FC<BasicFormProps> = ({
           name="business_stage" 
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Business Stage</FormLabel>
+              <FormLabel className="flex items-center">
+                Business Stage
+                <HelpTooltip content="This helps us tailor advice to your business's current needs" />
+              </FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
@@ -104,7 +139,7 @@ const BasicForm: React.FC<BasicFormProps> = ({
                 </SelectContent>
               </Select>
               <FormDescription>
-                What is your estimated annual revenue?
+                Which stage best describes your annual revenue range?
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -116,7 +151,10 @@ const BasicForm: React.FC<BasicFormProps> = ({
           name="crew_size" 
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Crew Size</FormLabel>
+              <FormLabel className="flex items-center">
+                Crew Size
+                <HelpTooltip content="Helps tailor task management to your team size" />
+              </FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
@@ -129,7 +167,9 @@ const BasicForm: React.FC<BasicFormProps> = ({
                   <SelectItem value="10+">10+ People</SelectItem>
                 </SelectContent>
               </Select>
-              <FormDescription>How many full time painters do you have?</FormDescription>
+              <FormDescription>
+                How many full-time painters do you currently employ?
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -140,12 +180,15 @@ const BasicForm: React.FC<BasicFormProps> = ({
           name="phone" 
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone Number</FormLabel>
+              <FormLabel className="flex items-center">
+                Phone Number
+                <HelpTooltip content="Used for optional SMS notifications and reminders" />
+              </FormLabel>
               <FormControl>
                 <Input placeholder="(555) 123-4567" {...field} />
               </FormControl>
               <FormDescription>
-                Your business phone number (optional).
+                Your business phone number (optional). Format: (123) 456-7890
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -153,10 +196,19 @@ const BasicForm: React.FC<BasicFormProps> = ({
         />
         
         {showSaveButton && (
-          <Button type="submit" className="w-full flex items-center justify-center gap-2">
-            {buttonText}
-            {buttonIcon}
-          </Button>
+          <div className="flex items-center justify-between">
+            <div>
+              {isAutosaving && (
+                <span className="text-sm text-muted-foreground">
+                  Auto-saving your progress...
+                </span>
+              )}
+            </div>
+            <Button type="submit" className="flex items-center justify-center gap-2">
+              {buttonText}
+              {buttonIcon || <ArrowRight className="h-4 w-4" />}
+            </Button>
+          </div>
         )}
       </form>
     </Form>

@@ -19,6 +19,14 @@ export const saveBasicFormData = async (
       case 'exit': workload = 'High'; break;
     }
     
+    // Check if profile exists first
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('compass_user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+      
+    // Use upsert with different approach based on whether profile exists
     const { data: compassData, error: compassError } = await supabase
       .from('compass_user_profiles')
       .upsert({
@@ -26,6 +34,10 @@ export const saveBasicFormData = async (
         business_name: values.business_name,
         crew_size: values.crew_size,
         workload,
+        // Preserve existing specialties if any
+        ...(existingProfile && existingProfile.specialties && {
+          specialties: existingProfile.specialties
+        })
       }, { onConflict: 'id' })
       .select('*')
       .single();
@@ -59,10 +71,13 @@ export const saveBasicFormData = async (
       return null;
     }
     
-    toast({
-      title: "Success!",
-      description: "Your profile has been saved."
-    });
+    // Only show toast on explicit saves, not auto-saves
+    if (toast) {
+      toast({
+        title: "Success!",
+        description: "Your profile has been saved."
+      });
+    }
     
     return compassData as CompassUserProfile;
   } catch (err) {
@@ -82,13 +97,30 @@ export const saveDetailsFormData = async (
   toast: ReturnType<typeof useToast>['toast']
 ): Promise<CompassUserProfile | null> => {
   try {
+    // Check if compass profile exists first
+    const { data: existingCompassProfile } = await supabase
+      .from('compass_user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+      
+    // Prepare data with existing values for any undefined fields
+    const compassProfileData = {
+      id: userId,
+      specialties: values.specialties,
+      workload: values.workload,
+      // Preserve these fields if they exist
+      ...(existingCompassProfile?.business_name && { 
+        business_name: existingCompassProfile.business_name 
+      }),
+      ...(existingCompassProfile?.crew_size && { 
+        crew_size: existingCompassProfile.crew_size 
+      }),
+    };
+      
     const { data: compassData, error: compassError } = await supabase
       .from('compass_user_profiles')
-      .upsert({
-        id: userId,
-        specialties: values.specialties,
-        workload: values.workload,
-      }, { onConflict: 'id' })
+      .upsert(compassProfileData, { onConflict: 'id' })
       .select('*')
       .single();
       
@@ -102,6 +134,7 @@ export const saveDetailsFormData = async (
       return null;
     }
     
+    // Get existing profile data to preserve fields
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('company_name, full_name')
@@ -115,6 +148,7 @@ export const saveDetailsFormData = async (
         business_address: values.business_address,
         company_description: values.company_description,
         website: values.website,
+        // Preserve these fields if they exist
         company_name: existingProfile?.company_name || '',
         full_name: existingProfile?.full_name || '',
       }, { onConflict: 'id' });
@@ -129,10 +163,13 @@ export const saveDetailsFormData = async (
       return null;
     }
     
-    toast({
-      title: "Success!",
-      description: "Your profile has been saved."
-    });
+    // Only show toast on explicit saves, not auto-saves
+    if (toast) {
+      toast({
+        title: "Success!",
+        description: "Your profile has been saved."
+      });
+    }
     
     return compassData as CompassUserProfile;
   } catch (err) {
@@ -148,6 +185,7 @@ export const saveDetailsFormData = async (
 
 export const loadProfileData = async (userId: string, setBasicValues: (values: Partial<BasicFormValues>) => void, setDetailsValues: (values: Partial<DetailsFormValues>) => void) => {
   try {
+    // Load general profile data
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -159,17 +197,42 @@ export const loadProfileData = async (userId: string, setBasicValues: (values: P
       return;
     }
     
-    if (profileData) {
-      setBasicValues({
-        business_name: profileData.company_name || '',
-        phone: profileData.phone || '',
-        full_name: profileData.full_name || '',
-      });
+    // Load compass-specific profile data
+    const { data: compassData, error: compassError } = await supabase
+      .from('compass_user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
       
+    if (compassError && compassError.code !== 'PGRST116') {
+      console.error('Error fetching compass profile:', compassError);
+      return;
+    }
+    
+    // Set basic values from both profile sources
+    if (profileData || compassData) {
+      setBasicValues({
+        business_name: compassData?.business_name || profileData?.company_name || '',
+        phone: profileData?.phone || '',
+        full_name: profileData?.full_name || '',
+        crew_size: compassData?.crew_size || '1-3',
+        // Infer business stage from workload if possible
+        ...(compassData?.workload && {
+          business_stage: 
+            compassData.workload === 'Low' ? 'early' :
+            compassData.workload === 'Medium' ? 'growth' : 'maturity'
+        }),
+      });
+    }
+    
+    // Set details values
+    if (profileData || compassData) {
       setDetailsValues({
-        business_address: profileData.business_address || '',
-        company_description: profileData.company_description || '',
-        website: profileData.website || '',
+        business_address: profileData?.business_address || '',
+        company_description: profileData?.company_description || '',
+        website: profileData?.website || '',
+        specialties: compassData?.specialties || [],
+        workload: compassData?.workload || 'Medium',
       });
     }
     
