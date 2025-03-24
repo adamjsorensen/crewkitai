@@ -1,16 +1,18 @@
 
 import React from 'react';
 import { useTaskView } from '@/contexts/TaskViewContext';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { List, Columns, Calendar } from 'lucide-react';
+import { toast } from 'sonner';
 
 const TaskViewSwitcher: React.FC = () => {
   const { viewType, setViewType, saveViewPreference } = useTaskView();
 
-  const handleViewChange = (value: string) => {
+  const handleViewChange = async (value: string) => {
     setViewType(value as 'list' | 'kanban' | 'calendar');
-    saveViewPreference();
+    
+    // Save the preference change
+    await saveViewPreference();
   };
 
   return (

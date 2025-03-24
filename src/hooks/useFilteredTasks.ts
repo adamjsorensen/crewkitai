@@ -23,6 +23,10 @@ export const useFilteredTasks = (tasks: CompassTaskDisplay[]) => {
 
 // This function can be used directly by any component that needs to filter tasks
 export const applyFilters = (tasks: CompassTaskDisplay[], filters: FilterCriteria): CompassTaskDisplay[] => {
+  if (!tasks || tasks.length === 0 || !filters || Object.keys(filters).length === 0) {
+    return tasks || [];
+  }
+  
   let filtered = [...tasks];
   
   // Apply priority filters

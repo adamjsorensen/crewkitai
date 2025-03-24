@@ -433,6 +433,7 @@ export type Database = {
           id: string
           specialties: string[] | null
           updated_at: string
+          view_preferences: Json | null
           workload: string | null
         }
         Insert: {
@@ -442,6 +443,7 @@ export type Database = {
           id: string
           specialties?: string[] | null
           updated_at?: string
+          view_preferences?: Json | null
           workload?: string | null
         }
         Update: {
@@ -451,6 +453,7 @@ export type Database = {
           id?: string
           specialties?: string[] | null
           updated_at?: string
+          view_preferences?: Json | null
           workload?: string | null
         }
         Relationships: []

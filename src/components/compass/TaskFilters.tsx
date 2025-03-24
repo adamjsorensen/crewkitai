@@ -56,13 +56,13 @@ const TaskFilters: React.FC = () => {
 
   const hasActiveFilters = Object.keys(filters).length > 0;
 
-  const clearFilters = () => {
+  const clearFilters = async () => {
     setFilters({});
-    saveViewPreference();
+    await saveViewPreference();
   };
 
-  const applyFilters = () => {
-    saveViewPreference();
+  const applyFilters = async () => {
+    await saveViewPreference();
     setIsOpen(false);
   };
 

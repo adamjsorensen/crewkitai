@@ -19,6 +19,7 @@ import CalendarView from '@/components/compass/CalendarView';
 import CompletedTasksList from '@/components/compass/CompletedTasksList';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { useFilteredTasks } from '@/hooks/useFilteredTasks';
 
 // This component handles task actions for all views
 const TasksContainer = () => {
@@ -31,6 +32,9 @@ const TasksContainer = () => {
   
   const { viewType } = useTaskView();
   const { toast } = useToast();
+  
+  // Apply filters to the active tasks
+  const filteredTasks = useFilteredTasks(activeTasks);
 
   // Handle task completion
   const markTaskComplete = async (task: CompassTaskDisplay) => {
@@ -117,7 +121,7 @@ const TasksContainer = () => {
       
       {viewType === 'list' && (
         <ListView 
-          tasks={activeTasks}
+          tasks={filteredTasks}
           onTaskUpdate={loadTasks}
           onComplete={markTaskComplete}
           onReminder={openReminderDialog}
@@ -130,7 +134,7 @@ const TasksContainer = () => {
       
       {viewType === 'kanban' && (
         <KanbanView 
-          tasks={activeTasks}
+          tasks={filteredTasks}
           onTaskUpdate={loadTasks}
           onComplete={markTaskComplete}
           onReminder={openReminderDialog}
@@ -143,7 +147,7 @@ const TasksContainer = () => {
       
       {viewType === 'calendar' && (
         <CalendarView 
-          tasks={activeTasks}
+          tasks={filteredTasks}
           onTaskUpdate={loadTasks}
           onComplete={markTaskComplete}
           onReminder={openReminderDialog}
