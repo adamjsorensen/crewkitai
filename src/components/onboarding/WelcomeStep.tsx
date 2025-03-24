@@ -3,7 +3,7 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Button } from '@/components/ui/button';
-import { PaintBucket, Rocket, User, Calendar, Robot, Star } from 'lucide-react';
+import { PaintBucket, Rocket, User, Calendar, Bot, Star } from 'lucide-react';
 
 export const WelcomeStep = () => {
   const { user } = useAuth();
@@ -24,7 +24,7 @@ export const WelcomeStep = () => {
       description: "Set up your Strategic Compass to organize and prioritize your work."
     },
     {
-      icon: <Robot className="h-5 w-5 text-purple-500" />,
+      icon: <Bot className="h-5 w-5 text-purple-500" />,
       title: "Meet Your AI Coach",
       description: "Get tailored business advice from your personal AI advisor."
     },

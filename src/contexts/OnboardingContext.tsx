@@ -84,9 +84,24 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             .single();
 
           if (createError) throw createError;
-          setProgress(newProgress);
+          
+          // Convert the JSONB completed_steps to a string array
+          if (newProgress) {
+            setProgress({
+              ...newProgress,
+              completed_steps: Array.isArray(newProgress.completed_steps) 
+                ? newProgress.completed_steps 
+                : [],
+            });
+          }
         } else {
-          setProgress(progressData);
+          // Convert the JSONB completed_steps to a string array
+          setProgress({
+            ...progressData,
+            completed_steps: Array.isArray(progressData.completed_steps) 
+              ? progressData.completed_steps 
+              : [],
+          });
         }
 
         if (stepsData && stepsData.length > 0) {
@@ -127,7 +142,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (!step) return;
       
       // Update completed steps array
-      const completedSteps = progress.completed_steps || [];
+      const completedSteps = [...progress.completed_steps];
       if (!completedSteps.includes(stepKey)) {
         completedSteps.push(stepKey);
       }
