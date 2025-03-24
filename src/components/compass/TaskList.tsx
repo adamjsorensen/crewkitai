@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Check, Loader2, MoreVertical } from 'lucide-react';
 import {
@@ -63,7 +64,7 @@ const TaskList = ({ tasks, onTaskUpdate }: TaskListProps) => {
           size="sm"
           className="h-8"
           onClick={() => handleComplete(task)}
-          disabled={isCompleting}
+          disabled={!!isCompleting}
         >
           {isCompleting === task.id ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -73,7 +74,6 @@ const TaskList = ({ tasks, onTaskUpdate }: TaskListProps) => {
           Complete
         </Button>
         
-        {/* New reminder action */}
         <TaskReminderDialog task={task} onReminderSet={onTaskUpdate} />
         
         <DropdownMenu>
