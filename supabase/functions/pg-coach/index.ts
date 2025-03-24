@@ -9,6 +9,216 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Define AI settings interface
+interface AISettings {
+  // Core settings
+  systemPrompt: string;
+  temperature: number;
+  maxTokens: number;
+  models: {
+    default: string;
+    think?: string;
+    vision?: string;
+  };
+  // Follow-up settings
+  followUpEnabled: boolean;
+  followUpDefaults: string[];
+  followUpPrompt: string;
+}
+
+// Default AI settings if database values aren't available
+const defaultSettings: AISettings = {
+  systemPrompt: `You are the PainterGrowth Coach, an AI assistant specialized in helping painting professionals grow their businesses. 
+You provide expert advice tailored to the painting industry, addressing challenges like pricing jobs, managing clients, 
+leading crews, and implementing effective marketing strategies.
+
+Your responses should be:
+- Practical and actionable, with clear steps
+- Tailored to the painting industry context
+- Professional but conversational in tone
+- Concise but comprehensive`,
+  temperature: 0.7,
+  maxTokens: 1000,
+  models: {
+    default: "gpt-4o-mini",
+    think: "gpt-4o",
+    vision: "gpt-4o"
+  },
+  followUpEnabled: true,
+  followUpDefaults: [
+    "How do I price a job properly?",
+    "What marketing strategies work best for painters?",
+    "How can I improve my crew's efficiency?",
+    "What should I include in my contracts?"
+  ],
+  followUpPrompt: "After each response, suggest 2-3 follow-up questions that would be useful for the user to continue the conversation."
+};
+
+// Function to load AI settings from the database
+async function loadAISettings(supabaseAdmin: any): Promise<AISettings> {
+  console.log("[pg-coach] Loading all AI settings from database");
+  
+  try {
+    const { data: settingsData, error: settingsError } = await supabaseAdmin
+      .from("ai_settings")
+      .select("name, value")
+      .in("name", [
+        "ai_coach_system_prompt",
+        "ai_coach_temperature", 
+        "ai_coach_max_tokens",
+        "ai_coach_models",
+        "ai_coach_follow_up_enabled", 
+        "ai_coach_follow_up_defaults", 
+        "ai_coach_follow_up_prompt"
+      ]);
+      
+    if (settingsError) {
+      console.error("[pg-coach] Error loading settings:", settingsError);
+      return defaultSettings;
+    }
+    
+    if (!settingsData || settingsData.length === 0) {
+      console.log("[pg-coach] No settings found in database, using defaults");
+      return defaultSettings;
+    }
+    
+    console.log("[pg-coach] Settings loaded:", settingsData);
+    
+    // Start with default settings
+    const settings: AISettings = { ...defaultSettings };
+    
+    // Process each setting
+    for (const setting of settingsData) {
+      try {
+        if (setting.name === "ai_coach_system_prompt") {
+          settings.systemPrompt = JSON.parse(setting.value);
+        } 
+        else if (setting.name === "ai_coach_temperature") {
+          const tempValue = parseFloat(JSON.parse(setting.value));
+          if (!isNaN(tempValue) && tempValue >= 0 && tempValue <= 1) {
+            settings.temperature = tempValue;
+          }
+        } 
+        else if (setting.name === "ai_coach_max_tokens") {
+          const tokenValue = parseInt(JSON.parse(setting.value));
+          if (!isNaN(tokenValue) && tokenValue > 0) {
+            settings.maxTokens = tokenValue;
+          }
+        } 
+        else if (setting.name === "ai_coach_models") {
+          try {
+            const models = JSON.parse(setting.value);
+            if (models && typeof models === 'object') {
+              settings.models = {
+                default: models.default || defaultSettings.models.default,
+                think: models.think || defaultSettings.models.think,
+                vision: models.vision || defaultSettings.models.vision
+              };
+            }
+          } catch (e) {
+            console.error("[pg-coach] Error parsing models setting:", e);
+          }
+        } 
+        else if (setting.name === "ai_coach_follow_up_enabled") {
+          settings.followUpEnabled = JSON.parse(setting.value) === "true";
+        } 
+        else if (setting.name === "ai_coach_follow_up_defaults") {
+          try {
+            const parsedDefaults = JSON.parse(setting.value);
+            if (Array.isArray(parsedDefaults)) {
+              settings.followUpDefaults = parsedDefaults;
+            }
+          } catch (e) {
+            console.error("[pg-coach] Error parsing follow-up defaults:", e);
+          }
+        } 
+        else if (setting.name === "ai_coach_follow_up_prompt") {
+          settings.followUpPrompt = JSON.parse(setting.value);
+        }
+      } catch (e) {
+        console.error(`[pg-coach] Error processing setting ${setting.name}:`, e);
+      }
+    }
+    
+    console.log("[pg-coach] Processed settings:", {
+      systemPromptLength: settings.systemPrompt.length,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      defaultModel: settings.models.default,
+      thinkModel: settings.models.think,
+      visionModel: settings.models.vision,
+      followUpEnabled: settings.followUpEnabled,
+      followUpDefaultsCount: settings.followUpDefaults.length,
+      followUpPromptLength: settings.followUpPrompt.length
+    });
+    
+    return settings;
+  } catch (error) {
+    console.error("[pg-coach] Unexpected error loading settings:", error);
+    return defaultSettings;
+  }
+}
+
+// Extract follow-up questions from AI response
+function extractFollowUpQuestions(response: string, defaultQuestions: string[]): string[] {
+  const suggestedFollowUps: string[] = [];
+  
+  try {
+    // Try to find a section with numbered questions (1. Question? format)
+    const lines = response.split('\n');
+    let foundQuestionSection = false;
+    
+    for (const line of lines) {
+      // Check for numbered questions
+      const questionMatch = line.match(/^\d+\.\s+(.*\?)/);
+      if (questionMatch && questionMatch[1]) {
+        suggestedFollowUps.push(questionMatch[1]);
+        foundQuestionSection = true;
+      }
+      // If we've found questions but now we're at a line that isn't a question, we're done
+      else if (foundQuestionSection && line.trim() !== '') {
+        break;
+      }
+    }
+    
+    // If no questions were found, look for bulleted questions
+    if (suggestedFollowUps.length === 0) {
+      for (const line of lines) {
+        const bulletMatch = line.match(/^[\-\*•]\s+(.*\?)/);
+        if (bulletMatch && bulletMatch[1]) {
+          suggestedFollowUps.push(bulletMatch[1]);
+        }
+      }
+    }
+    
+    // If still no questions, check for quoted questions
+    if (suggestedFollowUps.length === 0) {
+      const quotedQuestions = response.match(/"([^"]*\?)"|\*([^*]*\?)\*/g);
+      if (quotedQuestions) {
+        quotedQuestions.forEach(q => {
+          const cleaned = q.replace(/["*]/g, '').trim();
+          if (cleaned.endsWith('?')) {
+            suggestedFollowUps.push(cleaned);
+          }
+        });
+      }
+    }
+    
+    // If still no questions found, use the defaults
+    if (suggestedFollowUps.length === 0 && defaultQuestions.length > 0) {
+      // Randomly select up to 3 questions from the defaults
+      const shuffled = [...defaultQuestions].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, 3);
+    }
+    
+    // Limit to 3 questions max
+    return suggestedFollowUps.slice(0, 3);
+  } catch (error) {
+    console.error("[pg-coach] Error extracting follow-up questions:", error);
+    return defaultQuestions.slice(0, 3);
+  }
+}
+
 serve(async (req) => {
   console.log("[pg-coach] Function invoked:", {
     method: req.method,
@@ -97,74 +307,15 @@ serve(async (req) => {
     const userId = user.id;
     console.log("[pg-coach] User authenticated:", { userId });
     
-    // Load settings from the database
-    console.log("[pg-coach] Loading AI settings from database");
-    const { data: settingsData, error: settingsError } = await supabaseAdmin
-      .from("ai_settings")
-      .select("name, value")
-      .in("name", [
-        "ai_coach_follow_up_enabled", 
-        "ai_coach_follow_up_defaults", 
-        "ai_coach_follow_up_prompt"
-      ]);
-      
-    if (settingsError) {
-      console.error("[pg-coach] Error loading settings:", settingsError);
-    }
+    // Load AI settings from the database
+    const settings = await loadAISettings(supabaseAdmin);
     
-    // Default settings
-    let followUpEnabled = true;
-    let followUpDefaults = [
-      "How do I price a job properly?",
-      "What marketing strategies work best for painters?",
-      "How can I improve my crew's efficiency?",
-      "What should I include in my contracts?"
-    ];
-    let followUpPrompt = "After each response, suggest 2-3 follow-up questions that would be useful for the user to continue the conversation.";
-    
-    // Process settings if available
-    if (settingsData && settingsData.length > 0) {
-      for (const setting of settingsData) {
-        if (setting.name === "ai_coach_follow_up_enabled") {
-          followUpEnabled = setting.value === "true";
-        } else if (setting.name === "ai_coach_follow_up_defaults") {
-          try {
-            const parsed = typeof setting.value === 'string' 
-              ? JSON.parse(setting.value) 
-              : setting.value;
-              
-            if (Array.isArray(parsed)) {
-              followUpDefaults = parsed;
-            }
-          } catch (e) {
-            console.error("[pg-coach] Error parsing follow-up defaults:", e);
-          }
-        } else if (setting.name === "ai_coach_follow_up_prompt") {
-          followUpPrompt = setting.value;
-        }
-      }
-    }
-    
-    console.log("[pg-coach] Follow-up settings:", {
-      enabled: followUpEnabled,
-      defaultsCount: followUpDefaults.length,
-      prompt: followUpPrompt.substring(0, 50) + (followUpPrompt.length > 50 ? '...' : '')
-    });
-    
-    // System prompt for the AI assistant
-    let systemPrompt = `You are the PainterGrowth Coach, an AI assistant specialized in helping painting professionals grow their businesses. 
-You provide expert advice tailored to the painting industry, addressing challenges like pricing jobs, managing clients, 
-leading crews, and implementing effective marketing strategies.
-
-Your responses should be:
-- Practical and actionable, with clear steps
-- Tailored to the painting industry context
-- Professional but conversational in tone
-- Concise but comprehensive`;
+    // Build the system prompt
+    let systemPrompt = settings.systemPrompt;
 
     // Add follow-up question instruction if enabled
-    if (followUpEnabled) {
-      systemPrompt += `\n\n${followUpPrompt}`;
+    if (settings.followUpEnabled) {
+      systemPrompt += `\n\n${settings.followUpPrompt}`;
     }
 
     // Build the conversation history for context
@@ -214,11 +365,20 @@ Your responses should be:
       });
     }
     
-    // If an image was provided, use the Vision model and include the image in the message
-    let model = "gpt-4o-mini";
+    // Determine which model to use based on settings
+    let model = settings.models.default;
+    
+    // If thinking mode, use the think model if available
+    if (isThinkMode && settings.models.think) {
+      model = settings.models.think;
+    }
+    
+    // If an image was provided, use the vision model and include the image in the message
     if (imageUrl) {
       console.log("[pg-coach] Image provided, using vision model");
-      model = "gpt-4o"; // Use vision model
+      // Use vision model if configured, otherwise use default
+      model = settings.models.vision || "gpt-4o";
+      
       // Replace the last user message with one that includes the image
       messages[messages.length-1] = {
         role: "user",
@@ -232,8 +392,8 @@ Your responses should be:
     console.log("[pg-coach] Calling OpenAI API:", {
       model,
       messageCount: messages.length,
-      temperature: 0.7,
-      maxTokens: 1000
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens
     });
     
     // Call the OpenAI API
@@ -246,8 +406,8 @@ Your responses should be:
       body: JSON.stringify({
         model: model,
         messages: messages,
-        temperature: 0.7,
-        max_tokens: 1000,
+        temperature: settings.temperature,
+        max_tokens: settings.maxTokens,
       }),
     });
     
@@ -268,23 +428,9 @@ Your responses should be:
     const aiResponse = responseData.choices[0]?.message?.content || '';
     
     // Extract suggested follow-up questions if enabled
-    const suggestedFollowUps: string[] = [];
-    
-    if (followUpEnabled) {
-      const lines = aiResponse.split('\n');
-      for (const line of lines) {
-        // Look for numbered questions at the end of the response
-        const questionMatch = line.match(/^\d+\.\s+(.*\?)/);
-        if (questionMatch && questionMatch[1]) {
-          suggestedFollowUps.push(questionMatch[1]);
-        }
-      }
-      
-      // If no follow-ups were found, use defaults
-      if (suggestedFollowUps.length === 0 && followUpDefaults.length > 0) {
-        followUpDefaults.forEach(q => suggestedFollowUps.push(q));
-      }
-    }
+    const suggestedFollowUps = settings.followUpEnabled 
+      ? extractFollowUpQuestions(aiResponse, settings.followUpDefaults)
+      : [];
     
     console.log("[pg-coach] Extracted follow-up suggestions:", {
       count: suggestedFollowUps.length,
