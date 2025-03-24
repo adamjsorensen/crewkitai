@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { Compass, Bot, Check, ArrowRight, PaintBucket, Lightbulb, Award } from 'lucide-react';
 
 export const FeaturesIntroStep = () => {
@@ -25,12 +25,14 @@ export const FeaturesIntroStep = () => {
     {
       icon: <Award className="h-10 w-10 text-green-500" />,
       title: "Financial Clarity",
-      description: "Track job profitability, monitor expenses, and get financial insights to make better business decisions."
+      description: "Track job profitability, monitor expenses, and get financial insights to make better business decisions.",
+      comingSoon: true
     },
     {
       icon: <PaintBucket className="h-10 w-10 text-primary" />,
       title: "Content Generation",
-      description: "Create professional emails, proposals, and job ads tailored to the painting industry with just a few clicks."
+      description: "Create professional emails, proposals, and job ads tailored to the painting industry with just a few clicks.",
+      comingSoon: true
     }
   ];
   
@@ -74,11 +76,28 @@ export const FeaturesIntroStep = () => {
               <div key={i} className="bg-slate-50 border rounded-lg p-6">
                 <div className="flex flex-col items-center text-center">
                   <div className="mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold">{feature.title}</h3>
+                    {feature.comingSoon && (
+                      <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                        Coming Soon
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-muted-foreground">{feature.description}</p>
                 </div>
               </div>
             ))}
+          </div>
+          
+          <div className="flex justify-center mt-8">
+            <Button
+              size="lg"
+              onClick={() => setActiveTab('compass')}
+              className="flex items-center gap-2"
+            >
+              Next: Strategic Compass <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
         </TabsContent>
         
@@ -154,27 +173,15 @@ export const FeaturesIntroStep = () => {
           
           <div className="flex justify-center">
             <Button
-              variant="outline"
+              size="lg"
+              onClick={() => completeStep('feature_tour')}
               className="flex items-center gap-2"
-              onClick={() => {
-                setActiveTab("overview");
-              }}
             >
-              Back to Overview
+              Continue to Dashboard
             </Button>
           </div>
         </TabsContent>
       </Tabs>
-      
-      <div className="flex justify-center mt-8">
-        <Button
-          size="lg"
-          onClick={() => completeStep('feature_tour')}
-          className="flex items-center gap-2"
-        >
-          Continue
-        </Button>
-      </div>
     </div>
   );
 };
