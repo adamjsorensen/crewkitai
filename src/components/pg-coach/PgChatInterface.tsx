@@ -91,8 +91,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       // Then transition to chat UI
       setHasStartedChat(true);
       
-      // Removed forced scroll to bottom for first message
-      
       // Then handle API call after UI has updated
       setTimeout(() => {
         apiSendMessage(messageText, imageFile);
@@ -157,8 +155,6 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       setMessages([welcomeMessage, userMessage, placeholderMessage]);
       setHasStartedChat(true);
       
-      // Removed forced scroll to bottom for first example
-      
       // Then handle API call
       setTimeout(() => {
         apiSendMessage(question);
@@ -213,7 +209,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
       </div>
       
       {/* Scrollable message area with flex-1 to take available space */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         <PgMessageList
           messages={messages}
           isLoading={isLoading || isLoadingHistory}
@@ -228,7 +224,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         />
       </div>
       
-      {/* Sticky footer */}
+      {/* Sticky input at the bottom */}
       <div className="sticky bottom-0 z-10">
         <PgChatInput 
           onSendMessage={handleSendMessage} 

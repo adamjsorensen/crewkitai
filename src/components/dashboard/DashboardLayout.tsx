@@ -16,7 +16,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     <div className="flex min-h-screen w-full overflow-hidden">
       <CollapsibleSidebar />
       <div className="flex-1 flex flex-col ml-[4.5rem] transition-all duration-300">
-        <main className={`flex-1 p-4 ${isMobile ? 'pb-16' : 'pb-20'} bg-background overflow-hidden`}>
+        <main className="flex-1 p-4 bg-background overflow-hidden">
           {children}
         </main>
       </div>

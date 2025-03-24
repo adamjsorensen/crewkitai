@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { SendIcon, ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';

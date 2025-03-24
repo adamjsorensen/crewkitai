@@ -48,10 +48,9 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
   return (
     <div
       ref={messagesContainerRef}
-      className="h-full overflow-y-auto pb-1 px-2.5 scroll-smooth"
-      onScroll={() => console.log('[PgMessageList] Container scrolled')}
+      className="h-full overflow-y-auto py-2 px-2.5 scroll-smooth"
     >
-      <div className="max-w-3xl mx-auto space-y-1.5 mt-1">
+      <div className="max-w-3xl mx-auto space-y-1.5">
         {messages.length === 0 && (
           <div className="p-1.5 text-center text-muted-foreground text-sm">
             No messages yet. Start a conversation!
@@ -107,7 +106,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         
         {/* Show suggested follow-ups */}
         {messages.length > 0 && !isLoading && (
-          <div className="pt-0.5">
+          <div className="pt-0.5 mb-10">
             {messages[messages.length - 1].role === 'assistant' && 
              messages[messages.length - 1].suggestedFollowUps && 
              messages[messages.length - 1].suggestedFollowUps.length > 0 && (
@@ -135,9 +134,9 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         <div ref={messagesEndRef} className="h-1" />
       </div>
       
-      {/* Scroll button */}
+      {/* Scroll button - fixed positioning and high z-index */}
       {showScrollButton && (
-        <div className="fixed bottom-[70px] left-0 right-0 w-full flex justify-center items-center z-10">
+        <div className="fixed bottom-20 right-4 w-auto z-50">
           <Button
             variant="default"
             size="sm"
