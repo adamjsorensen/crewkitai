@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === 'development' &&
-    componentTagger({ name: "CrewkitAI" }),
+    componentTagger(), // Removed the argument since it's not expected
   ].filter(Boolean),
   resolve: {
     alias: {
