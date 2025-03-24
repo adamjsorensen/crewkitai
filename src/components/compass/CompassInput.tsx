@@ -17,7 +17,7 @@ const CompassInput: React.FC<CompassInputProps> = ({ onPlanCreated, onTasksGener
   });
   
   return (
-    <Card className="w-full border-2 border-primary/10 shadow-md compass-input-card">
+    <Card className="w-full border-2 border-primary/10 shadow-md">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center text-2xl text-primary">
           Strategic Planner

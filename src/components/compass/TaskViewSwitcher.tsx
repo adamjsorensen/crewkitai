@@ -16,7 +16,7 @@ const TaskViewSwitcher: React.FC = () => {
   };
 
   return (
-    <div className="mb-4 task-view-switcher">
+    <div className="mb-4">
       <Tabs value={viewType} onValueChange={handleViewChange} className="w-full">
         <TabsList className="grid grid-cols-3 w-full max-w-xs">
           <TabsTrigger value="list" className="flex items-center gap-2">
