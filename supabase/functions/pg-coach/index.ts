@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1';
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import 'https://deno.land/x/xhr@0.3.0/mod.ts';
@@ -392,22 +391,26 @@ serve(async (req) => {
     console.log("[pg-coach] Calling OpenAI API:", {
       model,
       messageCount: messages.length,
-      temperature: settings.temperature,
+      temperature: isThinkMode ? "N/A" : settings.temperature,
       maxCompletionTokens: settings.maxTokens,
     });
     
-    // Prepare the OpenAI API request body
-    const openAIRequestBody = {
+    // Prepare the OpenAI API request body - conditionally add temperature parameter
+    const openAIRequestBody: any = {
       model: model,
       messages: messages,
-      temperature: settings.temperature,
-      max_completion_tokens: settings.maxTokens, // Using max_completion_tokens instead of max_tokens
+      max_completion_tokens: settings.maxTokens,
     };
+    
+    // Only add temperature parameter for non-think mode
+    if (!isThinkMode) {
+      openAIRequestBody.temperature = settings.temperature;
+    }
     
     console.log("[pg-coach] OpenAI request payload:", {
       model: openAIRequestBody.model,
       messagesCount: openAIRequestBody.messages.length,
-      temperature: openAIRequestBody.temperature,
+      temperature: isThinkMode ? "N/A" : openAIRequestBody.temperature,
       max_completion_tokens: openAIRequestBody.max_completion_tokens
     });
     
