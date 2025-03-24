@@ -45,7 +45,7 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcess
           <div className="relative">
             <Textarea
               placeholder="What do you need to get done? Enter one or more tasks..."
-              className="min-h-[120px] text-base p-4 focus-visible:ring-primary/40 compass-input-textarea"
+              className="min-h-[120px] text-base p-4 focus-visible:ring-primary/40"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={isProcessing}
@@ -67,7 +67,7 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcess
             </TooltipProvider>
           </div>
           
-          <div className="bg-muted/30 rounded-md p-3 compass-examples">
+          <div className="bg-muted/30 rounded-md p-3">
             <div className="flex items-center text-sm text-muted-foreground mb-2">
               <Sparkles className="h-3.5 w-3.5 mr-1.5 text-primary" />
               <span>Need inspiration? Try these examples:</span>
@@ -94,7 +94,7 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcess
         <Button 
           type="submit" 
           disabled={isProcessing || !input.trim()}
-          className="flex items-center gap-2 px-4 compass-submit-button"
+          className="flex items-center gap-2 px-4"
         >
           {isProcessing ? (
             <>
