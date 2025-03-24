@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrainCircuit, FileText, DollarSign, Calendar, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useCompassTasks } from "@/hooks/useCompassTasks";
 import { Skeleton } from "@/components/ui/skeleton";
-import StatCard from "@/components/financial/StatCard";
+import RecentChats from "@/components/pg-coach/RecentChats";
 
 const DashboardHome = () => {
   const { user, profile } = useAuth();
@@ -28,40 +28,6 @@ const DashboardHome = () => {
     }
   }, [hasOnboarded, loadTasks]);
 
-  // Stats for the dashboard
-  const stats = [
-    {
-      title: "AI Coach",
-      value: "24/7",
-      description: "Access to personalized advice",
-      icon: BrainCircuit,
-      color: "text-blue-500",
-    },
-    {
-      title: "Strategic Planner",
-      value: hasOnboarded ? `${activeTasks.length}` : "Setup",
-      description: hasOnboarded 
-        ? `${activeTasks.length} active task${activeTasks.length !== 1 ? 's' : ''}` 
-        : "Organize your priorities",
-      icon: Calendar,
-      color: "text-green-500",
-    },
-    {
-      title: "Content Generator",
-      value: "10+",
-      description: "Templates available",
-      icon: FileText,
-      color: "text-amber-500",
-    },
-    {
-      title: "Financial Clarity",
-      value: "$0",
-      description: "Start monitoring your finances",
-      icon: DollarSign,
-      color: "text-purple-500",
-    },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Personalized Welcome Section */}
@@ -74,34 +40,10 @@ const DashboardHome = () => {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card 
-            key={stat.title} 
-            className="card-hover cursor-pointer transition-all hover:shadow-md"
-            onClick={() => {
-              if (stat.title === "AI Coach") navigate("/dashboard/ai-coach");
-              else if (stat.title === "Strategic Planner") navigate("/dashboard/compass");
-              else if (stat.title === "Content Generator") navigate("/dashboard/content");
-              else if (stat.title === "Financial Clarity") navigate("/dashboard/financial");
-            }}
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={cn("h-5 w-5", stat.color)} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">{stat.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Priority Tasks Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
+      {/* Main Content Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Priority Tasks Section */}
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Priority Tasks</span>
@@ -128,7 +70,7 @@ const DashboardHome = () => {
                   onClick={() => navigate("/dashboard/compass")}
                   className="bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors mx-auto"
                 >
-                  <Calendar className="h-5 w-5" />
+                  <ArrowRight className="h-5 w-5" />
                   Set Up Strategic Compass
                 </button>
               </div>
@@ -145,7 +87,7 @@ const DashboardHome = () => {
                   onClick={() => navigate("/dashboard/compass")}
                   className="bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors mx-auto"
                 >
-                  <Calendar className="h-5 w-5" />
+                  <ArrowRight className="h-5 w-5" />
                   Create New Tasks
                 </button>
               </div>
@@ -189,42 +131,8 @@ const DashboardHome = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks you might want to perform</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <button 
-              onClick={() => navigate("/dashboard/ai-coach")}
-              className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors"
-            >
-              <BrainCircuit className="h-5 w-5" />
-              Ask AI Coach a Question
-            </button>
-            <button 
-              onClick={() => navigate("/dashboard/content")}
-              className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors"
-            >
-              <FileText className="h-5 w-5" />
-              Generate New Content
-            </button>
-            <button 
-              onClick={() => navigate("/dashboard/financial")}
-              className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors"
-            >
-              <DollarSign className="h-5 w-5" />
-              Track a New Expense
-            </button>
-            <button 
-              onClick={() => navigate("/dashboard/compass")}
-              className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors"
-            >
-              <CheckCircle2 className="h-5 w-5" />
-              Complete a Task
-            </button>
-          </CardContent>
-        </Card>
+        {/* Recent Chats Section */}
+        <RecentChats />
       </div>
     </div>
   );
