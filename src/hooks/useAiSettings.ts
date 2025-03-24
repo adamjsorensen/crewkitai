@@ -23,7 +23,9 @@ export const useAiSettings = () => {
           "ai_coach_models",
           "ai_coach_follow_up_enabled",
           "ai_coach_follow_up_defaults",
-          "ai_coach_follow_up_prompt"
+          "ai_coach_follow_up_prompt",
+          "compass_ai_enabled",
+          "compass_ai_system_prompt"
         ]);
       
       if (error) throw error;
@@ -107,7 +109,7 @@ export const useSaveAiSettings = () => {
             setIsSaving(false);
             return false;
           }
-        } else if (key === 'ai_coach_follow_up_enabled') {
+        } else if (key === 'ai_coach_follow_up_enabled' || key === 'compass_ai_enabled') {
           // For boolean values stored as strings, just pass as is
           processedValue = value;
         } else {
@@ -117,15 +119,38 @@ export const useSaveAiSettings = () => {
         
         console.log(`Updating setting ${key}:`, processedValue);
         
-        // Update the setting
-        const { error } = await supabase
+        // Check if the setting already exists
+        const { data: existingData, error: checkError } = await supabase
           .from("ai_settings")
-          .update({ value: processedValue })
+          .select("name")
           .eq("name", key);
+          
+        if (checkError) {
+          console.error(`Error checking if ${key} exists:`, checkError);
+          throw checkError;
+        }
         
-        if (error) {
-          console.error(`Error updating ${key}:`, error);
-          throw error;
+        if (existingData && existingData.length > 0) {
+          // Update existing setting
+          const { error } = await supabase
+            .from("ai_settings")
+            .update({ value: processedValue })
+            .eq("name", key);
+          
+          if (error) {
+            console.error(`Error updating ${key}:`, error);
+            throw error;
+          }
+        } else {
+          // Insert new setting
+          const { error } = await supabase
+            .from("ai_settings")
+            .insert({ name: key, value: processedValue });
+          
+          if (error) {
+            console.error(`Error inserting ${key}:`, error);
+            throw error;
+          }
         }
       }
       

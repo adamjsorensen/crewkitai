@@ -14,12 +14,14 @@ import ContentManagement from "./settings/ContentManagement";
 import SaveButton from "./settings/SaveButton";
 import LoadingSpinner from "./settings/LoadingSpinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare, AlertTriangle, HelpCircle } from "lucide-react";
+import { Settings, MessageSquare, AlertTriangle, HelpCircle, Compass } from "lucide-react";
 import WelcomeContentManagement from "./settings/WelcomeContentManagement";
 import ContentFilters from "./settings/ContentFilters";
 import FollowUpQuestionsField from "./settings/FollowUpQuestionsField";
 import FollowUpPromptField from "./settings/FollowUpPromptField";
 import { useToast } from "@/hooks/use-toast";
+import CompassAiEnabledField from "./settings/CompassAiEnabledField";
+import CompassSystemPromptField from "./settings/CompassSystemPromptField";
 
 const AiSettingsForm = () => {
   const [activeTab, setActiveTab] = React.useState("model-settings");
@@ -43,6 +45,8 @@ const AiSettingsForm = () => {
         "What should I include in my contracts?"
       ], null, 2),
       ai_coach_follow_up_prompt: "After your response, suggest 2-3 follow-up questions that would be helpful for the user to continue the conversation.",
+      compass_ai_enabled: "true",
+      compass_ai_system_prompt: `You are a strategic planning assistant for a painting business. Your job is to extract tasks from the user's input, prioritize them, and suggest due dates.`,
     },
   });
   
@@ -93,6 +97,10 @@ const AiSettingsForm = () => {
               <AlertTriangle className="h-4 w-4" />
               <span>Content Filters</span>
             </TabsTrigger>
+            <TabsTrigger value="compass-settings" className="flex items-center gap-1.5">
+              <Compass className="h-4 w-4" />
+              <span>Compass</span>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="model-settings">
@@ -130,6 +138,18 @@ const AiSettingsForm = () => {
           
           <TabsContent value="content-filters">
             <ContentFilters />
+          </TabsContent>
+          
+          <TabsContent value="compass-settings">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <CompassAiEnabledField form={form} />
+                
+                <CompassSystemPromptField form={form} />
+                
+                <SaveButton isSaving={isSaving} />
+              </form>
+            </Form>
           </TabsContent>
         </Tabs>
       </CardContent>

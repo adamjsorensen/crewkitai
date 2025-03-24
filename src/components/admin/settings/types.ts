@@ -34,6 +34,10 @@ export const aiSettingsFormSchema = z.object({
   ai_coach_follow_up_prompt: z.string().min(10, {
     message: "Follow-up prompt must be at least 10 characters",
   }),
+  compass_ai_enabled: z.string(),
+  compass_ai_system_prompt: z.string().min(10, {
+    message: "System prompt must be at least 10 characters",
+  }).optional(),
 });
 
 // Type for form values
