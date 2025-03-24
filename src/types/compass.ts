@@ -16,11 +16,13 @@ export type CompassPlan = {
   updated_at: string;
 };
 
+export type CompassPriority = 'High' | 'Medium' | 'Low';
+
 export type CompassTask = {
   id: string;
   plan_id: string;
   task_text: string;
-  priority: 'High' | 'Medium' | 'Low';
+  priority: CompassPriority;
   reasoning?: string;
   due_date?: string;
   completed_at?: string;
@@ -46,14 +48,6 @@ export type CompassClarification = {
   updated_at: string;
 };
 
-export type CompassPriorityRule = {
-  id: string;
-  keyword: string;
-  priority: 'High' | 'Medium' | 'Low';
-  created_at: string;
-  updated_at: string;
-};
-
 export type CompassTaskDisplay = CompassTask & {
   clarification?: CompassClarification;
 };
@@ -62,7 +56,7 @@ export type CompassAnalyzeResponse = {
   plan_id: string;
   tasks: Array<{
     task_text: string;
-    priority: 'High' | 'Medium' | 'Low';
+    priority: CompassPriority;
     reasoning: string;
     due_date?: string;
     needs_clarification?: boolean;

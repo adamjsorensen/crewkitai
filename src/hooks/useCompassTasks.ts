@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CompassTaskDisplay, CompassAnalyzeResponse } from '@/types/compass';
+import { CompassTaskDisplay, CompassAnalyzeResponse, CompassPriority } from '@/types/compass';
 
 export const useCompassTasks = () => {
   const [activeTasks, setActiveTasks] = useState<CompassTaskDisplay[]>([]);
@@ -113,9 +113,17 @@ export const useCompassTasks = () => {
       const completedTasksList: CompassTaskDisplay[] = [];
 
       for (const task of tasksData) {
+        // Validate and cast priority to ensure it matches our type
+        const priority = task.priority as CompassPriority;
+        if (!['High', 'Medium', 'Low'].includes(priority)) {
+          console.error(`Invalid priority value: ${priority}`);
+          continue;
+        }
+
         // Process clarifications array into single object since we only expect one per task
         const taskWithSingleClarification: CompassTaskDisplay = {
           ...task,
+          priority,  // Use the validated priority
           clarification: task.clarification && task.clarification.length > 0 
             ? task.clarification[0] 
             : undefined
