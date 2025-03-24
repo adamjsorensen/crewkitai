@@ -32,30 +32,52 @@ const UsersPage = () => {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log("Fetching users...");
+      
+      // First get all profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("*, user_roles(role)")
+        .select("*")
         .order("full_name");
 
-      if (error) {
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
         toast({
           title: "Error fetching users",
-          description: error.message,
+          description: profilesError.message,
           variant: "destructive",
         });
         return [];
       }
 
-      // Transform the data structure to match our User type
-      return data.map((profile: any) => ({
-        id: profile.id,
-        full_name: profile.full_name,
-        company_name: profile.company_name,
-        email: profile.email,
-        role: profile.user_roles && profile.user_roles.length > 0 
-          ? profile.user_roles[0].role 
-          : 'user'
-      }));
+      console.log("Profiles fetched:", profiles);
+
+      // For each profile, get their role from user_roles
+      const usersWithRoles = await Promise.all(
+        profiles.map(async (profile) => {
+          const { data: roleData, error: roleError } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", profile.id)
+            .maybeSingle();
+
+          if (roleError) {
+            console.error(`Error fetching role for user ${profile.id}:`, roleError);
+          }
+
+          // Transform to match our User type
+          return {
+            id: profile.id,
+            full_name: profile.full_name || "",
+            company_name: profile.company_name || "",
+            email: profile.email || "",
+            role: roleData?.role || "user" // Default to 'user' if no role found
+          } as User;
+        })
+      );
+
+      console.log("Users with roles:", usersWithRoles);
+      return usersWithRoles;
     },
   });
 
