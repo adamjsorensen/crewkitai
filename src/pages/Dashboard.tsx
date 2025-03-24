@@ -18,17 +18,12 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-blue-50">
         <div className="w-full max-w-4xl p-6 space-y-6">
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-6 w-full" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => (
-              <Skeleton key={i} className="h-36 w-full rounded-xl" />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Skeleton className="h-64 md:col-span-2 rounded-xl" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-64 rounded-xl" />
             <Skeleton className="h-64 rounded-xl" />
           </div>
         </div>
@@ -38,7 +33,7 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="container max-w-6xl mx-auto py-4">
+      <div className="container max-w-6xl mx-auto py-8 px-4">
         <DashboardHome />
       </div>
     </DashboardLayout>

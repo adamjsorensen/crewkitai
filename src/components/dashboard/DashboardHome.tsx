@@ -29,11 +29,11 @@ const DashboardHome = () => {
   }, [hasOnboarded, loadTasks]);
 
   return (
-    <div className="space-y-6">
-      {/* Personalized Welcome Section */}
-      <div className="space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">{greeting}, {profile?.full_name?.split(' ')[0] || 'Painter'}</h2>
-        <p className="text-muted-foreground">
+    <div className="space-y-8">
+      {/* Hero Section with Personalized Welcome */}
+      <div className="p-6 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 shadow-sm">
+        <h2 className="text-3xl font-bold tracking-tight text-gradient">{greeting}, {profile?.full_name?.split(' ')[0] || 'Painter'}</h2>
+        <p className="text-muted-foreground mt-2 max-w-3xl">
           {profile?.company_name 
             ? `Welcome to CrewkitAI, your painting business assistant for ${profile.company_name}.` 
             : "Welcome to CrewkitAI, your all-in-one platform for managing your painting business."}
@@ -41,11 +41,11 @@ const DashboardHome = () => {
       </div>
 
       {/* Main Content Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
         {/* Priority Tasks Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+        <Card className="overflow-hidden border-blue-100 shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent border-b border-blue-100 pb-4">
+            <CardTitle className="flex items-center justify-between text-xl">
               <span>Priority Tasks</span>
               <button 
                 onClick={() => navigate("/dashboard/compass")}
@@ -56,7 +56,7 @@ const DashboardHome = () => {
             </CardTitle>
             <CardDescription>Your most important tasks from Strategic Compass</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-5">
             {hasOnboarded === null ? (
               <div className="space-y-4">
                 <Skeleton className="h-12 w-full" />
@@ -64,11 +64,14 @@ const DashboardHome = () => {
                 <Skeleton className="h-12 w-full" />
               </div>
             ) : hasOnboarded === false ? (
-              <div className="text-center py-6">
+              <div className="text-center py-8">
+                <div className="bg-blue-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <ArrowRight className="h-8 w-8 text-primary opacity-80" />
+                </div>
                 <p className="text-muted-foreground mb-4">You haven't set up Strategic Compass yet</p>
                 <button 
                   onClick={() => navigate("/dashboard/compass")}
-                  className="bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors mx-auto"
+                  className="bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors mx-auto"
                 >
                   <ArrowRight className="h-5 w-5" />
                   Set Up Strategic Compass
@@ -81,26 +84,29 @@ const DashboardHome = () => {
                 <Skeleton className="h-12 w-full" />
               </div>
             ) : activeTasks.length === 0 ? (
-              <div className="text-center py-6">
+              <div className="text-center py-8">
+                <div className="bg-blue-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <ArrowRight className="h-8 w-8 text-primary opacity-80" />
+                </div>
                 <p className="text-muted-foreground mb-4">You don't have any active tasks</p>
                 <button 
                   onClick={() => navigate("/dashboard/compass")}
-                  className="bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded flex items-center gap-2 transition-colors mx-auto"
+                  className="bg-primary/10 hover:bg-primary/20 text-primary font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors mx-auto"
                 >
                   <ArrowRight className="h-5 w-5" />
                   Create New Tasks
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {activeTasks.slice(0, 5).map((task) => (
                   <div 
                     key={task.id} 
-                    className="p-3 border rounded-md hover:bg-muted/50 transition-colors cursor-pointer flex items-start gap-3"
+                    className="p-4 border border-blue-100 rounded-lg hover:bg-blue-50/50 transition-colors cursor-pointer flex items-start gap-3 shadow-sm"
                     onClick={() => navigate("/dashboard/compass")}
                   >
                     <div className={cn(
-                      "h-2 w-2 rounded-full mt-2",
+                      "h-3 w-3 rounded-full mt-1.5 flex-shrink-0",
                       task.priority === "High" ? "bg-red-500" : 
                       task.priority === "Medium" ? "bg-amber-500" : 
                       "bg-green-500"
@@ -110,12 +116,12 @@ const DashboardHome = () => {
                       {task.reasoning && (
                         <p className="text-xs text-muted-foreground mt-1">{task.reasoning}</p>
                       )}
+                      {task.due_date && (
+                        <div className="text-xs text-muted-foreground mt-1.5 bg-blue-50 inline-block px-2 py-0.5 rounded-full">
+                          Due: {new Date(task.due_date).toLocaleDateString()}
+                        </div>
+                      )}
                     </div>
-                    {task.due_date && (
-                      <div className="text-xs text-muted-foreground whitespace-nowrap">
-                        Due: {new Date(task.due_date).toLocaleDateString()}
-                      </div>
-                    )}
                   </div>
                 ))}
                 {activeTasks.length > 5 && (
@@ -131,7 +137,7 @@ const DashboardHome = () => {
           </CardContent>
         </Card>
 
-        {/* Recent Chats Section */}
+        {/* Update RecentChats component reference */}
         <RecentChats />
       </div>
     </div>
