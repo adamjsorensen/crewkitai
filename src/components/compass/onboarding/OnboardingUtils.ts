@@ -3,12 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { CompassUserProfile } from '@/types/compass';
 import { BasicFormValues } from './BasicForm';
 import { DetailsFormValues } from './DetailsForm';
-import { UseToastReturn } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export const saveBasicFormData = async (
   values: BasicFormValues, 
   userId: string, 
-  toast: UseToastReturn['toast']
+  toast: ReturnType<typeof useToast>['toast']
 ): Promise<CompassUserProfile | null> => {
   try {
     let workload: 'High' | 'Medium' | 'Low' = 'Medium';
@@ -79,7 +79,7 @@ export const saveBasicFormData = async (
 export const saveDetailsFormData = async (
   values: DetailsFormValues, 
   userId: string, 
-  toast: UseToastReturn['toast']
+  toast: ReturnType<typeof useToast>['toast']
 ): Promise<CompassUserProfile | null> => {
   try {
     const { data: compassData, error: compassError } = await supabase
