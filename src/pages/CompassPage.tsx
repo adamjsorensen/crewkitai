@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import CompassInput from '@/components/compass/CompassInput';
@@ -6,7 +7,7 @@ import { CompassTask, CompassPriority } from '@/types/compass';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ListChecks, Sparkles, ArrowRight } from 'lucide-react';
 import { useCompassOnboarding } from '@/hooks/tasks/useCompassOnboarding';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -15,10 +16,19 @@ const CompassPage = () => {
   const [tasks, setTasks] = useState<CompassTask[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showOnboardingOverlay, setShowOnboardingOverlay] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const { hasOnboarded } = useCompassOnboarding();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Show onboarding overlay for new users who have completed onboarding
+    // but haven't used the Compass feature yet
+    if (hasOnboarded === true && !localStorage.getItem('compassFeatureIntroSeen')) {
+      setShowOnboardingOverlay(true);
+    }
+  }, [hasOnboarded]);
   
   useEffect(() => {
     if (user && hasOnboarded !== null) {
@@ -99,10 +109,32 @@ const CompassPage = () => {
   const handlePlanCreated = async (planId: string) => {
     setCurrentPlanId(planId);
     await loadTasksForPlan(planId);
+    
+    // Mark feature intro as seen when user creates their first plan
+    if (showOnboardingOverlay) {
+      dismissOnboardingOverlay();
+    }
   };
   
   const handleCompleteTask = async (taskId: string) => {
     try {
+      // Find the task in the current list
+      const taskToComplete = tasks.find(t => t.id === taskId);
+      
+      // Optimistically update UI
+      setTasks(tasks.map(task => 
+        task.id === taskId 
+          ? { ...task, completed_at: new Date().toISOString() } 
+          : task
+      ));
+      
+      // Show success message with task details
+      toast({
+        title: "Task completed!",
+        description: taskToComplete ? `Great job completing: ${taskToComplete.task_text.substring(0, 30)}...` : "Great job completing this task."
+      });
+      
+      // Persist to database
       const { error } = await supabase
         .from('compass_tasks')
         .update({ completed_at: new Date().toISOString() })
@@ -111,19 +143,16 @@ const CompassPage = () => {
       if (error) {
         throw error;
       }
+    } catch (err) {
+      console.error('Error completing task:', err);
       
+      // Revert optimistic update if the server request failed
       setTasks(tasks.map(task => 
-        task.id === taskId 
-          ? { ...task, completed_at: new Date().toISOString() } 
+        task.id === taskId && task.completed_at 
+          ? { ...task, completed_at: null } 
           : task
       ));
       
-      toast({
-        title: "Task completed!",
-        description: "Great job completing this task."
-      });
-    } catch (err) {
-      console.error('Error completing task:', err);
       toast({
         title: "Error",
         description: "Failed to mark task as complete. Please try again.",
@@ -146,15 +175,67 @@ const CompassPage = () => {
     });
   };
   
+  const dismissOnboardingOverlay = () => {
+    setShowOnboardingOverlay(false);
+    localStorage.setItem('compassFeatureIntroSeen', 'true');
+  };
+  
+  const OnboardingOverlay = () => (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-background rounded-lg max-w-2xl w-full p-6 shadow-xl">
+        <div className="text-center mb-6">
+          <div className="bg-primary/10 inline-flex rounded-full p-4 mb-4">
+            <Sparkles className="h-6 w-6 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Welcome to Strategic Planner</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Your personal AI assistant to help you prioritize tasks and stay focused on what matters most.
+          </p>
+        </div>
+        
+        <div className="grid gap-4 mb-6">
+          <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+            <div className="bg-primary/10 p-2 rounded-full">
+              <ListChecks className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-medium">Enter Your Tasks</h3>
+              <p className="text-sm text-muted-foreground">Type in all your tasks, and the AI will analyze and prioritize them for you.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
+            <div className="bg-primary/10 p-2 rounded-full">
+              <ArrowRight className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-medium">Get Prioritized Results</h3>
+              <p className="text-sm text-muted-foreground">Focus on high-priority tasks first to maximize your productivity.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-center">
+          <Button onClick={dismissOnboardingOverlay} size="lg">
+            Get Started
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+  
   return (
     <DashboardLayout>
       <div className="container max-w-4xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-extrabold tracking-tight mb-6">
-          Strategic Planner (Compass)
+        <h1 className="text-3xl font-extrabold tracking-tight mb-2 text-primary">
+          Strategic Planner
         </h1>
+        <p className="text-muted-foreground mb-6">
+          Prioritize your tasks and focus on what matters most
+        </p>
         
         {hasOnboarded === false && (
-          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="mb-6 bg-primary/5 border border-primary/10 rounded-lg p-4">
             <h3 className="text-lg font-semibold mb-2">Complete Your Profile</h3>
             <p className="mb-3">
               To get the most out of the Strategic Planner, we need some information about your business.
@@ -167,13 +248,13 @@ const CompassPage = () => {
           </div>
         )}
         
-        <div className="space-y-8">
+        <div className="space-y-6">
           <CompassInput onPlanCreated={handlePlanCreated} />
           
           {isLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="ml-2">Loading your plan...</span>
+            <div className="flex flex-col justify-center items-center py-16 bg-muted/20 rounded-lg border border-dashed">
+              <Loader2 className="h-10 w-10 animate-spin text-primary/60 mb-4" />
+              <p className="text-muted-foreground">Loading your plan...</p>
             </div>
           ) : (
             <TaskList 
@@ -185,6 +266,8 @@ const CompassPage = () => {
           )}
         </div>
       </div>
+      
+      {showOnboardingOverlay && <OnboardingOverlay />}
     </DashboardLayout>
   );
 };

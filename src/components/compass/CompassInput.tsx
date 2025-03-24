@@ -17,11 +17,13 @@ const CompassInput: React.FC<CompassInputProps> = ({ onPlanCreated, onTasksGener
   });
   
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Strategic Planner</CardTitle>
-        <CardDescription>
-          Enter your tasks, ideas, or reflections and we'll help you prioritize them.
+    <Card className="w-full border-2 border-primary/10 shadow-md">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center text-2xl text-primary">
+          Strategic Planner
+        </CardTitle>
+        <CardDescription className="text-base">
+          Enter your tasks below and our AI will prioritize them for you, helping you focus on what matters most.
         </CardDescription>
       </CardHeader>
       <CompassInputForm 
