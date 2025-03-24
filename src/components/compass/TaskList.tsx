@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, CheckCircle, CheckCircle2, Clock, CalendarPlus } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, CheckCircle2, Clock, CalendarPlus, Plus, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,12 +11,17 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { CompassTaskDisplay } from '@/types/compass';
+import { CompassTaskDisplay, CompassCategory, CompassTag } from '@/types/compass';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useCompassCategories } from '@/hooks/useCompassCategories';
+import { useCompassTags } from '@/hooks/useCompassTags';
+import CategoryBadge from './CategoryBadge';
+import TagBadge from './TagBadge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 interface TaskListProps {
   tasks: CompassTaskDisplay[];
@@ -37,10 +43,16 @@ const getPriorityColor = (priority: string) => {
 
 const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate }) => {
   const { toast } = useToast();
+  const { categories } = useCompassCategories();
+  const { tags, addTagToTask, removeTagFromTask } = useCompassTags();
+  
   const [selectedTask, setSelectedTask] = useState<CompassTaskDisplay | null>(null);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isClarificationOpen, setIsClarificationOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
+  
   const [reminderType, setReminderType] = useState<'15min' | '30min' | '1hr' | 'custom'>('15min');
   const [reminderMethod, setReminderMethod] = useState<'Email' | 'SMS'>('Email');
   const [customReminderTime, setCustomReminderTime] = useState<Date | undefined>(undefined);
@@ -255,6 +267,85 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate }) => {
     }
   };
 
+  // Handle category assignment
+  const openCategoryDialog = (task: CompassTaskDisplay) => {
+    setSelectedTask(task);
+    setIsCategoryDialogOpen(true);
+  };
+
+  const assignCategory = async (categoryId: string | null) => {
+    if (!selectedTask) return;
+    
+    try {
+      const { error } = await supabase
+        .from('compass_tasks')
+        .update({ 
+          category_id: categoryId,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', selectedTask.id);
+
+      if (error) {
+        console.error('Error assigning category:', error);
+        toast({
+          title: "Error",
+          description: "Failed to assign category. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Category Assigned",
+        description: "The task category has been updated.",
+      });
+      
+      setIsCategoryDialogOpen(false);
+      onTaskUpdate();
+    } catch (err) {
+      console.error('Error in assign category:', err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle tag assignment
+  const openTagDialog = (task: CompassTaskDisplay) => {
+    setSelectedTask(task);
+    setIsTagDialogOpen(true);
+  };
+
+  const toggleTag = async (tagId: string) => {
+    if (!selectedTask) return;
+    
+    const existingTag = selectedTask.tags?.find(t => t.id === tagId);
+    
+    if (existingTag) {
+      // Remove tag
+      const success = await removeTagFromTask(selectedTask.id, tagId);
+      if (success) {
+        toast({
+          title: "Tag Removed",
+          description: "The tag has been removed from the task.",
+        });
+        onTaskUpdate();
+      }
+    } else {
+      // Add tag
+      const success = await addTagToTask(selectedTask.id, tagId);
+      if (success) {
+        toast({
+          title: "Tag Added",
+          description: "The tag has been added to the task.",
+        });
+        onTaskUpdate();
+      }
+    }
+  };
+
   // If no tasks, show a message
   if (tasks.length === 0) {
     return (
@@ -280,8 +371,15 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate }) => {
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
                     <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
+                    {task.category && (
+                      <CategoryBadge 
+                        name={task.category.name} 
+                        color={task.category.color} 
+                        onClick={() => openCategoryDialog(task)}
+                      />
+                    )}
                     {task.clarification && !task.clarification.answer && (
                       <Badge variant="outline" className="border-amber-500 text-amber-700">
                         Needs Clarification
@@ -306,6 +404,19 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate }) => {
                     <p className="text-sm text-muted-foreground italic mb-3">
                       {task.reasoning}
                     </p>
+                  )}
+                  
+                  {task.tags && task.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {task.tags.map(tag => (
+                        <TagBadge 
+                          key={tag.id}
+                          name={tag.name} 
+                          color={tag.color}
+                          onClick={() => openTagDialog(task)}
+                        />
+                      ))}
+                    </div>
                   )}
                   
                   {task.clarification && !task.clarification.answer && (
@@ -334,7 +445,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate }) => {
             </CardContent>
             
             {!task.completed_at && (
-              <CardFooter className="flex justify-start gap-2 p-4 pt-0 border-t border-border">
+              <CardFooter className="flex flex-wrap justify-start gap-2 p-4 pt-0 border-t border-border">
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -353,6 +464,26 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate }) => {
                 >
                   <CalendarPlus className="h-3 w-3 mr-1" />
                   Add to Calendar
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => openCategoryDialog(task)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {task.category ? "Change Category" : "Add Category"}
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => openTagDialog(task)}
+                >
+                  <Tag className="h-3 w-3 mr-1" />
+                  {task.tags && task.tags.length > 0 ? "Manage Tags" : "Add Tags"}
                 </Button>
                 
                 {task.clarification && !task.clarification.answer && (
@@ -555,6 +686,134 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate }) => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsClarificationOpen(false)}>Cancel</Button>
             <Button onClick={submitClarification} disabled={!clarificationAnswer.trim()}>Submit</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Dialog */}
+      <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Category</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="space-y-4">
+              {selectedTask && (
+                <>
+                  <div>
+                    <h4 className="text-sm font-medium">Task:</h4>
+                    <p className="mt-1">{selectedTask.task_text}</p>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Select a category:</h4>
+                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto">
+                      <div
+                        className={cn(
+                          "flex items-center justify-between p-2 rounded cursor-pointer",
+                          !selectedTask.category_id ? "bg-accent" : "hover:bg-accent/50"
+                        )}
+                        onClick={() => assignCategory(null)}
+                      >
+                        <span>No Category</span>
+                        {!selectedTask.category_id && (
+                          <CheckCircle className="h-4 w-4 text-primary" />
+                        )}
+                      </div>
+                      
+                      {categories.map((category) => (
+                        <div
+                          key={category.id}
+                          className={cn(
+                            "flex items-center justify-between p-2 rounded cursor-pointer",
+                            selectedTask.category_id === category.id ? "bg-accent" : "hover:bg-accent/50"
+                          )}
+                          onClick={() => assignCategory(category.id)}
+                        >
+                          <CategoryBadge name={category.name} color={category.color} />
+                          {selectedTask.category_id === category.id && (
+                            <CheckCircle className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tags Dialog */}
+      <Dialog open={isTagDialogOpen} onOpenChange={setIsTagDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Manage Tags</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="space-y-4">
+              {selectedTask && (
+                <>
+                  <div>
+                    <h4 className="text-sm font-medium">Task:</h4>
+                    <p className="mt-1">{selectedTask.task_text}</p>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Task Tags:</h4>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {selectedTask.tags && selectedTask.tags.length > 0 ? (
+                        selectedTask.tags.map((tag) => (
+                          <TagBadge 
+                            key={tag.id}
+                            name={tag.name} 
+                            color={tag.color}
+                            onRemove={() => toggleTag(tag.id)}
+                          />
+                        ))
+                      ) : (
+                        <span className="text-sm text-muted-foreground">No tags assigned</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Available Tags:</h4>
+                    <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto">
+                      {tags
+                        .filter(tag => !selectedTask.tags?.some(t => t.id === tag.id))
+                        .map((tag) => (
+                          <div
+                            key={tag.id}
+                            className="flex items-center justify-between p-2 rounded cursor-pointer hover:bg-accent/50"
+                            onClick={() => toggleTag(tag.id)}
+                          >
+                            <TagBadge name={tag.name} color={tag.color} />
+                            <Plus className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTagDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

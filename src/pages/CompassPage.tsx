@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -11,11 +11,15 @@ import CompassInput from '@/components/compass/CompassInput';
 import TaskList from '@/components/compass/TaskList';
 import CompletedTasksList from '@/components/compass/CompletedTasksList';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Settings, ListTodo } from 'lucide-react';
+import CompassSettings from '@/components/compass/CompassSettings';
 
 const CompassPage = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('tasks');
   
   const {
     activeTasks,
@@ -61,23 +65,44 @@ const CompassPage = () => {
           // Onboarding
           <CompassOnboarding onComplete={handleOnboardingComplete} />
         ) : (
-          // Main interface
-          <div className="space-y-4">
-            <CompassInput onTasksGenerated={handleNewTasks} />
+          // Main interface with tabs
+          <Tabs 
+            defaultValue={activeTab} 
+            onValueChange={setActiveTab}
+            className="space-y-4"
+          >
+            <TabsList>
+              <TabsTrigger value="tasks" className="flex items-center gap-1.5">
+                <ListTodo className="h-4 w-4" />
+                <span>Tasks</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-1.5">
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
+              </TabsTrigger>
+            </TabsList>
             
-            {isLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-24 w-full rounded-xl" />
-                <Skeleton className="h-24 w-full rounded-xl" />
-                <Skeleton className="h-24 w-full rounded-xl" />
-              </div>
-            ) : (
-              <>
-                <TaskList tasks={activeTasks} onTaskUpdate={loadTasks} />
-                <CompletedTasksList tasks={completedTasks} />
-              </>
-            )}
-          </div>
+            <TabsContent value="tasks" className="space-y-4">
+              <CompassInput onTasksGenerated={handleNewTasks} />
+              
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-24 w-full rounded-xl" />
+                  <Skeleton className="h-24 w-full rounded-xl" />
+                  <Skeleton className="h-24 w-full rounded-xl" />
+                </div>
+              ) : (
+                <>
+                  <TaskList tasks={activeTasks} onTaskUpdate={loadTasks} />
+                  <CompletedTasksList tasks={completedTasks} />
+                </>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="settings">
+              <CompassSettings />
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </DashboardLayout>

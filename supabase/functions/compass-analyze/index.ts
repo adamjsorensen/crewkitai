@@ -1,4 +1,7 @@
 
+// Only modifying the required parts to support categories and tags
+// The file is quite large so we'll focus on the necessary changes
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -12,6 +15,7 @@ const corsHeaders = {
 interface CompassRequest {
   input: string;
   user_id?: string;
+  category_id?: string | null;
 }
 
 // Define the Task interface
@@ -20,6 +24,7 @@ interface Task {
   priority: 'High' | 'Medium' | 'Low';
   reasoning: string;
   due_date?: string;
+  category_id?: string;
   needs_clarification?: boolean;
   clarification_question?: string;
 }
@@ -103,6 +108,7 @@ Please consider their business context when prioritizing and assigning due dates
 async function analyzeTasksWithAI(
   inputText: string,
   userProfile?: any,
+  categoryId?: string | null,
   fallbackRules?: Array<{ keyword: string; priority: 'High' | 'Medium' | 'Low' }>
 ): Promise<{ tasks: Task[], discarded_count: number }> {
   try {
@@ -157,6 +163,13 @@ async function analyzeTasksWithAI(
         const tasks = functionArgs.tasks.slice(0, 5);
         const discarded_count = Math.max(0, functionArgs.tasks.length - 5) + (functionArgs.discarded_count || 0);
         
+        // Add category_id to all tasks if provided
+        if (categoryId) {
+          tasks.forEach((task: Task) => {
+            task.category_id = categoryId;
+          });
+        }
+        
         return { tasks, discarded_count };
       } catch (parseError) {
         console.error("Error parsing OpenAI function response:", parseError);
@@ -172,7 +185,7 @@ async function analyzeTasksWithAI(
     // Fallback to keyword-based analysis
     if (fallbackRules && fallbackRules.length > 0) {
       console.log("Falling back to keyword-based analysis");
-      const keywordAnalysis = analyzeTaskPriorities(inputText, fallbackRules, userProfile);
+      const keywordAnalysis = analyzeTaskPriorities(inputText, fallbackRules, userProfile, categoryId);
       return { 
         tasks: keywordAnalysis, 
         discarded_count: Math.max(0, inputText.split(/[.,\n]+/).filter(s => s.trim().length > 0).length - 5)
@@ -187,7 +200,8 @@ async function analyzeTasksWithAI(
 function analyzeTaskPriorities(
   inputText: string, 
   priorityRules: Array<{ keyword: string; priority: 'High' | 'Medium' | 'Low' }>,
-  userProfile?: any
+  userProfile?: any,
+  categoryId?: string | null
 ): Task[] {
   // Split the input into potential tasks using periods, commas, and line breaks
   const taskTexts = inputText
@@ -246,6 +260,7 @@ function analyzeTaskPriorities(
       priority,
       reasoning,
       due_date: dueDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      category_id: categoryId || undefined,
       needs_clarification: needsClarification,
       clarification_question: clarificationQuestion
     };
@@ -278,7 +293,7 @@ serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
     // Parse request body
-    const { input, user_id } = await req.json() as CompassRequest;
+    const { input, user_id, category_id } = await req.json() as CompassRequest;
     
     if (!input || input.trim() === '') {
       return new Response(
@@ -348,17 +363,17 @@ serve(async (req) => {
     if (useAi) {
       try {
         // Use OpenAI to analyze tasks
-        const aiAnalysis = await analyzeTasksWithAI(input, userProfile, priorityRules);
+        const aiAnalysis = await analyzeTasksWithAI(input, userProfile, category_id, priorityRules);
         tasks = aiAnalysis.tasks;
         discardedCount = aiAnalysis.discarded_count;
       } catch (error) {
         console.error('AI analysis failed, falling back to keyword method:', error);
-        tasks = analyzeTaskPriorities(input, priorityRules, userProfile);
+        tasks = analyzeTaskPriorities(input, priorityRules, userProfile, category_id);
         discardedCount = Math.max(0, input.split(/[.,\n]+/).filter(s => s.trim().length > 0).length - 5);
       }
     } else {
       // Use keyword-based analysis as specified in settings
-      tasks = analyzeTaskPriorities(input, priorityRules, userProfile);
+      tasks = analyzeTaskPriorities(input, priorityRules, userProfile, category_id);
       discardedCount = Math.max(0, input.split(/[.,\n]+/).filter(s => s.trim().length > 0).length - 5);
     }
 
@@ -388,6 +403,7 @@ serve(async (req) => {
         priority: task.priority,
         reasoning: task.reasoning,
         due_date: task.due_date,
+        category_id: task.category_id, // Include category_id if provided
       }));
 
       const { error: tasksError } = await supabaseAdmin

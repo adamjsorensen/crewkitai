@@ -1,12 +1,15 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Send } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { CompassAnalyzeResponse } from '@/types/compass';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCompassCategories } from '@/hooks/useCompassCategories';
 
 interface CompassInputProps {
   onTasksGenerated: (response: CompassAnalyzeResponse) => void;
@@ -14,103 +17,119 @@ interface CompassInputProps {
 
 const CompassInput: React.FC<CompassInputProps> = ({ onTasksGenerated }) => {
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { user } = useAuth();
   const { toast } = useToast();
-  
-  const handleSubmit = async () => {
+  const { categories } = useCompassCategories();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!input.trim()) {
       toast({
-        title: "Input required",
-        description: "Please enter some tasks, ideas, or reflections.",
+        title: "Input Required",
+        description: "Please enter some tasks or ideas to analyze.",
         variant: "destructive",
       });
       return;
     }
     
-    setIsLoading(true);
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to use this feature.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
     
     try {
-      // Get current user session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to use this feature.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      // Call the compass-analyze edge function
-      const response = await supabase.functions.invoke('compass-analyze', {
+      const { data, error } = await supabase.functions.invoke('compass-analyze', {
         body: {
-          input,
-          user_id: session.user.id
-        },
+          input: input.trim(),
+          user_id: user.id,
+          category_id: selectedCategory
+        }
       });
       
-      if (response.error) {
-        console.error('Error analyzing tasks:', response.error);
+      if (error) {
+        console.error('Error analyzing tasks:', error);
         toast({
           title: "Error",
-          description: "Failed to analyze your input. Please try again.",
+          description: "Failed to analyze your tasks. Please try again.",
           variant: "destructive",
         });
         return;
       }
       
-      // Call the callback with the response data
-      onTasksGenerated(response.data as CompassAnalyzeResponse);
+      // Success, call the callback with the response
+      onTasksGenerated(data as CompassAnalyzeResponse);
       
-      // Clear the input field after successful submission
+      // Clear input
       setInput('');
       
-    } catch (error) {
-      console.error('Error processing input:', error);
+    } catch (err) {
+      console.error('Error in task analysis:', err);
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: "An unexpected error occurred. Please try again later.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
   
   return (
-    <Card className="w-full mb-6">
-      <CardHeader>
-        <CardTitle>Strategic Planner</CardTitle>
-        <CardDescription>
-          Enter your tasks, ideas, or reflections. We'll organize and prioritize them for you.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Textarea
-          placeholder="Type your tasks, ideas, or reflections..."
-          className="min-h-[150px] mb-4"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={isLoading}
-        />
+    <Card>
+      <CardContent className="pt-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Enter your tasks, notes, or ideas... I'll help prioritize them for you."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className="min-h-[120px] resize-none"
+              disabled={isSubmitting}
+            />
+            
+            {categories.length > 0 && (
+              <Select
+                value={selectedCategory || ""}
+                onValueChange={(value) => setSelectedCategory(value || null)}
+              >
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Default category (none)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No category</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>Processing...</>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Create Plan
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </CardContent>
-      <CardFooter>
-        <Button 
-          onClick={handleSubmit} 
-          className="w-full" 
-          disabled={isLoading || !input.trim()}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            'Create Plan'
-          )}
-        </Button>
-      </CardFooter>
     </Card>
   );
 };

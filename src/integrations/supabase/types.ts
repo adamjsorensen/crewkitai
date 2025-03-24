@@ -166,6 +166,33 @@ export type Database = {
         }
         Relationships: []
       }
+      compass_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       compass_clarifications: {
         Row: {
           answer: string | null
@@ -281,8 +308,72 @@ export type Database = {
           },
         ]
       }
+      compass_tags: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      compass_task_tags: {
+        Row: {
+          created_at: string
+          id: string
+          tag_id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tag_id: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tag_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compass_task_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "compass_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compass_task_tags_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "compass_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compass_tasks: {
         Row: {
+          category_id: string | null
           completed_at: string | null
           created_at: string
           due_date: string | null
@@ -294,6 +385,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category_id?: string | null
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
@@ -305,6 +397,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category_id?: string | null
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
@@ -316,6 +409,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "compass_tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "compass_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "compass_tasks_plan_id_fkey"
             columns: ["plan_id"]

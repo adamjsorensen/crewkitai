@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CompassTaskDisplay, CompassAnalyzeResponse, CompassPriority } from '@/types/compass';
+import { CompassTaskDisplay, CompassAnalyzeResponse, CompassPriority, CompassTag } from '@/types/compass';
 
 export const useCompassTasks = () => {
   const [activeTasks, setActiveTasks] = useState<CompassTaskDisplay[]>([]);
@@ -86,12 +86,13 @@ export const useCompassTasks = () => {
 
       setCurrentPlanId(planData.id);
 
-      // Now fetch all tasks for this plan
+      // Now fetch all tasks for this plan, including their category
       const { data: tasksData, error: tasksError } = await supabase
         .from('compass_tasks')
         .select(`
           *,
-          clarification:compass_clarifications(*)
+          clarification:compass_clarifications(*),
+          category:compass_categories(*)
         `)
         .eq('plan_id', planData.id)
         .order('priority', { ascending: false })
@@ -106,6 +107,49 @@ export const useCompassTasks = () => {
         });
         setIsLoading(false);
         return;
+      }
+
+      // Get all task IDs to fetch their tags
+      const taskIds = tasksData.map(task => task.id);
+      
+      // Fetch all task-tag relationships
+      const { data: taskTagsData, error: taskTagsError } = await supabase
+        .from('compass_task_tags')
+        .select('task_id, tag_id')
+        .in('task_id', taskIds);
+        
+      if (taskTagsError) {
+        console.error('Error fetching task tags:', taskTagsError);
+      }
+      
+      // Create a map of task ID to tag IDs
+      const taskTagMap: Record<string, string[]> = {};
+      if (taskTagsData) {
+        for (const relation of taskTagsData) {
+          if (!taskTagMap[relation.task_id]) {
+            taskTagMap[relation.task_id] = [];
+          }
+          taskTagMap[relation.task_id].push(relation.tag_id);
+        }
+      }
+      
+      // If we have any tags, fetch all tags at once
+      let allTags: Record<string, CompassTag> = {};
+      if (Object.keys(taskTagMap).length > 0) {
+        const tagIds = Array.from(new Set(taskTagsData.map(tt => tt.tag_id)));
+        const { data: tagsData, error: tagsError } = await supabase
+          .from('compass_tags')
+          .select('*')
+          .in('id', tagIds);
+          
+        if (tagsError) {
+          console.error('Error fetching tags:', tagsError);
+        } else if (tagsData) {
+          allTags = tagsData.reduce((acc, tag) => {
+            acc[tag.id] = tag;
+            return acc;
+          }, {} as Record<string, CompassTag>);
+        }
       }
 
       // Split into active and completed tasks
@@ -126,7 +170,9 @@ export const useCompassTasks = () => {
           priority,  // Use the validated priority
           clarification: task.clarification && task.clarification.length > 0 
             ? task.clarification[0] 
-            : undefined
+            : undefined,
+          category: task.category,
+          tags: taskTagMap[task.id]?.map(tagId => allTags[tagId]).filter(Boolean) || []
         };
 
         if (task.completed_at) {
@@ -147,6 +193,41 @@ export const useCompassTasks = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Update task category
+  const updateTaskCategory = async (taskId: string, categoryId: string | null) => {
+    try {
+      const { error } = await supabase
+        .from('compass_tasks')
+        .update({ 
+          category_id: categoryId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', taskId);
+
+      if (error) {
+        console.error('Error updating task category:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update task category.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Refresh tasks to get the updated data
+      await loadTasks();
+      return true;
+    } catch (err) {
+      console.error('Error in update task category:', err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+      return false;
     }
   };
 
@@ -190,5 +271,6 @@ export const useCompassTasks = () => {
     handleNewTasks,
     handleOnboardingComplete,
     loadTasks,
+    updateTaskCategory
   };
 };
