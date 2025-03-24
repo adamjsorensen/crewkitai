@@ -112,12 +112,14 @@ const UserForm = ({ user, onClose, onSuccess }: UserFormProps) => {
       // Note: In a real app, you'd likely use Supabase Auth Admin API to create users
       // This is a simplified example that only updates profiles table
       
-      // Create user auth account would go here
-      // For now, we're just simulating by creating a profile entry
-
+      // Create a UUID for the new user
+      const newUserId = crypto.randomUUID();
+      
+      // Create profile entry with the generated ID
       const { data, error } = await supabase
         .from("profiles")
         .insert({
+          id: newUserId,
           full_name: values.full_name,
           company_name: values.company_name,
           email: values.email,
