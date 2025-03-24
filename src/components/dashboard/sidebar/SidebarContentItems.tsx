@@ -68,6 +68,16 @@ const SidebarContentItems = () => {
     { name: "Compass Settings", icon: Compass, path: "/dashboard/admin/compass-settings" },
   ];
 
+  // Helper to check if a menu item is active
+  const isItemActive = (itemPath: string) => {
+    // Dashboard should only be active when exactly on /dashboard
+    if (itemPath === "/dashboard") {
+      return location.pathname === "/dashboard";
+    }
+    // For other paths, check if the current path starts with the item path
+    return location.pathname.startsWith(itemPath);
+  };
+
   return (
     <>
       <SidebarHeader className="py-3">
@@ -100,7 +110,7 @@ const SidebarContentItems = () => {
               <SidebarMenuItem key={item.name}>
                 <SidebarMenuButton
                   asChild
-                  isActive={location.pathname === item.path}
+                  isActive={isItemActive(item.path)}
                   tooltip={item.name}
                 >
                   <Link to={item.path} className="flex justify-between w-full">
@@ -132,7 +142,7 @@ const SidebarContentItems = () => {
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton
                       asChild
-                      isActive={location.pathname.startsWith(item.path.split('/').slice(0, 3).join('/'))}
+                      isActive={isItemActive(item.path)}
                       tooltip={item.name}
                     >
                       <Link to={item.path}>
