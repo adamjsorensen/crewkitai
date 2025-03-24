@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CompassUserProfile } from '@/types/compass';
@@ -109,6 +108,7 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
     }
   };
 
+  
   const renderBasicForm = () => (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>

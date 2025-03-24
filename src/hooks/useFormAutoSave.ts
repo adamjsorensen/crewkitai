@@ -1,37 +1,66 @@
 
-import { useEffect, useRef } from 'react';
-import { useForm, UseFormReturn, FieldValues } from 'react-hook-form';
+import { useEffect, useRef, useState } from 'react';
+import { FieldValues } from 'react-hook-form';
 import { debounce } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
-interface UseFormAutoSaveProps<T extends FieldValues> {
-  form: UseFormReturn<T>;
-  onSave: (data: T) => void;
-  debounceTime?: number;
+interface UseFormAutoSaveProps<T> {
+  values: T;
+  onSave: (data: T) => Promise<any> | null;
+  enableAutoSave?: boolean;
+  debounceMs?: number;
+  saveMessage?: string;
 }
 
 /**
  * Custom hook for auto-saving form data
- * @param form The react-hook-form instance
+ * @param values The form values to save
  * @param onSave Function to call when saving data
- * @param debounceTime Debounce time in milliseconds (default: 1000ms)
+ * @param enableAutoSave Whether auto-save is enabled
+ * @param debounceMs Debounce time in milliseconds
+ * @param saveMessage Message to show when saving
  */
-export const useFormAutoSave = <T extends FieldValues>({
-  form,
+export const useFormAutoSave = <T>({
+  values,
   onSave,
-  debounceTime = 1000,
+  enableAutoSave = true,
+  debounceMs = 2000,
+  saveMessage = "Progress auto-saved"
 }: UseFormAutoSaveProps<T>) => {
-  const { watch, getValues, formState } = form;
-  const { isDirty } = formState;
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
   
   // Use useRef to persist the debounced function across renders
   const debouncedSave = useRef<ReturnType<typeof debounce>>();
   
   // Initialize the debounced function once
   useEffect(() => {
-    debouncedSave.current = debounce((data: T) => {
-      console.log('Auto-saving form data...', data);
-      onSave(data);
-    }, debounceTime);
+    debouncedSave.current = debounce(async (data: T) => {
+      if (!enableAutoSave) return;
+      
+      try {
+        setIsSaving(true);
+        console.log('Auto-saving form data...', data);
+        const result = await onSave(data);
+        
+        if (saveMessage && result) {
+          toast({
+            title: saveMessage,
+            description: `Last saved at ${new Date().toLocaleTimeString()}`,
+            duration: 2000,
+          });
+        }
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        toast({
+          title: "Auto-save failed",
+          description: "Your changes couldn't be saved automatically",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    }, debounceMs);
     
     // Clean up the debounce timer when the component unmounts
     return () => {
@@ -39,26 +68,43 @@ export const useFormAutoSave = <T extends FieldValues>({
         (debouncedSave.current as { cancel: () => void }).cancel();
       }
     };
-  }, [onSave, debounceTime]);
+  }, [onSave, debounceMs, enableAutoSave, saveMessage, toast]);
   
   // Watch for changes and trigger the save
   useEffect(() => {
-    if (!isDirty) return;
+    if (enableAutoSave && values && debouncedSave.current) {
+      debouncedSave.current(values);
+    }
     
-    const subscription = watch((formData) => {
-      if (debouncedSave.current) {
-        debouncedSave.current(getValues());
+    return () => {
+      if (debouncedSave.current && 'cancel' in debouncedSave.current) {
+        (debouncedSave.current as { cancel: () => void }).cancel();
       }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, [watch, isDirty, getValues]);
+    };
+  }, [values, enableAutoSave]);
   
-  const save = () => {
-    if (isDirty) {
-      onSave(getValues());
+  const save = async () => {
+    try {
+      setIsSaving(true);
+      await onSave(values);
+      
+      if (saveMessage) {
+        toast({
+          title: saveMessage,
+          description: `Saved at ${new Date().toLocaleTimeString()}`,
+        });
+      }
+    } catch (error) {
+      console.error('Manual save failed:', error);
+      toast({
+        title: "Save failed",
+        description: "Your changes couldn't be saved",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
   
-  return { save };
+  return { save, isSaving };
 };
