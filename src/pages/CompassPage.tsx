@@ -32,7 +32,7 @@ const CompassPage = () => {
     if (!isAuthLoading && !user) {
       toast({
         title: "Authentication required",
-        description: "Please sign in to use the Strategic Planner",
+        description: "Please sign in to use the Strategic Compass",
         variant: "destructive",
       });
       navigate("/auth");
@@ -50,7 +50,7 @@ const CompassPage = () => {
   return (
     <DashboardLayout>
       <div className="container max-w-4xl mx-auto py-6">
-        <h1 className="text-3xl font-extrabold tracking-tight mb-6">Strategic Planner</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight mb-6">Strategic Compass</h1>
         
         {hasOnboarded === null ? (
           // Loading state

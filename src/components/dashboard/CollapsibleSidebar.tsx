@@ -42,14 +42,13 @@ const CollapsibleSidebar = () => {
     { name: "Financial", icon: BarChart3, path: "/dashboard/financial" },
     { name: "AI Coach", icon: Sparkles, path: "/dashboard/ai-coach" },
     { name: "PainterGrowth", icon: Brush, path: "/dashboard/pg-coach" },
-    { name: "Strategic Planner", icon: ClipboardList, path: "/dashboard/compass" },
+    { name: "Strategic Compass", icon: ClipboardList, path: "/dashboard/compass" },
     { name: "Profile", icon: User, path: "/dashboard/profile" },
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
 
   const adminItems = [
     { name: "AI Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
-    { name: "Feature Flags", icon: Shield, path: "/dashboard/admin/feature-flags" },
   ];
 
   return (
@@ -60,10 +59,10 @@ const CollapsibleSidebar = () => {
       {/* Header */}
       <div className="flex h-14 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2 overflow-hidden">
-          <PaintBucket className="h-6 w-6 text-primary" />
+          <PaintBucket className="h-6 w-6 text-primary shrink-0" />
           <span className={cn(
-            "font-display text-lg font-semibold transition-opacity",
-            isCollapsed ? "opacity-0" : "opacity-100"
+            "font-display text-lg font-semibold transition-opacity duration-200",
+            isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
           )}>
             CrewkitAI
           </span>
@@ -98,8 +97,8 @@ const CollapsibleSidebar = () => {
             >
               <item.icon className="h-5 w-5" />
               <span className={cn(
-                "transition-opacity",
-                isCollapsed ? "opacity-0" : "opacity-100"
+                "transition-opacity duration-200",
+                isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
               )}>
                 {item.name}
               </span>
@@ -131,8 +130,8 @@ const CollapsibleSidebar = () => {
                 >
                   <item.icon className="h-5 w-5" />
                   <span className={cn(
-                    "transition-opacity",
-                    isCollapsed ? "opacity-0" : "opacity-100"
+                    "transition-opacity duration-200",
+                    isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
                   )}>
                     {item.name}
                   </span>
@@ -152,8 +151,8 @@ const CollapsibleSidebar = () => {
         >
           <LogOut className="h-5 w-5" />
           <span className={cn(
-            "transition-opacity",
-            isCollapsed ? "opacity-0" : "opacity-100"
+            "transition-opacity duration-200",
+            isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
           )}>
             Sign Out
           </span>
