@@ -19,6 +19,12 @@ interface CreatePlanDialogProps {
 const CreatePlanDialog: React.FC<CreatePlanDialogProps> = ({ onTasksGenerated }) => {
   const [open, setOpen] = React.useState(false);
   
+  const handlePlanCreated = (planId: string) => {
+    // CreatePlanDialog is only interested in the tasks being generated,
+    // the plan ID is handled by the CompassInput component internally
+    console.log("Plan created with ID:", planId);
+  };
+  
   const handleTasksGenerated = (response: CompassAnalyzeResponse) => {
     onTasksGenerated(response);
     setOpen(false); // Close the dialog after successful submission
@@ -37,7 +43,10 @@ const CreatePlanDialog: React.FC<CreatePlanDialogProps> = ({ onTasksGenerated })
           <DialogTitle className="text-xl">Create A New Plan</DialogTitle>
         </DialogHeader>
         <div className="pt-2">
-          <CompassInput onTasksGenerated={handleTasksGenerated} />
+          <CompassInput 
+            onPlanCreated={handlePlanCreated} 
+            onTasksGenerated={handleTasksGenerated}
+          />
         </div>
       </DialogContent>
     </Dialog>

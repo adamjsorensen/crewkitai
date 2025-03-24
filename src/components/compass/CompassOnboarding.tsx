@@ -15,7 +15,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft } from 'lucide-react';
 
-// Define the form schema with Zod for both tabs
 const basicFormSchema = z.object({
   business_name: z.string().min(1, 'Business name is required'),
   business_stage: z.enum(['early', 'growth', 'maturity', 'exit']),
@@ -35,7 +34,6 @@ const detailsFormSchema = z.object({
 type BasicFormValues = z.infer<typeof basicFormSchema>;
 type DetailsFormValues = z.infer<typeof detailsFormSchema>;
 
-// Define the specialties options
 const specialtiesOptions = [{
   id: 'residential',
   label: 'Residential'
@@ -83,7 +81,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
   const { toast } = useToast();
   const { user, profile } = useAuth();
   
-  // Initialize the basic info form
   const basicForm = useForm<BasicFormValues>({
     resolver: zodResolver(basicFormSchema),
     defaultValues: {
@@ -95,7 +92,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
     }
   });
   
-  // Initialize the details form
   const detailsForm = useForm<DetailsFormValues>({
     resolver: zodResolver(detailsFormSchema),
     defaultValues: {
@@ -107,7 +103,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
     }
   });
 
-  // Load profile data if it exists
   useEffect(() => {
     const loadProfileData = async () => {
       if (!user) return;
@@ -125,7 +120,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
         }
         
         if (profileData) {
-          // Update form values with existing profile data
           basicForm.setValue('business_name', profileData.company_name || '');
           basicForm.setValue('phone', profileData.phone || '');
           basicForm.setValue('full_name', profileData.full_name || '');
@@ -154,7 +148,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
         return;
       }
       
-      // Map business_stage to workload for compass_user_profiles
       let workload: 'High' | 'Medium' | 'Low' = 'Medium';
       switch (values.business_stage) {
         case 'early': workload = 'Low'; break;
@@ -163,7 +156,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
         case 'exit': workload = 'High'; break;
       }
       
-      // Update compass_user_profiles
       const { data: compassData, error: compassError } = await supabase
         .from('compass_user_profiles')
         .upsert({
@@ -185,7 +177,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
         return;
       }
       
-      // Update general profile
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -210,7 +201,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
         description: "Your profile has been saved."
       });
       
-      // If we're only showing the basic form, notify parent of completion
       if (formMode === 'basic' && compassData) {
         onComplete(compassData as CompassUserProfile);
       }
@@ -236,7 +226,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
         return;
       }
       
-      // Update compass_user_profiles with specialties
       const { data: compassData, error: compassError } = await supabase
         .from('compass_user_profiles')
         .upsert({
@@ -257,7 +246,12 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
         return;
       }
       
-      // Update general profile
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('company_name, full_name')
+        .eq('id', user.id)
+        .single();
+      
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -265,6 +259,8 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
           business_address: values.business_address,
           company_description: values.company_description,
           website: values.website,
+          company_name: existingProfile?.company_name || '',
+          full_name: existingProfile?.full_name || profile?.full_name || '',
         }, { onConflict: 'id' });
         
       if (profileError) {
@@ -282,7 +278,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
         description: "Your profile has been saved."
       });
       
-      // Notify parent component of completion
       if (compassData) {
         onComplete(compassData as CompassUserProfile);
       }
@@ -297,7 +292,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
     }
   };
   
-  // Render the basic info form
   const renderBasicForm = () => (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -423,7 +417,6 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
     </Card>
   );
   
-  // Render the details form
   const renderDetailsForm = () => (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -560,13 +553,11 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
     </Card>
   );
   
-  // Return the appropriate form based on the mode
   if (formMode === 'basic') {
     return renderBasicForm();
   } else if (formMode === 'details') {
     return renderDetailsForm();
   } else {
-    // Full form mode
     return (
       <div className="space-y-8">
         {renderBasicForm()}

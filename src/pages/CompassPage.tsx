@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import CompassInput from '@/components/compass/CompassInput';
 import TaskList from '@/components/compass/TaskList';
-import { CompassTask } from '@/types/compass';
+import { CompassTask, CompassPriority } from '@/types/compass';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +35,6 @@ const CompassPage = () => {
     
     setIsLoading(true);
     try {
-      // Get the most recent plan
       const { data: planData, error: planError } = await supabase
         .from('compass_plans')
         .select('id')
@@ -80,7 +78,12 @@ const CompassPage = () => {
         throw error;
       }
       
-      setTasks(data || []);
+      const typedTasks = data?.map(task => ({
+        ...task,
+        priority: task.priority as CompassPriority
+      })) || [];
+      
+      setTasks(typedTasks);
     } catch (err) {
       console.error('Error loading tasks:', err);
       toast({
@@ -109,7 +112,6 @@ const CompassPage = () => {
         throw error;
       }
       
-      // Update the local state
       setTasks(tasks.map(task => 
         task.id === taskId 
           ? { ...task, completed_at: new Date().toISOString() } 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,9 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface CompassInputProps {
   onPlanCreated: (planId: string) => void;
+  onTasksGenerated?: (response: CompassAnalyzeResponse) => void;
 }
 
-const CompassInput: React.FC<CompassInputProps> = ({ onPlanCreated }) => {
+const CompassInput: React.FC<CompassInputProps> = ({ onPlanCreated, onTasksGenerated }) => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -71,6 +71,11 @@ const CompassInput: React.FC<CompassInputProps> = ({ onPlanCreated }) => {
       
       // Notify parent component that plan was created
       onPlanCreated(planData.id);
+      
+      // If onTasksGenerated is provided, call it with the response
+      if (onTasksGenerated && data) {
+        onTasksGenerated(data as CompassAnalyzeResponse);
+      }
       
       toast({
         title: "Plan created!",
