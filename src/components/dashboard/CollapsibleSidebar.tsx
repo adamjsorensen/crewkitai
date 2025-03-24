@@ -17,7 +17,8 @@ import {
   Shield,
   PaintBucket,
   Compass,
-  BrainCircuit
+  BrainCircuit,
+  Brush
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,10 +41,11 @@ const CollapsibleSidebar = () => {
     return location.pathname.startsWith(path);
   };
 
-  // Reordered nav items with Strategic Compass before Content and Financial
+  // Updated nav items with PainterGrowth AI above Content
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
+    { name: "PainterGrowth AI", icon: Brush, path: "/dashboard/pg-coach" },
     { 
       name: "Content", 
       icon: FileText, 
@@ -56,7 +58,6 @@ const CollapsibleSidebar = () => {
       path: "/dashboard/financial",
       badge: { text: "Coming Soon", variant: "secondary" as const } 
     },
-    // PainterGrowth removed as it shouldn't be there
     { name: "Profile", icon: User, path: "/dashboard/profile" },
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];

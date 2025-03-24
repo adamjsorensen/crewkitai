@@ -13,7 +13,8 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
-  Compass
+  Compass,
+  Brush
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -41,10 +42,11 @@ const SidebarContentItems = () => {
     navigate("/auth");
   };
 
-  // Reordered nav items with Strategic Compass before Content and Financial
+  // Updated nav items with PainterGrowth AI added back in the correct position
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
+    { name: "PainterGrowth AI", icon: Brush, path: "/dashboard/pg-coach" },
     { 
       name: "Content", 
       icon: FileText, 
@@ -57,7 +59,6 @@ const SidebarContentItems = () => {
       path: "/dashboard/financial", 
       badge: { text: "Coming Soon", variant: "secondary" as const } 
     },
-    // AI Coach hidden as requested
     { name: "Profile", icon: User, path: "/dashboard/profile" },
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
