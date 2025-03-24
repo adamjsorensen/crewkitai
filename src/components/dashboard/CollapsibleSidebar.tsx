@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { 
   BarChart3, 
   FileText, 
@@ -13,14 +14,10 @@ import {
   LogOut, 
   LayoutDashboard, 
   User, 
-  Brush,
-  MessageSquare,
-  BrainCircuit,
-  ClipboardList,
   Shield,
   PaintBucket,
-  Sparkles,
-  Compass
+  Compass,
+  BrainCircuit
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,17 +30,33 @@ const CollapsibleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
 
+  // Helper to check if a menu item is active
   const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+    // Dashboard should only be active when exactly on /dashboard
+    if (path === "/dashboard") {
+      return location.pathname === "/dashboard";
+    }
+    // For other paths, check if the current path starts with the item path
+    return location.pathname.startsWith(path);
   };
 
+  // Reordered nav items with Strategic Compass before Content and Financial
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { name: "Content", icon: FileText, path: "/dashboard/content" },
-    { name: "Financial", icon: BarChart3, path: "/dashboard/financial" },
-    // AI Coach hidden as requested
-    { name: "PainterGrowth", icon: Brush, path: "/dashboard/pg-coach" },
-    { name: "Strategic Compass", icon: ClipboardList, path: "/dashboard/compass" },
+    { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
+    { 
+      name: "Content", 
+      icon: FileText, 
+      path: "/dashboard/content",
+      badge: { text: "Coming Soon", variant: "secondary" as const } 
+    },
+    { 
+      name: "Financial", 
+      icon: BarChart3, 
+      path: "/dashboard/financial",
+      badge: { text: "Coming Soon", variant: "secondary" as const } 
+    },
+    // PainterGrowth removed as it shouldn't be there
     { name: "Profile", icon: User, path: "/dashboard/profile" },
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
@@ -98,12 +111,22 @@ const CollapsibleSidebar = () => {
               )}
             >
               <item.icon className="h-5 w-5" />
-              <span className={cn(
-                "transition-opacity duration-200",
-                isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-              )}>
-                {item.name}
-              </span>
+              <div className="flex flex-1 items-center justify-between">
+                <span className={cn(
+                  "transition-opacity duration-200",
+                  isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+                )}>
+                  {item.name}
+                </span>
+                {item.badge && !isCollapsed && (
+                  <Badge 
+                    variant={item.badge.variant} 
+                    className="ml-2 text-xs h-5 px-1.5"
+                  >
+                    {item.badge.text}
+                  </Badge>
+                )}
+              </div>
             </Link>
           ))}
         </nav>
