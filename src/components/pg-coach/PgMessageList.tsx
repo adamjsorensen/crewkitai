@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ChevronDown, PaintBucket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PgMessage from './PgMessage';
@@ -32,6 +32,11 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
   handleExampleClick,
   isMobile
 }) => {
+  // Debug logs for scroll button
+  useEffect(() => {
+    console.log('[PgMessageList] showScrollButton state:', showScrollButton);
+  }, [showScrollButton]);
+  
   // Split messages into regular and placeholder messages
   const regularMessages = messages.filter(message => !message.isPlaceholder);
   const placeholderMessages = messages.filter(message => message.isPlaceholder);
@@ -50,7 +55,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
       ref={messagesContainerRef}
       className="h-full overflow-y-auto py-2 px-2.5 scroll-smooth"
     >
-      <div className="max-w-3xl mx-auto space-y-1.5">
+      <div className="max-w-3xl mx-auto space-y-1.5 pb-4">
         {messages.length === 0 && (
           <div className="p-1.5 text-center text-muted-foreground text-sm">
             No messages yet. Start a conversation!
@@ -106,7 +111,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
         
         {/* Show suggested follow-ups */}
         {messages.length > 0 && !isLoading && (
-          <div className="pt-0.5 mb-10">
+          <div className="pt-0.5 mb-2">
             {messages[messages.length - 1].role === 'assistant' && 
              messages[messages.length - 1].suggestedFollowUps && 
              messages[messages.length - 1].suggestedFollowUps.length > 0 && (
@@ -142,7 +147,7 @@ const PgMessageList: React.FC<PgMessageListProps> = ({
             size="sm"
             className={cn(
               "shadow-md border border-primary/20",
-              "bg-primary text-white px-3 py-0.5 h-6 rounded-full transition-all",
+              "bg-primary text-white px-3 py-0.5 h-8 rounded-full transition-all",
               "flex items-center gap-1 hover:bg-primary/90 animate-bounce-light"
             )}
             onClick={handleScrollClick}

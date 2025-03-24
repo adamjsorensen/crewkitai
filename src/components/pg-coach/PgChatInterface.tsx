@@ -200,7 +200,7 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Sticky header */}
-      <div className="sticky top-0 z-10">
+      <div className="sticky top-0 z-10 bg-background">
         <PgChatHeader 
           isThinkMode={isThinkMode}
           onToggleThinkMode={handleToggleThinkMode}
@@ -224,8 +224,8 @@ const PgChatInterface: React.FC<PgChatInterfaceProps> = ({
         />
       </div>
       
-      {/* Sticky input at the bottom */}
-      <div className="sticky bottom-0 z-10">
+      {/* Input at the bottom */}
+      <div className="bg-background z-10">
         <PgChatInput 
           onSendMessage={handleSendMessage} 
           isLoading={isLoading} 

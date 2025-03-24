@@ -44,7 +44,7 @@ const PgCoachPage = () => {
     <DashboardLayout>
       <div className="h-full flex flex-col overflow-hidden">
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Card className={`overflow-hidden border-none shadow-sm flex-1 ${isMobile ? '-mx-3 rounded-none' : 'mx-0'}`}>
+          <Card className={`overflow-hidden border-none shadow-sm flex-1 h-full flex flex-col ${isMobile ? '-mx-3 rounded-none' : 'mx-0'}`}>
             <PgChatInterface 
               key={selectedConversationId || 'new'} 
               conversationId={selectedConversationId}
