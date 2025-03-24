@@ -1,5 +1,6 @@
 
 import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
@@ -10,8 +11,14 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // If user is logged in, redirect to dashboard
+    if (user) {
+      navigate("/dashboard");
+    }
+    
     // Smooth scroll behavior for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
@@ -29,7 +36,7 @@ const Index = () => {
         });
       });
     });
-  }, []);
+  }, [user, navigate]);
 
   return (
     <div className="min-h-screen bg-white">
