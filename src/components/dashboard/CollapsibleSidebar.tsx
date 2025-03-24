@@ -14,9 +14,12 @@ import {
   LayoutDashboard, 
   User, 
   Brush,
+  MessageSquare,
+  BrainCircuit,
   ClipboardList,
   Shield,
-  PaintBucket
+  PaintBucket,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +40,7 @@ const CollapsibleSidebar = () => {
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Content", icon: FileText, path: "/dashboard/content" },
     { name: "Financial", icon: BarChart3, path: "/dashboard/financial" },
+    { name: "AI Coach", icon: Sparkles, path: "/dashboard/ai-coach" },
     { name: "PainterGrowth", icon: Brush, path: "/dashboard/pg-coach" },
     { name: "Strategic Compass", icon: ClipboardList, path: "/dashboard/compass" },
     { name: "Profile", icon: User, path: "/dashboard/profile" },
