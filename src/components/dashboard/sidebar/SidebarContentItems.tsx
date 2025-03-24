@@ -28,6 +28,7 @@ import {
   useSidebar
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const SidebarContentItems = () => {
   const location = useLocation();
@@ -40,10 +41,22 @@ const SidebarContentItems = () => {
     navigate("/auth");
   };
 
+  // Reordered nav items with Strategic Compass before Content and Financial
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { name: "Content", icon: FileText, path: "/dashboard/content" },
-    { name: "Financial", icon: BarChart4, path: "/dashboard/financial" },
+    { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
+    { 
+      name: "Content", 
+      icon: FileText, 
+      path: "/dashboard/content", 
+      badge: { text: "Coming Soon", variant: "secondary" as const } 
+    },
+    { 
+      name: "Financial", 
+      icon: BarChart4, 
+      path: "/dashboard/financial", 
+      badge: { text: "Coming Soon", variant: "secondary" as const } 
+    },
     // AI Coach hidden as requested
     { name: "Profile", icon: User, path: "/dashboard/profile" },
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
@@ -90,9 +103,19 @@ const SidebarContentItems = () => {
                   isActive={location.pathname === item.path}
                   tooltip={item.name}
                 >
-                  <Link to={item.path}>
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.name}</span>
+                  <Link to={item.path} className="flex justify-between w-full">
+                    <div className="flex items-center">
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </div>
+                    {item.badge && (
+                      <Badge 
+                        variant={item.badge.variant} 
+                        className="ml-2 text-xs h-5 px-1.5"
+                      >
+                        {item.badge.text}
+                      </Badge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
