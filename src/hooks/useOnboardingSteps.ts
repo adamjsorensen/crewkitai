@@ -48,24 +48,10 @@ export const useOnboardingSteps = () => {
               is_required: true
             },
             {
-              step_key: 'compass_intro',
-              title: 'Strategic Compass',
-              description: 'Learn about task management',
-              order_index: 4,
-              is_required: true
-            },
-            {
-              step_key: 'ai_coach_intro',
-              title: 'AI Coach',
-              description: 'Meet your AI business advisor',
-              order_index: 5,
-              is_required: true
-            },
-            {
               step_key: 'completion',
               title: 'Completion',
               description: 'Complete the onboarding process',
-              order_index: 6,
+              order_index: 4,
               is_required: true
             }
           ];

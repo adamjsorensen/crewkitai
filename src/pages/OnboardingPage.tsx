@@ -6,9 +6,7 @@ import { useOnboarding } from '@/contexts/OnboardingContext';
 import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
 import { BusinessProfileStep } from '@/components/onboarding/BusinessProfileStep';
-import { FeatureTourStep } from '@/components/onboarding/FeatureTourStep';
-import { CompassIntroStep } from '@/components/onboarding/CompassIntroStep';
-import { AiCoachIntroStep } from '@/components/onboarding/AiCoachIntroStep';
+import { FeaturesIntroStep } from '@/components/onboarding/FeaturesIntroStep';
 import { CompletionStep } from '@/components/onboarding/CompletionStep';
 import { Loader2 } from 'lucide-react';
 
@@ -22,11 +20,7 @@ const StepSelector = () => {
     case 'business_profile':
       return <BusinessProfileStep />;
     case 'feature_tour':
-      return <FeatureTourStep />;
-    case 'compass_intro':
-      return <CompassIntroStep />;
-    case 'ai_coach_intro':
-      return <AiCoachIntroStep />;
+      return <FeaturesIntroStep />;
     case 'completion':
       return <CompletionStep />;
     default:
