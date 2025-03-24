@@ -82,6 +82,10 @@ const CompassInput: React.FC<CompassInputProps> = ({ onTasksGenerated }) => {
       setIsSubmitting(false);
     }
   };
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value === "none" ? null : value);
+  };
   
   return (
     <Card>
@@ -98,14 +102,14 @@ const CompassInput: React.FC<CompassInputProps> = ({ onTasksGenerated }) => {
             
             {categories.length > 0 && (
               <Select
-                value={selectedCategory || ""}
-                onValueChange={(value) => setSelectedCategory(value || null)}
+                value={selectedCategory || "none"}
+                onValueChange={handleCategoryChange}
               >
                 <SelectTrigger className="w-full md:w-[200px]">
                   <SelectValue placeholder="Default category (none)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No category</SelectItem>
+                  <SelectItem value="none">No category</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
