@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
 
 export type ViewType = 'list' | 'kanban' | 'calendar';
 export type FilterCriteria = {
@@ -20,8 +21,9 @@ interface TaskViewContextType {
   saveViewPreference: () => Promise<void>;
 }
 
-// Define a type for our view preferences structure that matches JSON compatible types
-interface ViewPreferences {
+// Define ViewPreferences as a Record with string keys and Json-compatible values
+// This ensures compatibility with the Json type expected by Supabase
+interface ViewPreferences extends Record<string, Json> {
   viewType?: ViewType;
   filters?: {
     priority?: string[];
@@ -95,7 +97,7 @@ export const TaskViewProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return;
     
     try {
-      // Create a properly structured object for JSON serialization
+      // Create a properly structured object that matches the Json type
       const viewPreferences: ViewPreferences = {
         viewType: viewType,
         filters: filters
@@ -104,7 +106,7 @@ export const TaskViewProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const { error } = await supabase
         .from('compass_user_profiles')
         .update({
-          view_preferences: viewPreferences,
+          view_preferences: viewPreferences as Json,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
