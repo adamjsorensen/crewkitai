@@ -24,6 +24,7 @@ import CompassPage from "./pages/CompassPage"; // Strategic Planner page
 import AiSettingsPage from "./pages/admin/AiSettingsPage";
 import FeatureFlagsPage from "./pages/admin/FeatureFlagsPage";
 import CompassSettingsPage from "./pages/admin/CompassSettingsPage"; // CompassSettingsPage import
+import UsersPage from "./pages/admin/UsersPage"; // New Users page import
 import ContentPage from "./pages/content/ContentPage"; // New Content page
 import { useEffect } from "react";
 import { prefetchWelcomeContent } from "./hooks/useWelcomeContent";
@@ -71,6 +72,7 @@ const AppContent = () => {
         <Route path="/dashboard/admin/ai-settings" element={<AiSettingsPage />} />
         <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
         <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
+        <Route path="/dashboard/admin/users" element={<UsersPage />} />
         
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
