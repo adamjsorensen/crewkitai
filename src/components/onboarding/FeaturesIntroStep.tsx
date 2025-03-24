@@ -62,7 +62,7 @@ export const FeaturesIntroStep = () => {
         CrewkitAI comes packed with features designed specifically for painting professionals.
       </p>
       
-      <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 w-full mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="compass">Strategic Compass</TabsTrigger>
@@ -133,9 +133,7 @@ export const FeaturesIntroStep = () => {
             <Button
               variant="outline"
               className="flex items-center gap-2"
-              onClick={() => {
-                setActiveTab("coach");
-              }}
+              onClick={() => setActiveTab("coach")}
             >
               Next: AI Coach <ArrowRight className="h-4 w-4" />
             </Button>
