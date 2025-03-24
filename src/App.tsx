@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,7 +23,8 @@ import PgCoachPage from "./pages/PgCoachPage"; // PainterGrowth Coach page
 import CompassPage from "./pages/CompassPage"; // Strategic Planner page
 import AiSettingsPage from "./pages/admin/AiSettingsPage";
 import FeatureFlagsPage from "./pages/admin/FeatureFlagsPage";
-import CompassSettingsPage from "./pages/admin/CompassSettingsPage"; // Add CompassSettingsPage import
+import CompassSettingsPage from "./pages/admin/CompassSettingsPage"; // CompassSettingsPage import
+import ContentPage from "./pages/content/ContentPage"; // New Content page
 import { useEffect } from "react";
 import { prefetchWelcomeContent } from "./hooks/useWelcomeContent";
 
@@ -52,6 +54,7 @@ const AppContent = () => {
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/content" element={<ContentPage />} />
         <Route path="/dashboard/financial" element={<FinancialDashboard />} />
         <Route path="/dashboard/financial/jobs" element={<JobAnalysis />} />
         <Route path="/dashboard/financial/reports" element={<FinancialReports />} />
