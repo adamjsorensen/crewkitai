@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { CompassTaskDisplay } from '@/types/compass';
 import { useToast } from '@/hooks/use-toast';
@@ -95,6 +96,9 @@ const ClarificationDialog: React.FC<ClarificationDialogProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="text-xl">Clarify Task</DialogTitle>
+          <DialogDescription>
+            Provide additional details to clarify this task.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">

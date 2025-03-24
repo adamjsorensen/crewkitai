@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -73,8 +74,10 @@ const ReminderDialog: React.FC<ReminderDialogProps> = ({
         .from('compass_reminders')
         .insert({
           task_id: task.id,
-          remind_at: reminderDate.toISOString(),
+          trigger_at: reminderDate.toISOString(),
+          method: 'Email', // Default method
           created_at: new Date().toISOString(),
+          triggered: false
         });
 
       if (error) {
@@ -111,6 +114,9 @@ const ReminderDialog: React.FC<ReminderDialogProps> = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-xl">Set Reminder</DialogTitle>
+          <DialogDescription>
+            Choose when you'd like to be reminded about this task.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">

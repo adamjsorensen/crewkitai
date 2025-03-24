@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -20,14 +20,14 @@ interface TaskViewContextType {
   saveViewPreference: () => Promise<void>;
 }
 
-// Define a type for our view preferences structure that matches Json compatible types
+// Define a type for our view preferences structure that matches JSON compatible types
 interface ViewPreferences {
-  viewType?: string;
+  viewType?: ViewType;
   filters?: {
     priority?: string[];
     category?: string[];
     tag?: string[];
-    dueDate?: string | null;
+    dueDate?: 'today' | 'week' | 'month' | 'overdue' | null;
   };
 }
 
@@ -91,12 +91,12 @@ export const TaskViewProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const saveViewPreference = async () => {
+  const saveViewPreference = useCallback(async () => {
     if (!user) return;
     
     try {
       // Create a properly structured object for JSON serialization
-      const viewPreferences = {
+      const viewPreferences: ViewPreferences = {
         viewType: viewType,
         filters: filters
       };
@@ -123,7 +123,7 @@ export const TaskViewProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       console.error('Error in save preferences:', err);
       toast.error('Failed to save view preferences');
     }
-  };
+  }, [user, viewType, filters]);
 
   return (
     <TaskViewContext.Provider

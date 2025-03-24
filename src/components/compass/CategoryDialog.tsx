@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
+import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,16 +9,13 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { CompassTaskDisplay } from '@/types/compass';
-import { useToast } from '@/hooks/use-toast';
-import { useCompassCategories } from '@/hooks/useCompassCategories';
-import { useCompassTasks } from '@/hooks/useCompassTasks';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { PlusCircle } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { HexColorPicker } from 'react-colorful';
+import { cn } from '@/lib/utils';
+import CategoryBadge from './CategoryBadge';
+import { useCompassCategorySelection } from '@/hooks/tasks/useCompassCategorySelection';
 
 interface CategoryDialogProps {
   task: CompassTaskDisplay;
@@ -32,79 +30,20 @@ const CategoryDialog: React.FC<CategoryDialogProps> = ({
   onOpenChange,
   onSuccess,
 }) => {
-  const { categories, addCategory } = useCompassCategories();
-  const { updateTaskCategory } = useCompassTasks();
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    task.category ? task.category.id : null
-  );
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryColor, setNewCategoryColor] = useState('#4f46e5');
-  const { toast } = useToast();
+  const { categories, isSubmitting, assignCategory, loadCategories } = useCompassCategorySelection();
 
-  const handleSelectCategory = async () => {
-    setIsSubmitting(true);
-
-    try {
-      const success = await updateTaskCategory(task.id, selectedCategoryId);
-      
-      if (success) {
-        toast({
-          title: "Category Updated",
-          description: selectedCategoryId 
-            ? "Task category has been updated." 
-            : "Category has been removed from task.",
-        });
-        
-        onSuccess();
-        onOpenChange(false);
-      }
-    } catch (err) {
-      console.error('Error in category selection:', err);
-      toast({
-        title: "Error",
-        description: "Failed to update task category.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+  useEffect(() => {
+    if (open) {
+      loadCategories();
     }
-  };
+  }, [open, loadCategories]);
 
-  const handleAddNewCategory = async () => {
-    if (!newCategoryName.trim()) {
-      toast({
-        title: "Name Required",
-        description: "Please enter a category name.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const newCategory = await addCategory(newCategoryName, newCategoryColor);
-      
-      if (newCategory) {
-        setSelectedCategoryId(newCategory.id);
-        setIsAddingNew(false);
-        
-        toast({
-          title: "Category Created",
-          description: `The category "${newCategoryName}" has been created.`,
-        });
-      }
-    } catch (err) {
-      console.error('Error creating category:', err);
-      toast({
-        title: "Error",
-        description: "Failed to create new category.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+  const handleAssignCategory = async (categoryId: string | null) => {
+    const success = await assignCategory(task.id, categoryId);
+    
+    if (success) {
+      onSuccess();
+      onOpenChange(false);
     }
   };
 
@@ -112,91 +51,58 @@ const CategoryDialog: React.FC<CategoryDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-xl">
-            {task.category ? "Change Category" : "Add Category"}
-          </DialogTitle>
+          <DialogTitle className="text-xl">Assign Category</DialogTitle>
+          <DialogDescription>
+            Categorize this task to better organize your work.
+          </DialogDescription>
         </DialogHeader>
-        
-        {isAddingNew ? (
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="categoryName">Category Name</Label>
-              <Input
-                id="categoryName"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Enter category name"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Category Color</Label>
-              <HexColorPicker color={newCategoryColor} onChange={setNewCategoryColor} />
-              <div className="flex items-center mt-2 gap-2">
-                <div 
-                  className="w-6 h-6 rounded-full" 
-                  style={{ backgroundColor: newCategoryColor }}
-                />
-                <Input
-                  value={newCategoryColor}
-                  onChange={(e) => setNewCategoryColor(e.target.value)}
-                  className="w-32"
-                />
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Task</h3>
+            <p className="text-sm">{task.task_text}</p>
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium mb-2">Select a category:</h3>
+            <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto">
+              <div
+                className={cn(
+                  "flex items-center justify-between p-2 rounded cursor-pointer",
+                  !task.category_id ? "bg-accent" : "hover:bg-accent/50"
+                )}
+                onClick={() => handleAssignCategory(null)}
+              >
+                <span>No Category</span>
+                {!task.category_id && (
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                )}
               </div>
-            </div>
-            
-            <div className="flex justify-end space-x-2 pt-2">
-              <Button variant="outline" onClick={() => setIsAddingNew(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddNewCategory} disabled={isSubmitting || !newCategoryName.trim()}>
-                {isSubmitting ? "Creating..." : "Create Category"}
-              </Button>
+              
+              {categories.map((category) => (
+                <div
+                  key={category.id}
+                  className={cn(
+                    "flex items-center justify-between p-2 rounded cursor-pointer",
+                    task.category_id === category.id ? "bg-accent" : "hover:bg-accent/50"
+                  )}
+                  onClick={() => handleAssignCategory(category.id)}
+                >
+                  <CategoryBadge name={category.name} color={category.color} />
+                  {task.category_id === category.id && (
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-        ) : (
-          <>
-            <div className="py-4">
-              <RadioGroup value={selectedCategoryId || "none"} onValueChange={(value) => setSelectedCategoryId(value === "none" ? null : value)}>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="none" id="none" />
-                    <Label htmlFor="none" className="cursor-pointer">No Category</Label>
-                  </div>
-                  
-                  {categories.map((category) => (
-                    <div key={category.id} className="flex items-center space-x-2">
-                      <RadioGroupItem value={category.id} id={category.id} />
-                      <div 
-                        className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: category.color }}
-                      />
-                      <Label htmlFor={category.id} className="cursor-pointer">{category.name}</Label>
-                    </div>
-                  ))}
-                </div>
-              </RadioGroup>
-              
-              <Button 
-                variant="ghost" 
-                className="mt-4 text-sm"
-                onClick={() => setIsAddingNew(true)}
-              >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Create New Category
-              </Button>
-            </div>
-            
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button onClick={handleSelectCategory} disabled={isSubmitting}>
-                {isSubmitting ? "Updating..." : "Save Changes"}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
