@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +7,6 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Card } from '@/components/ui/card';
 import { useCompassTasks } from '@/hooks/useCompassTasks';
 import CompassOnboarding from '@/components/compass/CompassOnboarding';
-import CompassInput from '@/components/compass/CompassInput';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TaskViewProvider, useTaskView } from '@/contexts/TaskViewContext';
 import { CompassTaskDisplay } from '@/types/compass';
@@ -16,10 +16,14 @@ import ListView from '@/components/compass/ListView';
 import KanbanView from '@/components/compass/KanbanView';
 import CalendarView from '@/components/compass/CalendarView';
 import CompletedTasksList from '@/components/compass/CompletedTasksList';
-import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useFilteredTasks } from '@/hooks/useFilteredTasks';
 import CreatePlanDialog from '@/components/compass/CreatePlanDialog';
+import ReminderDialog from '@/components/compass/ReminderDialog';
+import CalendarDialog from '@/components/compass/CalendarDialog';
+import CategoryDialog from '@/components/compass/CategoryDialog';
+import TagDialog from '@/components/compass/TagDialog';
+import ClarificationDialog from '@/components/compass/ClarificationDialog';
 
 const TasksContainer = () => {
   const {
@@ -33,6 +37,13 @@ const TasksContainer = () => {
   const { toast } = useToast();
   
   const filteredTasks = useFilteredTasks(activeTasks);
+  
+  // Dialog states
+  const [reminderTask, setReminderTask] = useState<CompassTaskDisplay | null>(null);
+  const [calendarTask, setCalendarTask] = useState<CompassTaskDisplay | null>(null);
+  const [categoryTask, setCategoryTask] = useState<CompassTaskDisplay | null>(null);
+  const [tagTask, setTagTask] = useState<CompassTaskDisplay | null>(null);
+  const [clarifyTask, setClarifyTask] = useState<CompassTaskDisplay | null>(null);
 
   const markTaskComplete = async (task: CompassTaskDisplay) => {
     try {
@@ -68,18 +79,23 @@ const TasksContainer = () => {
   };
 
   const openReminderDialog = (task: CompassTaskDisplay) => {
+    setReminderTask(task);
   };
 
   const openCalendarDialog = (task: CompassTaskDisplay) => {
+    setCalendarTask(task);
   };
 
   const openClarificationDialog = (task: CompassTaskDisplay) => {
+    setClarifyTask(task);
   };
 
   const openCategoryDialog = (task: CompassTaskDisplay) => {
+    setCategoryTask(task);
   };
 
   const openTagDialog = (task: CompassTaskDisplay) => {
+    setTagTask(task);
   };
 
   if (isLoading) {
@@ -139,6 +155,52 @@ const TasksContainer = () => {
       )}
       
       <CompletedTasksList tasks={completedTasks} />
+      
+      {/* Dialogs */}
+      {reminderTask && (
+        <ReminderDialog
+          task={reminderTask}
+          open={!!reminderTask}
+          onOpenChange={(open) => !open && setReminderTask(null)}
+          onSuccess={loadTasks}
+        />
+      )}
+      
+      {calendarTask && (
+        <CalendarDialog
+          task={calendarTask}
+          open={!!calendarTask}
+          onOpenChange={(open) => !open && setCalendarTask(null)}
+          onSuccess={loadTasks}
+        />
+      )}
+      
+      {categoryTask && (
+        <CategoryDialog
+          task={categoryTask}
+          open={!!categoryTask}
+          onOpenChange={(open) => !open && setCategoryTask(null)}
+          onSuccess={loadTasks}
+        />
+      )}
+      
+      {tagTask && (
+        <TagDialog
+          task={tagTask}
+          open={!!tagTask}
+          onOpenChange={(open) => !open && setTagTask(null)}
+          onSuccess={loadTasks}
+        />
+      )}
+      
+      {clarifyTask && (
+        <ClarificationDialog
+          task={clarifyTask}
+          open={!!clarifyTask}
+          onOpenChange={(open) => !open && setClarifyTask(null)}
+          onSuccess={loadTasks}
+        />
+      )}
     </div>
   );
 };

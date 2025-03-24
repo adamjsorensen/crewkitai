@@ -20,10 +20,15 @@ interface TaskViewContextType {
   saveViewPreference: () => Promise<void>;
 }
 
-// Define a type for our view preferences structure
+// Define a type for our view preferences structure that matches Json compatible types
 interface ViewPreferences {
-  viewType?: ViewType;
-  filters?: FilterCriteria;
+  viewType?: string;
+  filters?: {
+    priority?: string[];
+    category?: string[];
+    tag?: string[];
+    dueDate?: string | null;
+  };
 }
 
 const defaultFilters: FilterCriteria = {};
@@ -68,15 +73,15 @@ export const TaskViewProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       if (data?.view_preferences) {
-        // Type check and safely access the properties
-        const prefs = data.view_preferences as ViewPreferences;
+        // Safe parsing of the preferences
+        const prefs = data.view_preferences as Record<string, any>;
         
-        if (prefs.viewType) {
-          setViewType(prefs.viewType);
+        if (prefs.viewType && ['list', 'kanban', 'calendar'].includes(prefs.viewType)) {
+          setViewType(prefs.viewType as ViewType);
         }
         
-        if (prefs.filters) {
-          setFilters(prefs.filters);
+        if (prefs.filters && typeof prefs.filters === 'object') {
+          setFilters(prefs.filters as FilterCriteria);
         }
       }
     } catch (err) {
@@ -90,10 +95,10 @@ export const TaskViewProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return;
     
     try {
-      // Create a properly typed view preferences object
-      const viewPreferences: ViewPreferences = {
-        viewType,
-        filters
+      // Create a properly structured object for JSON serialization
+      const viewPreferences = {
+        viewType: viewType,
+        filters: filters
       };
       
       const { error } = await supabase
