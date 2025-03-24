@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import CompassInput from '@/components/compass/CompassInput';
@@ -11,6 +10,9 @@ import { Loader2, ListChecks, Sparkles, ArrowRight } from 'lucide-react';
 import { useCompassOnboarding } from '@/hooks/tasks/useCompassOnboarding';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import TaskViewSwitcher from '@/components/compass/TaskViewSwitcher';
+import CompassGuidedTour from '@/components/compass/CompassGuidedTour';
+import RestartTourButton from '@/components/compass/RestartTourButton';
 
 const CompassPage = () => {
   const [tasks, setTasks] = useState<CompassTask[]>([]);
@@ -23,8 +25,6 @@ const CompassPage = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Show onboarding overlay for new users who have completed onboarding
-    // but haven't used the Compass feature yet
     if (hasOnboarded === true && !localStorage.getItem('compassFeatureIntroSeen')) {
       setShowOnboardingOverlay(true);
     }
@@ -110,7 +110,6 @@ const CompassPage = () => {
     setCurrentPlanId(planId);
     await loadTasksForPlan(planId);
     
-    // Mark feature intro as seen when user creates their first plan
     if (showOnboardingOverlay) {
       dismissOnboardingOverlay();
     }
@@ -118,23 +117,19 @@ const CompassPage = () => {
   
   const handleCompleteTask = async (taskId: string) => {
     try {
-      // Find the task in the current list
       const taskToComplete = tasks.find(t => t.id === taskId);
       
-      // Optimistically update UI
       setTasks(tasks.map(task => 
         task.id === taskId 
           ? { ...task, completed_at: new Date().toISOString() } 
           : task
       ));
       
-      // Show success message with task details
       toast({
         title: "Task completed!",
         description: taskToComplete ? `Great job completing: ${taskToComplete.task_text.substring(0, 30)}...` : "Great job completing this task."
       });
       
-      // Persist to database
       const { error } = await supabase
         .from('compass_tasks')
         .update({ completed_at: new Date().toISOString() })
@@ -146,7 +141,6 @@ const CompassPage = () => {
     } catch (err) {
       console.error('Error completing task:', err);
       
-      // Revert optimistic update if the server request failed
       setTasks(tasks.map(task => 
         task.id === taskId && task.completed_at 
           ? { ...task, completed_at: null } 
@@ -226,13 +220,19 @@ const CompassPage = () => {
   
   return (
     <DashboardLayout>
+      <CompassGuidedTour />
       <div className="container max-w-4xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-extrabold tracking-tight mb-2 text-primary">
-          Strategic Planner
-        </h1>
-        <p className="text-muted-foreground mb-6">
-          Prioritize your tasks and focus on what matters most
-        </p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight mb-2 text-primary">
+              Strategic Planner
+            </h1>
+            <p className="text-muted-foreground">
+              Prioritize your tasks and focus on what matters most
+            </p>
+          </div>
+          <RestartTourButton />
+        </div>
         
         {hasOnboarded === false && (
           <div className="mb-6 bg-primary/5 border border-primary/10 rounded-lg p-4">
@@ -250,6 +250,10 @@ const CompassPage = () => {
         
         <div className="space-y-6">
           <CompassInput onPlanCreated={handlePlanCreated} />
+          
+          {hasOnboarded && (
+            <TaskViewSwitcher />
+          )}
           
           {isLoading ? (
             <div className="flex flex-col justify-center items-center py-16 bg-muted/20 rounded-lg border border-dashed">
