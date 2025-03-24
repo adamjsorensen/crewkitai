@@ -31,7 +31,7 @@ const formSchema = z.object({
   full_name: z.string().min(2, { message: "Name is required" }),
   company_name: z.string().optional(),
   email: z.string().email({ message: "Invalid email address" }),
-  role: z.enum(["user", "admin", "moderator"]).default("user"),
+  role: z.enum(["user", "admin"]).default("user"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -53,7 +53,7 @@ const UserForm = ({ user, onClose, onSuccess }: UserFormProps) => {
       full_name: user?.full_name || "",
       company_name: user?.company_name || "",
       email: user?.email || "",
-      role: (user?.user_roles?.[0]?.role as any) || "user",
+      role: user?.role || "user",
     },
   });
 
@@ -68,14 +68,14 @@ const UserForm = ({ user, onClose, onSuccess }: UserFormProps) => {
         .update({
           full_name: values.full_name,
           company_name: values.company_name,
+          email: values.email
         })
         .eq("id", user.id);
 
       if (profileError) throw profileError;
 
       // Update role if changed
-      const currentRole = user.user_roles?.[0]?.role || "user";
-      if (values.role !== currentRole) {
+      if (values.role !== user.role) {
         // Delete existing role
         const { error: deleteRoleError } = await supabase
           .from("user_roles")
@@ -181,7 +181,7 @@ const UserForm = ({ user, onClose, onSuccess }: UserFormProps) => {
             <FormItem>
               <FormLabel>Company Name</FormLabel>
               <FormControl>
-                <Input placeholder="Acme Inc." {...field} />
+                <Input placeholder="Acme Painting Inc." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -224,7 +224,6 @@ const UserForm = ({ user, onClose, onSuccess }: UserFormProps) => {
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="moderator">Moderator</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>

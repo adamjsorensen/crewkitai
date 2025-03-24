@@ -33,7 +33,15 @@ const DeleteUserDialog = ({
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async () => {
-      // Delete from profiles table
+      // First delete from user_roles table
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (roleError) throw roleError;
+
+      // Then delete from profiles table
       const { error } = await supabase
         .from("profiles")
         .delete()

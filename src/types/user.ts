@@ -4,8 +4,6 @@ export interface User {
   full_name: string;
   company_name?: string;
   email?: string;
-  user_roles?: {
-    role: 'admin' | 'moderator' | 'user';
-  }[];
+  role?: 'admin' | 'user';
   [key: string]: any;
 }

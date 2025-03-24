@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -13,19 +13,12 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import UserForm from "@/components/admin/users/UserForm";
 import DeleteUserDialog from "@/components/admin/users/DeleteUserDialog";
 import { User } from "@/types/user";
 import { Search, UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,7 +28,7 @@ const UsersPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch users
+  // Fetch users with roles
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
@@ -52,14 +45,25 @@ const UsersPage = () => {
         });
         return [];
       }
-      return data;
+
+      // Transform the data structure to match our User type
+      return data.map((profile: any) => ({
+        id: profile.id,
+        full_name: profile.full_name,
+        company_name: profile.company_name,
+        email: profile.email,
+        role: profile.user_roles && profile.user_roles.length > 0 
+          ? profile.user_roles[0].role 
+          : 'user'
+      }));
     },
   });
 
   // Filter users based on search term
-  const filteredUsers = users.filter((user: any) => 
+  const filteredUsers = users.filter((user: User) => 
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    user.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Handle edit user
@@ -115,16 +119,12 @@ const UsersPage = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsers.map((user: any) => (
+                  filteredUsers.map((user: User) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.full_name}</TableCell>
                       <TableCell>{user.company_name}</TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        {user.user_roles && user.user_roles.length > 0 
-                          ? user.user_roles.map((role: any) => role.role).join(', ')
-                          : 'user'}
-                      </TableCell>
+                      <TableCell className="capitalize">{user.role || 'user'}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"

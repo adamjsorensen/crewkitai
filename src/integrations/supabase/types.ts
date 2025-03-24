@@ -660,6 +660,7 @@ export type Database = {
           company_description: string | null
           company_name: string
           created_at: string
+          email: string | null
           full_name: string
           id: string
           phone: string | null
@@ -673,6 +674,7 @@ export type Database = {
           company_description?: string | null
           company_name: string
           created_at?: string
+          email?: string | null
           full_name: string
           id: string
           phone?: string | null
@@ -686,6 +688,7 @@ export type Database = {
           company_description?: string | null
           company_name?: string
           created_at?: string
+          email?: string | null
           full_name?: string
           id?: string
           phone?: string | null
