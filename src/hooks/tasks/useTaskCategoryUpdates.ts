@@ -1,12 +1,13 @@
 
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export const useTaskCategoryUpdates = () => {
   const { toast } = useToast();
 
-  // Update task category
-  const updateTaskCategory = async (taskId: string, categoryId: string | null) => {
+  // Update task category with useCallback to memoize
+  const updateTaskCategory = useCallback(async (taskId: string, categoryId: string | null) => {
     try {
       const { error } = await supabase
         .from('compass_tasks')
@@ -36,7 +37,7 @@ export const useTaskCategoryUpdates = () => {
       });
       return false;
     }
-  };
+  }, [toast]);
 
   return {
     updateTaskCategory

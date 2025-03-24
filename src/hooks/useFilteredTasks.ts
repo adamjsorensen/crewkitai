@@ -1,21 +1,14 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { CompassTaskDisplay } from '@/types/compass';
 import { useTaskView, FilterCriteria } from '@/contexts/TaskViewContext';
 
 export const useFilteredTasks = (tasks: CompassTaskDisplay[]) => {
   const { filters } = useTaskView();
-  const [filteredTasks, setFilteredTasks] = useState<CompassTaskDisplay[]>(tasks);
-
-  useEffect(() => {
-    // Start with all tasks
-    let filtered = [...tasks];
-    
-    // Apply filters
-    filtered = applyFilters(filtered, filters);
-    
-    // Update state
-    setFilteredTasks(filtered);
+  
+  // Use useMemo to prevent unnecessary recalculations
+  const filteredTasks = useMemo(() => {
+    return applyFilters(tasks, filters);
   }, [tasks, filters]);
 
   return filteredTasks;

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useCompassTags } from '@/hooks/useCompassTags';
 import { useToast } from '@/hooks/use-toast';
 
@@ -8,7 +8,7 @@ export const useCompassTagSelection = () => {
   const { tags, addTagToTask, removeTagFromTask, loadTags } = useCompassTags();
   const { toast } = useToast();
 
-  const toggleTag = async (taskId: string, tagId: string, isCurrentlyAssigned: boolean) => {
+  const toggleTag = useCallback(async (taskId: string, tagId: string, isCurrentlyAssigned: boolean) => {
     setIsSubmitting(true);
     
     try {
@@ -46,7 +46,7 @@ export const useCompassTagSelection = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [addTagToTask, removeTagFromTask, toast]);
 
   return {
     tags,

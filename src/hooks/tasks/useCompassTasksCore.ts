@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -13,8 +13,8 @@ export const useCompassTasksCore = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Load tasks
-  const loadTasks = async () => {
+  // Load tasks - memoize with useCallback to prevent recreation on every render
+  const loadTasks = useCallback(async () => {
     if (!user) return;
     
     setIsLoading(true);
@@ -158,10 +158,10 @@ export const useCompassTasksCore = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, toast]); // Only depend on user and toast
 
   // Handle new tasks from CompassInput
-  const handleNewTasks = (response: CompassAnalyzeResponse) => {
+  const handleNewTasks = useCallback((response: CompassAnalyzeResponse) => {
     setCurrentPlanId(response.plan_id);
     // Reload tasks to get the newly created ones with proper IDs
     loadTasks();
@@ -177,7 +177,7 @@ export const useCompassTasksCore = () => {
         description: `${response.tasks.length} tasks have been prioritized for you.`,
       });
     }
-  };
+  }, [loadTasks, toast]); // depend on loadTasks and toast
 
   return {
     activeTasks,

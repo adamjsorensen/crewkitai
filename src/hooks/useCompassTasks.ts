@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useCompassTasksCore } from './tasks/useCompassTasksCore';
 import { useTaskCategoryUpdates } from './tasks/useTaskCategoryUpdates';
 import { useCompassOnboarding } from './tasks/useCompassOnboarding';
@@ -18,7 +18,7 @@ export const useCompassTasks = () => {
   const { updateTaskCategory } = useTaskCategoryUpdates();
   const { hasOnboarded, handleOnboardingComplete } = useCompassOnboarding();
 
-  // Initial load
+  // Initial load - only run when hasOnboarded changes
   useEffect(() => {
     if (hasOnboarded === true) {
       loadTasks();
@@ -26,9 +26,9 @@ export const useCompassTasks = () => {
   }, [hasOnboarded, loadTasks]);
 
   // Create a wrapper that combines task creation with any additional logic
-  const handleNewTasks = (response: CompassAnalyzeResponse) => {
+  const handleNewTasks = useCallback((response: CompassAnalyzeResponse) => {
     handleNewTasksInternal(response);
-  };
+  }, [handleNewTasksInternal]);
 
   return {
     activeTasks,

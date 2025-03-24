@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -45,9 +45,9 @@ export const useCompassOnboarding = () => {
   }, [user, toast]);
 
   // Handle onboarding completion
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = useCallback(() => {
     setHasOnboarded(true);
-  };
+  }, []);
 
   return {
     hasOnboarded,
