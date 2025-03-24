@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +12,7 @@ export const useAiSettings = () => {
 
   const fetchSettings = async () => {
     try {
+      console.log("Fetching AI settings...");
       const { data, error } = await supabase
         .from("ai_settings")
         .select("name, value")
@@ -25,6 +27,8 @@ export const useAiSettings = () => {
         ]);
       
       if (error) throw error;
+      
+      console.log("Settings fetched:", data);
       
       if (data) {
         const formValues: AiSettingsData = {};
@@ -50,6 +54,7 @@ export const useAiSettings = () => {
           }
         });
         
+        console.log("Processed settings for form:", formValues);
         setSettings(formValues);
       }
     } catch (error) {
