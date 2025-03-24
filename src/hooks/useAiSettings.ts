@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,11 +31,13 @@ export const useAiSettings = () => {
         
         data.forEach(setting => {
           let value = setting.value;
+          
           // If the value appears to be a JSON string, parse it
           if (typeof value === 'string' && (value.startsWith('"') || value.startsWith('{'))) {
             try {
               value = JSON.parse(value);
             } catch (e) {
+              console.error("Error parsing JSON value:", e);
               // Keep as is if parsing fails
             }
           }
@@ -67,7 +68,7 @@ export const useAiSettings = () => {
     fetchSettings();
   }, []);
 
-  return { settings, isLoading };
+  return { settings, isLoading, refetchSettings: fetchSettings };
 };
 
 export const useSaveAiSettings = () => {
@@ -78,6 +79,8 @@ export const useSaveAiSettings = () => {
     setIsSaving(true);
     
     try {
+      console.log("Saving settings:", values);
+      
       // Process each setting
       for (const [key, value] of Object.entries(values)) {
         let processedValue = value;
@@ -85,8 +88,12 @@ export const useSaveAiSettings = () => {
         // Try to parse JSON fields
         if (key === 'ai_coach_models' || key === 'ai_coach_follow_up_defaults') {
           try {
-            processedValue = JSON.parse(value);
+            // Parse the JSON string to an object
+            const jsonValue = JSON.parse(value);
+            // Then stringify it again to ensure it's a valid JSON string for storage
+            processedValue = JSON.stringify(jsonValue);
           } catch (e) {
+            console.error(`Invalid JSON for ${key}:`, e);
             toast({
               title: "Invalid JSON",
               description: `${key} must be valid JSON`,
@@ -95,7 +102,15 @@ export const useSaveAiSettings = () => {
             setIsSaving(false);
             return false;
           }
+        } else if (key === 'ai_coach_follow_up_enabled') {
+          // For boolean values stored as strings, just pass as is
+          processedValue = value;
+        } else {
+          // For string values like system prompt, wrap in quotes to make it a JSON string
+          processedValue = JSON.stringify(value);
         }
+        
+        console.log(`Updating setting ${key}:`, processedValue);
         
         // Update the setting
         const { error } = await supabase
@@ -103,7 +118,10 @@ export const useSaveAiSettings = () => {
           .update({ value: processedValue })
           .eq("name", key);
         
-        if (error) throw error;
+        if (error) {
+          console.error(`Error updating ${key}:`, error);
+          throw error;
+        }
       }
       
       toast({

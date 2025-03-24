@@ -19,11 +19,13 @@ import WelcomeContentManagement from "./settings/WelcomeContentManagement";
 import ContentFilters from "./settings/ContentFilters";
 import FollowUpQuestionsField from "./settings/FollowUpQuestionsField";
 import FollowUpPromptField from "./settings/FollowUpPromptField";
+import { useToast } from "@/hooks/use-toast";
 
 const AiSettingsForm = () => {
   const [activeTab, setActiveTab] = React.useState("model-settings");
-  const { settings, isLoading } = useAiSettings();
+  const { settings, isLoading, refetchSettings } = useAiSettings();
   const { saveSettings, isSaving } = useSaveAiSettings();
+  const { toast } = useToast();
   
   // Initialize form with default values
   const form = useForm<AiSettingsFormValues>({
@@ -47,13 +49,19 @@ const AiSettingsForm = () => {
   // Update form values when settings are loaded
   React.useEffect(() => {
     if (!isLoading && Object.keys(settings).length > 0) {
+      console.log("Settings loaded, updating form:", settings);
       form.reset(settings);
     }
   }, [settings, isLoading, form]);
   
   // Submit form handler
   const onSubmit = async (values: AiSettingsFormValues) => {
-    await saveSettings(values);
+    console.log("Form submitted with values:", values);
+    const success = await saveSettings(values);
+    if (success) {
+      // Refetch settings to update the form with saved values
+      refetchSettings();
+    }
   };
   
   if (isLoading) {
