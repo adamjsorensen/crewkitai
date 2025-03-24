@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, CheckCircle, CheckCircle2, Clock, CalendarPlus, Plus, Tag } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
@@ -11,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { CompassTaskDisplay, CompassCategory, CompassTag } from '@/types/compass';
+import { CompassTaskDisplay } from '@/types/compass';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -21,7 +20,9 @@ import { useCompassCategories } from '@/hooks/useCompassCategories';
 import { useCompassTags } from '@/hooks/useCompassTags';
 import CategoryBadge from './CategoryBadge';
 import TagBadge from './TagBadge';
+import TaskActions from './TaskActions';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { CheckCircle } from 'lucide-react';
 
 interface TaskListProps {
   tasks: CompassTaskDisplay[];
@@ -31,13 +32,13 @@ interface TaskListProps {
 const getPriorityColor = (priority: string) => {
   switch (priority) {
     case 'High':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-500';
     case 'Medium':
-      return 'bg-amber-100 text-amber-800';
+      return 'bg-amber-500';
     case 'Low':
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-500';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-500';
   }
 };
 
@@ -350,158 +351,115 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onTaskUpdate }) => {
   if (tasks.length === 0) {
     return (
       <Card className="w-full">
-        <CardContent className="p-6 text-center">
+        <div className="p-6 text-center">
           <p className="text-muted-foreground">No tasks available. Create a new plan to get started.</p>
-        </CardContent>
+        </div>
       </Card>
     );
   }
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-3">
         {tasks.map((task) => (
           <Card 
             key={task.id} 
             className={cn(
-              "w-full transition-all duration-300",
-              task.completed_at ? "bg-green-50" : ""
+              "w-full transition-all duration-300 overflow-hidden",
+              task.completed_at ? "bg-gray-50" : ""
             )}
           >
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
-                    {task.category && (
-                      <CategoryBadge 
-                        name={task.category.name} 
-                        color={task.category.color} 
-                        onClick={() => openCategoryDialog(task)}
-                      />
+            <div className="flex">
+              {/* Priority indicator as left border */}
+              <div className={cn("w-1.5", getPriorityColor(task.priority))} />
+              
+              <div className="flex-1 p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    {/* Status badges row */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <Badge className="bg-accent text-accent-foreground">{task.priority}</Badge>
+                      
+                      {task.category && (
+                        <CategoryBadge 
+                          name={task.category.name} 
+                          color={task.category.color} 
+                          onClick={() => openCategoryDialog(task)}
+                        />
+                      )}
+                      
+                      {task.due_date && (
+                        <div className="text-xs text-muted-foreground flex items-center">
+                          <CalendarIcon className="h-3 w-3 mr-1" />
+                          {format(new Date(task.due_date), 'MMM d, yyyy')}
+                        </div>
+                      )}
+                      
+                      {task.clarification && !task.clarification.answer && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-700">
+                          Needs Clarification
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {/* Task title */}
+                    <h3 className={cn(
+                      "text-lg font-medium mb-1 break-words",
+                      task.completed_at ? "line-through text-muted-foreground" : ""
+                    )}>
+                      {task.task_text}
+                    </h3>
+                    
+                    {/* Task reasoning */}
+                    {task.reasoning && (
+                      <p className="text-sm text-muted-foreground italic mb-3 break-words">
+                        {task.reasoning}
+                      </p>
                     )}
+                    
+                    {/* Task tags */}
+                    {task.tags && task.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {task.tags.map(tag => (
+                          <TagBadge 
+                            key={tag.id}
+                            name={tag.name} 
+                            color={tag.color}
+                            onClick={() => openTagDialog(task)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Clarification callout */}
                     {task.clarification && !task.clarification.answer && (
-                      <Badge variant="outline" className="border-amber-500 text-amber-700">
-                        Needs Clarification
-                      </Badge>
-                    )}
-                    {task.due_date && (
-                      <div className="text-xs text-muted-foreground flex items-center">
-                        <CalendarIcon className="h-3 w-3 mr-1" />
-                        Due: {format(new Date(task.due_date), 'MMM d, yyyy')}
+                      <div 
+                        className="text-sm p-2 bg-amber-50 border border-amber-200 rounded-md cursor-pointer mt-2"
+                        onClick={() => openClarificationDialog(task)}
+                      >
+                        <span className="font-medium text-amber-800">Clarification needed:</span> {task.clarification.question}
                       </div>
                     )}
                   </div>
                   
-                  <h3 className={cn(
-                    "text-lg font-medium mb-1",
-                    task.completed_at ? "line-through text-muted-foreground" : ""
-                  )}>
-                    {task.task_text}
-                  </h3>
-                  
-                  {task.reasoning && (
-                    <p className="text-sm text-muted-foreground italic mb-3">
-                      {task.reasoning}
-                    </p>
-                  )}
-                  
-                  {task.tags && task.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {task.tags.map(tag => (
-                        <TagBadge 
-                          key={tag.id}
-                          name={tag.name} 
-                          color={tag.color}
-                          onClick={() => openTagDialog(task)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  
-                  {task.clarification && !task.clarification.answer && (
-                    <div 
-                      className="text-sm p-2 bg-amber-50 border border-amber-200 rounded-md cursor-pointer mt-2"
-                      onClick={() => openClarificationDialog(task)}
-                    >
-                      <span className="font-medium text-amber-800">Clarification needed:</span> {task.clarification.question}
-                    </div>
-                  )}
+                  {/* Task actions */}
+                  <TaskActions 
+                    task={task}
+                    onComplete={markTaskComplete}
+                    onReminder={openReminderDialog}
+                    onCalendar={openCalendarDialog}
+                    onCategory={openCategoryDialog}
+                    onTag={openTagDialog}
+                    onClarify={task.clarification && !task.clarification.answer ? openClarificationDialog : undefined}
+                  />
                 </div>
-                
-                {!task.completed_at && (
-                  <div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                      onClick={() => markTaskComplete(task)}
-                    >
-                      <CheckCircle2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                )}
               </div>
-            </CardContent>
-            
-            {!task.completed_at && (
-              <CardFooter className="flex flex-wrap justify-start gap-2 p-4 pt-0 border-t border-border">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => openReminderDialog(task)}
-                >
-                  <Clock className="h-3 w-3 mr-1" />
-                  Remind Me
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => openCalendarDialog(task)}
-                >
-                  <CalendarPlus className="h-3 w-3 mr-1" />
-                  Add to Calendar
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => openCategoryDialog(task)}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  {task.category ? "Change Category" : "Add Category"}
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => openTagDialog(task)}
-                >
-                  <Tag className="h-3 w-3 mr-1" />
-                  {task.tags && task.tags.length > 0 ? "Manage Tags" : "Add Tags"}
-                </Button>
-                
-                {task.clarification && !task.clarification.answer && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="text-xs text-amber-600 border-amber-300"
-                    onClick={() => openClarificationDialog(task)}
-                  >
-                    Clarify
-                  </Button>
-                )}
-              </CardFooter>
-            )}
+            </div>
           </Card>
         ))}
       </div>
 
+      {/* Dialogs */}
       {/* Reminder Dialog */}
       <Dialog open={isReminderOpen} onOpenChange={setIsReminderOpen}>
         <DialogContent>
