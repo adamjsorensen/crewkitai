@@ -187,7 +187,7 @@ const CompassOnboarding: React.FC<CompassOnboardingProps> = ({
             <FormField control={form.control} name="workload" render={({
             field
           }) => <FormItem>
-                  <FormLabel>Current Workload</FormLabel>
+                  <FormLabel>Business Stage</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
