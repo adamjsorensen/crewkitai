@@ -92,9 +92,9 @@ export const FeaturesIntroStep = () => {
           
           <div className="flex justify-center mt-8">
             <Button
-              size="lg"
-              onClick={() => setActiveTab('compass')}
+              variant="outline"
               className="flex items-center gap-2"
+              onClick={() => setActiveTab('compass')}
             >
               Next: Strategic Compass <ArrowRight className="h-4 w-4" />
             </Button>
