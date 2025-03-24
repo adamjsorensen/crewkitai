@@ -88,53 +88,51 @@ const CompassInput: React.FC<CompassInputProps> = ({ onTasksGenerated }) => {
   };
   
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Textarea
-              placeholder="Enter your tasks, notes, or ideas... I'll help prioritize them for you."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="min-h-[120px] resize-none"
-              disabled={isSubmitting}
-            />
-            
-            {categories.length > 0 && (
-              <Select
-                value={selectedCategory || "none"}
-                onValueChange={handleCategoryChange}
-              >
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="Default category (none)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No category</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Textarea
+            placeholder="Enter your tasks, notes, or ideas... I'll help prioritize them for you."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="min-h-[120px] resize-none"
+            disabled={isSubmitting}
+          />
           
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>Processing...</>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Create Plan
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+          {categories.length > 0 && (
+            <Select
+              value={selectedCategory || "none"}
+              onValueChange={handleCategoryChange}
+            >
+              <SelectTrigger className="w-full md:w-[200px]">
+                <SelectValue placeholder="Default category (none)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No category</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>Processing...</>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Create Plan
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 };
 

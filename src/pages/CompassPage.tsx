@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,8 +19,8 @@ import CompletedTasksList from '@/components/compass/CompletedTasksList';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useFilteredTasks } from '@/hooks/useFilteredTasks';
+import CreatePlanDialog from '@/components/compass/CreatePlanDialog';
 
-// This component handles task actions for all views
 const TasksContainer = () => {
   const {
     activeTasks,
@@ -33,10 +32,8 @@ const TasksContainer = () => {
   const { viewType } = useTaskView();
   const { toast } = useToast();
   
-  // Apply filters to the active tasks
   const filteredTasks = useFilteredTasks(activeTasks);
 
-  // Handle task completion
   const markTaskComplete = async (task: CompassTaskDisplay) => {
     try {
       const { error } = await supabase
@@ -59,7 +56,6 @@ const TasksContainer = () => {
         description: "The task has been marked as complete.",
       });
       
-      // Refresh tasks list
       loadTasks();
     } catch (err) {
       console.error('Error in mark complete:', err);
@@ -71,34 +67,19 @@ const TasksContainer = () => {
     }
   };
 
-  // Handle set reminder
   const openReminderDialog = (task: CompassTaskDisplay) => {
-    // This function will be passed to the view components
-    // The implementation is already in TaskList.tsx and would be reused
   };
 
-  // Handle calendar integration
   const openCalendarDialog = (task: CompassTaskDisplay) => {
-    // This function will be passed to the view components
-    // The implementation is already in TaskList.tsx and would be reused
   };
 
-  // Handle clarification
   const openClarificationDialog = (task: CompassTaskDisplay) => {
-    // This function will be passed to the view components
-    // The implementation is already in TaskList.tsx and would be reused
   };
 
-  // Handle category assignment
   const openCategoryDialog = (task: CompassTaskDisplay) => {
-    // This function will be passed to the view components
-    // The implementation is already in TaskList.tsx and would be reused
   };
 
-  // Handle tag assignment
   const openTagDialog = (task: CompassTaskDisplay) => {
-    // This function will be passed to the view components
-    // The implementation is already in TaskList.tsx and would be reused
   };
 
   if (isLoading) {
@@ -111,7 +92,6 @@ const TasksContainer = () => {
     );
   }
 
-  // Render the appropriate view based on viewType
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
@@ -174,7 +154,6 @@ const CompassPage = () => {
     handleOnboardingComplete,
   } = useCompassTasks();
 
-  // Redirect to auth page if not logged in
   React.useEffect(() => {
     if (!isAuthLoading && !user) {
       toast({
@@ -200,18 +179,17 @@ const CompassPage = () => {
         <h1 className="text-3xl font-extrabold tracking-tight mb-6">Strategic Compass</h1>
         
         {hasOnboarded === null ? (
-          // Loading state
           <div className="space-y-4">
             <Skeleton className="h-[300px] w-full rounded-xl" />
           </div>
         ) : hasOnboarded === false ? (
-          // Onboarding
           <CompassOnboarding onComplete={handleOnboardingComplete} />
         ) : (
-          // Main interface with TaskViewProvider
           <TaskViewProvider>
             <div className="space-y-4">
-              <CompassInput onTasksGenerated={handleNewTasks} />
+              <div className="flex justify-end">
+                <CreatePlanDialog onTasksGenerated={handleNewTasks} />
+              </div>
               <TasksContainer />
             </div>
           </TaskViewProvider>
