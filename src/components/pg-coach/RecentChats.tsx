@@ -15,11 +15,11 @@ const RecentChats = () => {
   
   const handleChatClick = (id: string) => {
     selectConversation(id);
-    navigate('/dashboard/ai-coach');
+    navigate('/dashboard/pg-coach');
   };
   
   const handleViewAllClick = () => {
-    navigate('/dashboard/ai-coach');
+    navigate('/dashboard/pg-coach');
   };
   
   const formatChatDate = (date: Date) => {
