@@ -166,6 +166,195 @@ export type Database = {
         }
         Relationships: []
       }
+      compass_clarifications: {
+        Row: {
+          answer: string | null
+          created_at: string
+          id: string
+          question: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          question: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string
+          id?: string
+          question?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compass_clarifications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "compass_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compass_plans: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      compass_priority_rules: {
+        Row: {
+          created_at: string
+          id: string
+          keyword: string
+          priority: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          keyword: string
+          priority: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          keyword?: string
+          priority?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      compass_reminders: {
+        Row: {
+          created_at: string
+          id: string
+          method: string
+          task_id: string
+          trigger_at: string
+          triggered: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          method: string
+          task_id: string
+          trigger_at: string
+          triggered?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          method?: string
+          task_id?: string
+          trigger_at?: string
+          triggered?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compass_reminders_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "compass_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compass_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          plan_id: string
+          priority: string
+          reasoning: string | null
+          task_text: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          plan_id: string
+          priority: string
+          reasoning?: string | null
+          task_text: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          plan_id?: string
+          priority?: string
+          reasoning?: string | null
+          task_text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compass_tasks_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "compass_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compass_user_profiles: {
+        Row: {
+          business_name: string | null
+          created_at: string
+          crew_size: string | null
+          id: string
+          specialties: string[] | null
+          updated_at: string
+          workload: string | null
+        }
+        Insert: {
+          business_name?: string | null
+          created_at?: string
+          crew_size?: string | null
+          id: string
+          specialties?: string[] | null
+          updated_at?: string
+          workload?: string | null
+        }
+        Update: {
+          business_name?: string | null
+          created_at?: string
+          crew_size?: string | null
+          id?: string
+          specialties?: string[] | null
+          updated_at?: string
+          workload?: string | null
+        }
+        Relationships: []
+      }
       feature_flags: {
         Row: {
           created_at: string | null
