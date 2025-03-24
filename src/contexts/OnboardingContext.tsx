@@ -87,20 +87,18 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           
           // Convert the JSONB completed_steps to a string array
           if (newProgress) {
+            const completedStepsArray = parseCompletedSteps(newProgress.completed_steps);
             setProgress({
               ...newProgress,
-              completed_steps: Array.isArray(newProgress.completed_steps) 
-                ? newProgress.completed_steps 
-                : [],
+              completed_steps: completedStepsArray
             });
           }
         } else {
           // Convert the JSONB completed_steps to a string array
+          const completedStepsArray = parseCompletedSteps(progressData.completed_steps);
           setProgress({
             ...progressData,
-            completed_steps: Array.isArray(progressData.completed_steps) 
-              ? progressData.completed_steps 
-              : [],
+            completed_steps: completedStepsArray
           });
         }
 
@@ -132,6 +130,37 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     fetchOnboardingData();
   }, [user, toast]);
+
+  // Helper function to safely parse completed_steps from JSONB
+  const parseCompletedSteps = (jsonData: any): string[] => {
+    if (!jsonData) return [];
+    
+    try {
+      // If it's already an array, ensure all elements are strings
+      if (Array.isArray(jsonData)) {
+        return jsonData.map(item => String(item));
+      }
+      
+      // If it's a JSON string, parse it and ensure all elements are strings
+      if (typeof jsonData === 'string') {
+        try {
+          const parsed = JSON.parse(jsonData);
+          if (Array.isArray(parsed)) {
+            return parsed.map(item => String(item));
+          }
+        } catch (e) {
+          // If parsing fails, return the string in an array
+          return [jsonData];
+        }
+      }
+      
+      // Fallback: return empty array
+      return [];
+    } catch (error) {
+      console.error('Error parsing completed_steps:', error);
+      return [];
+    }
+  };
 
   // Complete a step
   const completeStep = async (stepKey: string) => {
