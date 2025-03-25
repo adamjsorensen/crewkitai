@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -14,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Compass,
-  Brush
+  Brush,
+  Users
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -42,7 +42,6 @@ const SidebarContentItems = () => {
     navigate("/auth");
   };
 
-  // Updated nav items with PainterGrowth AI added back in the correct position
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
@@ -63,18 +62,22 @@ const SidebarContentItems = () => {
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
 
-  // Simplified to a single admin menu item
   const adminItems = [
-    { name: "Admin Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "AI Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "User Management", icon: Users, path: "/dashboard/admin/users/user-list" },
   ];
 
-  // Helper to check if a menu item is active
   const isItemActive = (itemPath: string) => {
-    // Dashboard should only be active when exactly on /dashboard
     if (itemPath === "/dashboard") {
       return location.pathname === "/dashboard";
     }
-    // For other paths, check if the current path starts with the item path
+    if (itemPath.startsWith("/dashboard/admin/users")) {
+      return location.pathname.startsWith("/dashboard/admin/users");
+    }
+    if (itemPath === "/dashboard/admin/ai-settings") {
+      return location.pathname.startsWith("/dashboard/admin/") && 
+             !location.pathname.startsWith("/dashboard/admin/users");
+    }
     return location.pathname.startsWith(itemPath);
   };
 

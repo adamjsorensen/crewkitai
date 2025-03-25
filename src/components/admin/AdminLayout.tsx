@@ -42,6 +42,12 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
   }
 
   const handleTabChange = (value: string) => {
+    // Special case for users tab which now has its own route structure
+    if (value === "users") {
+      navigate("/dashboard/admin/users/user-list");
+      return;
+    }
+    
     navigate(`/dashboard/admin/${value}`);
   };
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +16,8 @@ import {
   Shield,
   PaintBucket,
   Compass,
-  Brush
+  Brush,
+  Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,18 @@ const CollapsibleSidebar = () => {
     if (path === "/dashboard") {
       return location.pathname === "/dashboard";
     }
+    
+    // Special case for user management
+    if (path.startsWith("/dashboard/admin/users")) {
+      return location.pathname.startsWith("/dashboard/admin/users");
+    }
+    
+    // For AI settings and other admin paths
+    if (path === "/dashboard/admin/ai-settings") {
+      return location.pathname.startsWith("/dashboard/admin/") && 
+             !location.pathname.startsWith("/dashboard/admin/users");
+    }
+    
     // For other paths, check if the current path starts with the item path
     return location.pathname.startsWith(path);
   };
@@ -61,9 +73,10 @@ const CollapsibleSidebar = () => {
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
 
-  // Simplified to a single admin menu item
+  // Updated to have separate admin menu items
   const adminItems = [
-    { name: "Admin Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "AI Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "User Management", icon: Users, path: "/dashboard/admin/users/user-list" },
   ];
 
   return (
