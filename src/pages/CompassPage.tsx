@@ -1,42 +1,46 @@
+
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { CompassTask, CompassPriority, CompassAnalyzeResponse } from '@/types/compass';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, ListChecks, ArrowRight } from 'lucide-react';
+import { Sparkles, ListChecks, ArrowRight, X } from 'lucide-react';
 import { useCompassOnboarding } from '@/hooks/tasks/useCompassOnboarding';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import TabView from '@/components/compass/TabView';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const CompassPage = () => {
   const [tasks, setTasks] = useState<CompassTask[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showOnboardingOverlay, setShowOnboardingOverlay] = useState(false);
+  const [neverShowOverlayAgain, setNeverShowOverlayAgain] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const { hasOnboarded } = useCompassOnboarding();
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Show onboarding overlay for new users who have completed onboarding
-    // but haven't used the Compass feature yet
-    if (hasOnboarded === true && !localStorage.getItem('compassFeatureIntroSeen')) {
+    // Check if the user has dismissed the overlay permanently
+    const overlayDismissed = localStorage.getItem('compassFeatureIntroNeverShow') === 'true';
+    
+    // Only show the overlay if the user has completed onboarding but hasn't 
+    // permanently dismissed the overlay
+    if (hasOnboarded === true && !overlayDismissed && 
+        !localStorage.getItem('compassFeatureIntroSeen')) {
       setShowOnboardingOverlay(true);
     }
   }, [hasOnboarded]);
   
   useEffect(() => {
     if (user && hasOnboarded !== null) {
-      if (!hasOnboarded) {
-        navigate('/onboarding');
-      } else {
-        loadLatestPlan();
-      }
+      // Load the latest plan regardless of onboarding status
+      loadLatestPlan();
     }
-  }, [user, hasOnboarded, navigate]);
+  }, [user, hasOnboarded]);
   
   const loadLatestPlan = async () => {
     if (!user) return;
@@ -176,6 +180,11 @@ const CompassPage = () => {
   const dismissOnboardingOverlay = () => {
     setShowOnboardingOverlay(false);
     localStorage.setItem('compassFeatureIntroSeen', 'true');
+    
+    // If the user has checked "Don't show again", save that preference
+    if (neverShowOverlayAgain) {
+      localStorage.setItem('compassFeatureIntroNeverShow', 'true');
+    }
   };
   
   const OnboardingOverlay = () => (
@@ -213,10 +222,26 @@ const CompassPage = () => {
           </div>
         </div>
         
-        <div className="flex justify-center">
-          <Button onClick={dismissOnboardingOverlay} size="lg">
-            Get Started
-          </Button>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="neverShow" 
+              checked={neverShowOverlayAgain}
+              onCheckedChange={(checked) => setNeverShowOverlayAgain(checked as boolean)}
+            />
+            <label 
+              htmlFor="neverShow" 
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Don't show this again
+            </label>
+          </div>
+          
+          <div className="flex justify-center">
+            <Button onClick={dismissOnboardingOverlay} size="lg">
+              Get Started
+            </Button>
+          </div>
         </div>
       </div>
     </div>
