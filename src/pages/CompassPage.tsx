@@ -4,7 +4,7 @@ import { CompassTask, CompassPriority, CompassAnalyzeResponse } from '@/types/co
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ListChecks, ArrowRight } from 'lucide-react';
 import { useCompassOnboarding } from '@/hooks/tasks/useCompassOnboarding';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
