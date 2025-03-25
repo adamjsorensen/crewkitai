@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { CardContent, CardFooter } from '@/components/ui/card';
-import { Loader2, ArrowRight, HelpCircle, Sparkles } from 'lucide-react';
+import { Loader2, ArrowRight, HelpCircle, Sparkles, Brain } from 'lucide-react';
 import { 
   Tooltip,
   TooltipContent,
@@ -44,8 +44,8 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcess
         <div className="space-y-4">
           <div className="relative">
             <Textarea
-              placeholder="What do you need to get done? Enter one or more tasks..."
-              className="min-h-[120px] text-base p-4 focus-visible:ring-primary/40"
+              placeholder="Brain dump everything you need to do... We'll help you make sense of it all."
+              className="min-h-[180px] text-base p-4 focus-visible:ring-primary/40"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={isProcessing}
@@ -61,7 +61,7 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcess
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-xs">
-                  <p>Enter your tasks, ideas, or to-dos. The AI will prioritize them for you.</p>
+                  <p>Type anything that's on your mind - tasks, ideas, or to-dos. Our AI will organize and prioritize them for you.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -94,16 +94,18 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcess
         <Button 
           type="submit" 
           disabled={isProcessing || !input.trim()}
-          className="flex items-center gap-2 px-4"
+          className="flex items-center gap-2 px-6 py-6"
+          size="lg"
         >
           {isProcessing ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" /> 
+              <Loader2 className="h-5 w-5 animate-spin" /> 
               Analyzing...
             </>
           ) : (
             <>
-              Prioritize Tasks <ArrowRight className="h-4 w-4" />
+              <Brain className="h-5 w-5 mr-1" />
+              Organize My Thoughts
             </>
           )}
         </Button>

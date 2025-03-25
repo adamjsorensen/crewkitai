@@ -20,10 +20,10 @@ const CompassInput: React.FC<CompassInputProps> = ({ onPlanCreated, onTasksGener
     <Card className="w-full border-2 border-primary/10 shadow-md">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center text-2xl text-primary">
-          Strategic Planner
+          What's on your mind today?
         </CardTitle>
         <CardDescription className="text-base">
-          Enter your tasks below and our AI will prioritize them for you, helping you focus on what matters most.
+          Enter your tasks, ideas, or reflections below. Our AI will organize and prioritize them for you.
         </CardDescription>
       </CardHeader>
       <CompassInputForm 

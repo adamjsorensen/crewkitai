@@ -1,16 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
-import CompassInput from '@/components/compass/CompassInput';
-import TaskList from '@/components/compass/TaskList';
-import { CompassTask, CompassPriority } from '@/types/compass';
+import { CompassTask, CompassPriority, CompassAnalyzeResponse } from '@/types/compass';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ListChecks, Sparkles, ArrowRight } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useCompassOnboarding } from '@/hooks/tasks/useCompassOnboarding';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import TabView from '@/components/compass/TabView';
 
 const CompassPage = () => {
   const [tasks, setTasks] = useState<CompassTask[]>([]);
@@ -231,7 +229,7 @@ const CompassPage = () => {
           Strategic Planner
         </h1>
         <p className="text-muted-foreground mb-6">
-          Prioritize your tasks and focus on what matters most
+          Organize your tasks, prioritize your work, and focus on what matters most
         </p>
         
         {hasOnboarded === false && (
@@ -248,23 +246,14 @@ const CompassPage = () => {
           </div>
         )}
         
-        <div className="space-y-6">
-          <CompassInput onPlanCreated={handlePlanCreated} />
-          
-          {isLoading ? (
-            <div className="flex flex-col justify-center items-center py-16 bg-muted/20 rounded-lg border border-dashed">
-              <Loader2 className="h-10 w-10 animate-spin text-primary/60 mb-4" />
-              <p className="text-muted-foreground">Loading your plan...</p>
-            </div>
-          ) : (
-            <TaskList 
-              tasks={tasks.filter(task => !task.completed_at)} 
-              onCompleteTask={handleCompleteTask}
-              onSetReminder={handleSetReminder}
-              onAddToCalendar={handleAddToCalendar}
-            />
-          )}
-        </div>
+        <TabView 
+          tasks={tasks.filter(task => !task.completed_at)}
+          isLoading={isLoading}
+          onPlanCreated={handlePlanCreated}
+          onCompleteTask={handleCompleteTask}
+          onSetReminder={handleSetReminder}
+          onAddToCalendar={handleAddToCalendar}
+        />
       </div>
       
       {showOnboardingOverlay && <OnboardingOverlay />}

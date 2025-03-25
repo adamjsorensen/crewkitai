@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CompassPriority, CompassTask } from '@/types/compass';
 import { format } from 'date-fns';
-import { CheckCircle2, Clock, CalendarDays, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Clock, CalendarDays, AlertCircle, PlusCircle, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -57,7 +57,10 @@ const TaskList: React.FC<TaskListProps> = ({
   return (
     <Card className="w-full shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle>Your Prioritized Tasks</CardTitle>
+        <CardTitle className="flex items-center">
+          <ListChecks className="h-5 w-5 mr-2 text-primary" />
+          Your Prioritized Tasks
+        </CardTitle>
         {tasks.length > 0 && (
           <CardDescription>
             Focus on high priority tasks first to maximize your productivity
@@ -140,15 +143,17 @@ const TaskList: React.FC<TaskListProps> = ({
             })}
           </ul>
         ) : (
-          <div className="text-center py-10 px-4">
+          <div className="text-center py-8 px-4">
             <div className="bg-primary/5 inline-flex rounded-full p-4 mb-4">
-              <CalendarDays className="h-6 w-6 text-primary" />
+              <PlusCircle className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-lg font-medium mb-2">No tasks yet</h3>
-            <p className="text-muted-foreground max-w-md mx-auto mb-6">
-              Enter your tasks in the form above and the AI will prioritize them for you,
-              helping you focus on what matters most.
+            <p className="text-muted-foreground max-w-md mx-auto mb-4">
+              Switch to the "Create & Plan" tab to add your tasks and have the AI prioritize them for you.
             </p>
+            <Button variant="outline" onClick={() => document.querySelector('[value="create"]')?.dispatchEvent(new Event('click'))}>
+              Create New Tasks
+            </Button>
           </div>
         )}
       </CardContent>
