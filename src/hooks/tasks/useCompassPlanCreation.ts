@@ -52,6 +52,11 @@ export const useCompassPlanCreation = ({ onPlanCreated, onTasksGenerated }: UseC
         throw new Error("Failed to create plan");
       }
       
+      console.log("Calling compass-analyze function with:", { 
+        input_text: input, 
+        plan_id: planData.id 
+      });
+      
       // Call the Compass analyze function
       const { data, error } = await supabase.functions.invoke('compass-analyze', {
         body: { 
@@ -61,8 +66,11 @@ export const useCompassPlanCreation = ({ onPlanCreated, onTasksGenerated }: UseC
       });
       
       if (error) {
+        console.error("Function error:", error);
         throw error;
       }
+      
+      console.log("Function response:", data);
       
       // Notify parent component that plan was created
       onPlanCreated(planData.id);

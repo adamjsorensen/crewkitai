@@ -1,4 +1,3 @@
-
 // Only modifying the required parts to support categories and tags
 // The file is quite large so we'll focus on the necessary changes
 
@@ -13,8 +12,10 @@ const corsHeaders = {
 
 // Define the request body interface
 interface CompassRequest {
-  input: string;
+  input?: string;
+  input_text?: string;
   user_id?: string;
+  plan_id?: string;
   category_id?: string | null;
 }
 
@@ -293,16 +294,27 @@ serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
     // Parse request body
-    const { input, user_id, category_id } = await req.json() as CompassRequest;
+    const requestBody = await req.json() as CompassRequest;
     
-    if (!input || input.trim() === '') {
+    // Accept either input or input_text for compatibility
+    const inputText = requestBody.input_text || requestBody.input;
+    const { user_id, plan_id, category_id } = requestBody;
+    
+    console.log(`Processing request with parameters:`, { 
+      inputText, 
+      user_id: user_id || 'anonymous',
+      plan_id: plan_id || 'new plan will be created',
+      category_id: category_id || 'none'
+    });
+    
+    if (!inputText || inputText.trim() === '') {
       return new Response(
         JSON.stringify({ error: 'Input text is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Analyzing input: "${input}" for user ID: ${user_id || 'anonymous'}`);
+    console.log(`Analyzing input: "${inputText}" for user ID: ${user_id || 'anonymous'}`);
 
     // Fetch priority rules from database (for fallback)
     const { data: priorityRules, error: rulesError } = await supabaseAdmin
@@ -363,23 +375,25 @@ serve(async (req) => {
     if (useAi) {
       try {
         // Use OpenAI to analyze tasks
-        const aiAnalysis = await analyzeTasksWithAI(input, userProfile, category_id, priorityRules);
+        const aiAnalysis = await analyzeTasksWithAI(inputText, userProfile, category_id, priorityRules);
         tasks = aiAnalysis.tasks;
         discardedCount = aiAnalysis.discarded_count;
       } catch (error) {
         console.error('AI analysis failed, falling back to keyword method:', error);
-        tasks = analyzeTaskPriorities(input, priorityRules, userProfile, category_id);
-        discardedCount = Math.max(0, input.split(/[.,\n]+/).filter(s => s.trim().length > 0).length - 5);
+        tasks = analyzeTaskPriorities(inputText, priorityRules, userProfile, category_id);
+        discardedCount = Math.max(0, inputText.split(/[.,\n]+/).filter(s => s.trim().length > 0).length - 5);
       }
     } else {
       // Use keyword-based analysis as specified in settings
-      tasks = analyzeTaskPriorities(input, priorityRules, userProfile, category_id);
-      discardedCount = Math.max(0, input.split(/[.,\n]+/).filter(s => s.trim().length > 0).length - 5);
+      tasks = analyzeTaskPriorities(inputText, priorityRules, userProfile, category_id);
+      discardedCount = Math.max(0, inputText.split(/[.,\n]+/).filter(s => s.trim().length > 0).length - 5);
     }
 
-    // Create a plan entry
-    let planId: string | null = null;
-    if (user_id) {
+    // Create or use existing plan
+    let planId: string | null = plan_id || null;
+    
+    if (user_id && !planId) {
+      // Create a new plan if none provided
       const { data: plan, error: planError } = await supabaseAdmin
         .from('compass_plans')
         .insert({ user_id })
@@ -395,7 +409,9 @@ serve(async (req) => {
       }
 
       planId = plan.id;
+    }
 
+    if (planId) {
       // Insert tasks into the database
       const tasksToInsert = tasks.map(task => ({
         plan_id: planId,
