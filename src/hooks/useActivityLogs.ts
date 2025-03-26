@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,15 +44,15 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     ...initialFilters,
   });
 
-  const fetchActivityLogs = async ({ queryKey }) => {
+  const fetchActivityLogs = async ({ queryKey }: { queryKey: [string, ActivityLogFilters] }) => {
     const [_, currentFilters] = queryKey;
     
     let query = supabase
       .from('user_activity_logs')
       .select(`
         *,
-        user:profiles!user_id(full_name, email),
-        affected_user:profiles!affected_user_id(full_name, email)
+        user:user_id(full_name, email),
+        affected_user:affected_user_id(full_name, email)
       `)
       .order('created_at', { ascending: false });
     
@@ -59,7 +60,7 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
       query = query.eq('user_id', currentFilters.userId);
     }
     
-    if (currentFilters.actionType) {
+    if (currentFilters.actionType && currentFilters.actionType !== 'all') {
       query = query.eq('action_type', currentFilters.actionType);
     }
     
@@ -82,7 +83,7 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
       );
     }
     
-    const { data, error, count } = await query;
+    const { data, error } = await query;
     
     if (error) {
       console.error('Error fetching activity logs:', error);
@@ -94,10 +95,7 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
       throw error;
     }
     
-    // Cast the data to ActivityLog[] with type assertion after validation
-    const logData = data as unknown as ActivityLog[];
-    
-    return { logs: logData, count };
+    return { logs: (data || []) as ActivityLog[], count: data?.length || 0 };
   };
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -114,7 +112,7 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
       query = query.eq('user_id', filters.userId);
     }
     
-    if (filters.actionType) {
+    if (filters.actionType && filters.actionType !== 'all') {
       query = query.eq('action_type', filters.actionType);
     }
     

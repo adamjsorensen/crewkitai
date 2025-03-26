@@ -298,7 +298,7 @@ const ActivityLogsPage = () => {
                   <SelectValue placeholder="Filter by action" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Actions</SelectItem>
+                  <SelectItem value="all">All Actions</SelectItem>
                   {ACTION_TYPES.map(action => (
                     <SelectItem key={action.value} value={action.value}>
                       {action.label}
