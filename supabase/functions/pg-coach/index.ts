@@ -220,13 +220,16 @@ function extractFollowUpQuestions(response: string, defaultQuestions: string[]):
 }
 
 // Log activity to user_activity_logs
-async function logActivity(supabaseAdmin: any, userId: string, actionType: string, actionDetails: any, affectedResourceType?: string, affectedResourceId?: string) {
+async function logActivity(supabaseAdmin: any, authToken: string, userId: string, actionType: string, actionDetails: any, affectedResourceType?: string, affectedResourceId?: string) {
   try {
     console.log(`[pg-coach] Logging activity: ${actionType}`);
     
     const { data, error } = await supabaseAdmin.functions.invoke(
       'log-activity',
       {
+        headers: {
+          Authorization: authToken,
+        },
         body: {
           action_type: actionType,
           action_details: actionDetails || {},
@@ -459,7 +462,8 @@ serve(async (req) => {
 
     // Log user message to activity logs
     await logActivity(
-      supabaseAdmin, 
+      supabaseAdmin,
+      authHeader, // Pass the complete auth header
       userId, 
       'chat_message', 
       {
@@ -580,7 +584,8 @@ serve(async (req) => {
 
     // Log AI response to activity logs
     await logActivity(
-      supabaseAdmin, 
+      supabaseAdmin,
+      authHeader, // Pass the complete auth header
       userId, 
       'chat_response', 
       {
