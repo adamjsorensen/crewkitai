@@ -9,7 +9,7 @@ const ActivityLogsPage = () => {
     <Card className="p-6">
       <h3 className="text-lg font-semibold mb-4">User Activity Logs</h3>
       
-      <Alert variant="info" className="mb-4">
+      <Alert variant="default" className="mb-4">
         <AlertCircle className="h-4 w-4 mr-2" />
         <AlertDescription>
           Activity logging will be implemented in Phase 2 of the admin console development.
