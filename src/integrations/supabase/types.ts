@@ -823,6 +823,45 @@ export type Database = {
           },
         ]
       }
+      user_activity_logs: {
+        Row: {
+          action_details: Json
+          action_type: string
+          affected_resource_id: string | null
+          affected_resource_type: string | null
+          affected_user_id: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_details?: Json
+          action_type: string
+          affected_resource_id?: string | null
+          affected_resource_type?: string | null
+          affected_user_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_details?: Json
+          action_type?: string
+          affected_resource_id?: string | null
+          affected_resource_type?: string | null
+          affected_user_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -864,6 +903,16 @@ export type Database = {
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      log_user_activity: {
+        Args: {
+          p_action_type: string
+          p_action_details?: Json
+          p_affected_user_id?: string
+          p_affected_resource_type?: string
+          p_affected_resource_id?: string
+        }
+        Returns: string
       }
     }
     Enums: {

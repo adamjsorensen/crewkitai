@@ -1,140 +1,78 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import { FeatureFlagsProvider } from "./contexts/FeatureFlagsContext";
-import { OnboardingProvider } from "./contexts/OnboardingContext";
-import Index from "./pages/Index";
-import AuthPage from "./pages/AuthPage";
-import Dashboard from "./pages/Dashboard";
-import OnboardingPage from "./pages/OnboardingPage";
-import NotFound from "./pages/NotFound";
-import FinancialDashboard from "./pages/financial/FinancialDashboard";
-import JobAnalysis from "./pages/financial/JobAnalysis";
-import FinancialReports from "./pages/financial/FinancialReports";
-import DataUpload from "./pages/financial/DataUpload";
-import ProfilePage from "./pages/profile/ProfilePage";
-import BusinessProfilePage from "./pages/profile/BusinessProfilePage";
-import PersonalProfilePage from "./pages/profile/PersonalProfilePage";
-import SettingsPage from "./pages/profile/SettingsPage";
-import AiCoach from "./pages/AiCoach";
-import PgCoachPage from "./pages/PgCoachPage"; // PainterGrowth Coach page
-import CompassPage from "./pages/CompassPage"; // Strategic Planner page
-import AiSettingsPage from "./pages/admin/AiSettingsPage";
-import FeatureFlagsPage from "./pages/admin/FeatureFlagsPage";
-import CompassSettingsPage from "./pages/admin/CompassSettingsPage"; // CompassSettingsPage import
-import ContentPage from "./pages/content/ContentPage"; // New Content page
-import { useEffect } from "react";
-import { prefetchWelcomeContent } from "./hooks/useWelcomeContent";
-import { useNeedsOnboarding } from "./hooks/useNeedsOnboarding";
-import { useOnboardingSteps } from "./hooks/useOnboardingSteps";
+import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import AuthPage from "@/pages/AuthPage";
+import Dashboard from "@/pages/Dashboard";
+import CompassPage from "@/pages/CompassPage";
+import PGCoachPage from "@/pages/PGCoachPage";
+import ContentPage from "@/pages/ContentPage";
+import FinancialPage from "@/pages/FinancialPage";
+import ProfilePage from "@/pages/ProfilePage";
+import SettingsPage from "@/pages/SettingsPage";
+import AISettingsPage from "@/pages/admin/AISettingsPage";
+import CompassSettingsPage from "@/pages/admin/CompassSettingsPage";
+import FeatureFlagsPage from "@/pages/admin/FeatureFlagsPage";
+import AppSettingsPage from "@/pages/admin/AppSettingsPage";
+import DatabasePage from "@/pages/admin/DatabasePage";
+import UserManagementPage from "@/pages/user-management/UserManagementPage";
+import UserListPage from "@/pages/user-management/UserListPage";
+import AddUserPage from "@/pages/user-management/AddUserPage";
+import ActivityLogsPage from "@/pages/user-management/ActivityLogsPage";
+import UserDetailsPage from "@/pages/user-management/UserDetailsPage";
+import UserListPage from "@/pages/admin/users/UserListPage";
+import UserDetailsPage from "@/pages/admin/users/UserDetailsPage";
+import ActivityLogsPage from "@/pages/admin/users/ActivityLogsPage";
+import AddUserPage from "@/pages/admin/users/AddUserPage";
 
-// New Admin Pages
-import UserManagementPage from "./pages/user-management/UserManagementPage";
-import UserListPage from "./pages/user-management/UserListPage";
-import AddUserPage from "./pages/user-management/AddUserPage";
-import ActivityLogsPage from "./pages/user-management/ActivityLogsPage";
-import UserDetailsPage from "./pages/user-management/UserDetailsPage";
+const queryClient = new QueryClient();
 
-// Create query client with optimal settings for caching
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false, // Don't refetch when window regains focus by default
-      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes by default
-      retry: 1, // Only retry once by default
-    },
-  },
-});
-
-// Initial prefetching for commonly used data
-const AuthenticatedRoute = ({ element }: { element: React.ReactNode }) => {
-  const { needsOnboarding, isLoading } = useNeedsOnboarding();
-  
-  // If still loading, render nothing (or a loader)
-  if (isLoading) {
-    return null;
-  }
-  
-  // If user needs onboarding, redirect to onboarding
-  if (needsOnboarding) {
-    return <Navigate to="/onboarding" replace />;
-  }
-  
-  // Otherwise, render the protected component
-  return <>{element}</>;
-};
-
-const AppContent = () => {
-  // Initialize onboarding steps
-  useOnboardingSteps();
-  
-  useEffect(() => {
-    // Start prefetching the welcome content as soon as the app loads
-    prefetchWelcomeContent(queryClient);
-    
-    // Additional prefetching can be added here later
-  }, []);
-  
+function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        
-        {/* Protected Routes */}
-        <Route path="/dashboard" element={<AuthenticatedRoute element={<Dashboard />} />} />
-        <Route path="/dashboard/content" element={<AuthenticatedRoute element={<ContentPage />} />} />
-        <Route path="/dashboard/financial" element={<AuthenticatedRoute element={<FinancialDashboard />} />} />
-        <Route path="/dashboard/financial/jobs" element={<AuthenticatedRoute element={<JobAnalysis />} />} />
-        <Route path="/dashboard/financial/reports" element={<AuthenticatedRoute element={<FinancialReports />} />} />
-        <Route path="/dashboard/financial/upload" element={<AuthenticatedRoute element={<DataUpload />} />} />
-        <Route path="/dashboard/profile" element={<AuthenticatedRoute element={<ProfilePage />} />} />
-        <Route path="/dashboard/profile/business" element={<AuthenticatedRoute element={<BusinessProfilePage />} />} />
-        <Route path="/dashboard/profile/personal" element={<AuthenticatedRoute element={<PersonalProfilePage />} />} />
-        <Route path="/dashboard/settings" element={<AuthenticatedRoute element={<SettingsPage />} />} />
-        <Route path="/dashboard/ai-coach" element={<AuthenticatedRoute element={<AiCoach />} />} />
-        <Route path="/dashboard/pg-coach" element={<AuthenticatedRoute element={<PgCoachPage />} />} />
-        <Route path="/dashboard/compass" element={<AuthenticatedRoute element={<CompassPage />} />} />
-        
-        {/* Admin Routes */}
-        <Route path="/dashboard/admin/ai-settings" element={<AuthenticatedRoute element={<AiSettingsPage />} />} />
-        <Route path="/dashboard/admin/feature-flags" element={<AuthenticatedRoute element={<FeatureFlagsPage />} />} />
-        <Route path="/dashboard/admin/compass-settings" element={<AuthenticatedRoute element={<CompassSettingsPage />} />} />
-        
-        {/* User Management Routes (now separate from Admin) */}
-        <Route path="/dashboard/user-management" element={<AuthenticatedRoute element={<UserManagementPage />} />}>
-          <Route index element={<Navigate to="user-list" replace />} />
-          <Route path="user-list" element={<UserListPage />} />
-          <Route path="add-user" element={<AddUserPage />} />
-          <Route path="activity-logs" element={<ActivityLogsPage />} />
-        </Route>
-        <Route path="/dashboard/user-management/user-details/:userId" element={<AuthenticatedRoute element={<UserDetailsPage />} />} />
-        
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
-  );
-};
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <FeatureFlagsProvider>
-          <OnboardingProvider>
-            <Toaster />
-            <Sonner />
-            <AppContent />
-          </OnboardingProvider>
-        </FeatureFlagsProvider>
+        <SidebarProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/compass" element={<CompassPage />} />
+              <Route path="/dashboard/pg-coach" element={<PGCoachPage />} />
+              <Route path="/dashboard/content" element={<ContentPage />} />
+              <Route path="/dashboard/financial" element={<FinancialPage />} />
+              <Route path="/dashboard/profile" element={<ProfilePage />} />
+              <Route path="/dashboard/settings" element={<SettingsPage />} />
+              
+              {/* Admin routes */}
+              <Route path="/dashboard/admin/ai-settings" element={<AISettingsPage />} />
+              <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
+              <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
+              <Route path="/dashboard/admin/app-settings" element={<AppSettingsPage />} />
+              <Route path="/dashboard/admin/database" element={<DatabasePage />} />
+              
+              {/* Admin user management routes */}
+              <Route path="/dashboard/admin/users/user-list" element={<UserListPage />} />
+              <Route path="/dashboard/admin/users/user-details/:userId" element={<UserDetailsPage />} />
+              <Route path="/dashboard/admin/users/activity-logs" element={<ActivityLogsPage />} />
+              <Route path="/dashboard/admin/users/add-user" element={<AddUserPage />} />
+              
+              {/* User management routes */}
+              <Route path="/dashboard/user-management" element={<UserManagementPage />}>
+                <Route path="user-list" element={<UserListPage />} />
+                <Route path="add-user" element={<AddUserPage />} />
+                <Route path="activity-logs" element={<ActivityLogsPage />} />
+                <Route path="user-details/:userId" element={<UserDetailsPage />} />
+              </Route>
+            </Routes>
+          </Router>
+          <Toaster />
+        </SidebarProvider>
       </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+}
 
 export default App;
