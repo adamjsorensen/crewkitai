@@ -110,7 +110,7 @@ export const useSendMessage = ({
       
       // Log the AI response to activity logs
       if (result?.response) {
-        await logChatResponse(input.trim(), result.response, result.conversationId || conversationId || undefined);
+        await logChatResponse(input.trim(), result.response, conversationId || undefined);
       }
       
       // Check the message state after mutation
