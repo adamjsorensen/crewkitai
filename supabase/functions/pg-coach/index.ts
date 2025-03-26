@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1';
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import 'https://deno.land/x/xhr@0.3.0/mod.ts';
@@ -218,6 +219,48 @@ function extractFollowUpQuestions(response: string, defaultQuestions: string[]):
   }
 }
 
+// Log activity to user_activity_logs
+async function logActivity(supabaseAdmin: any, userId: string, actionType: string, actionDetails: any, affectedResourceType?: string, affectedResourceId?: string) {
+  try {
+    console.log(`[pg-coach] Logging activity: ${actionType}`);
+    
+    const { data, error } = await supabaseAdmin.functions.invoke(
+      'log-activity',
+      {
+        body: {
+          action_type: actionType,
+          action_details: actionDetails || {},
+          affected_user_id: null,
+          affected_resource_type: affectedResourceType || null,
+          affected_resource_id: affectedResourceId || null,
+        },
+      }
+    );
+
+    if (error) {
+      console.error('[pg-coach] Error calling log-activity function:', error);
+      
+      // Fallback to direct RPC call if function fails
+      const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
+        'log_user_activity',
+        {
+          p_action_type: actionType,
+          p_action_details: actionDetails || {},
+          p_affected_user_id: null,
+          p_affected_resource_type: affectedResourceType || null,
+          p_affected_resource_id: affectedResourceId || null,
+        }
+      );
+
+      if (rpcError) {
+        console.error('[pg-coach] Error logging activity via RPC:', rpcError);
+      }
+    }
+  } catch (error) {
+    console.error('[pg-coach] Error in activity logging:', error);
+  }
+}
+
 serve(async (req) => {
   console.log("[pg-coach] Function invoked:", {
     method: req.method,
@@ -413,6 +456,21 @@ serve(async (req) => {
       temperature: isThinkMode ? "N/A" : openAIRequestBody.temperature,
       max_completion_tokens: openAIRequestBody.max_completion_tokens
     });
+
+    // Log user message to activity logs
+    await logActivity(
+      supabaseAdmin, 
+      userId, 
+      'chat_message', 
+      {
+        user_message: message,
+        conversation_id: conversationId,
+        is_think_mode: isThinkMode,
+        has_image: !!imageUrl
+      }, 
+      'conversation', 
+      conversationId
+    );
     
     // Call the OpenAI API
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -519,6 +577,22 @@ serve(async (req) => {
       .from('pg_conversations')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', actualConversationId);
+
+    // Log AI response to activity logs
+    await logActivity(
+      supabaseAdmin, 
+      userId, 
+      'chat_response', 
+      {
+        prompt: message,
+        response: aiResponse,
+        conversation_id: actualConversationId,
+        is_think_mode: isThinkMode,
+        has_image: !!imageUrl
+      }, 
+      'conversation', 
+      actualConversationId
+    );
     
     console.log("[pg-coach] Function completed successfully");
     
