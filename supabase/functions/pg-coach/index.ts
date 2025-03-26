@@ -219,17 +219,15 @@ function extractFollowUpQuestions(response: string, defaultQuestions: string[]):
 }
 
 // Log activity to pg_activity_logs
-async function logActivity(supabaseAdmin: any, authToken: string, userId: string, actionType: string, actionDetails: any, affectedResourceType?: string, affectedResourceId?: string) {
+async function logActivity(supabaseAdmin: any, userId: string, actionType: string, actionDetails: any, affectedResourceType?: string, affectedResourceId?: string) {
   try {
     console.log(`[pg-coach] Logging activity: ${actionType}`);
     
     const { data, error } = await supabaseAdmin.functions.invoke(
       'pg-coach-logger',
       {
-        headers: {
-          Authorization: authToken,
-        },
         body: {
+          user_id: userId,
           action_type: actionType,
           action_details: actionDetails || {},
           conversation_id: affectedResourceId
@@ -441,10 +439,9 @@ serve(async (req) => {
       max_completion_tokens: openAIRequestBody.max_completion_tokens
     });
 
-    // Log user message to activity logs
+    // Log user message to activity logs - updated to pass userId
     await logActivity(
       supabaseAdmin,
-      authHeader, // Pass the complete auth header
       userId, 
       'chat_message', 
       {
@@ -563,10 +560,9 @@ serve(async (req) => {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', actualConversationId);
 
-    // Log AI response to activity logs
+    // Log AI response to activity logs - updated to pass userId
     await logActivity(
       supabaseAdmin,
-      authHeader, // Pass the complete auth header
       userId, 
       'chat_response', 
       {

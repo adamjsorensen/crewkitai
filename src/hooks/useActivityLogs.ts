@@ -25,6 +25,7 @@ export interface ActivityLog {
   affected_user_id?: string;
   affected_resource_type?: string;
   affected_resource_id?: string;
+  conversation_id?: string;
   user?: {
     full_name: string;
     email: string;
@@ -55,60 +56,100 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     ...initialFilters,
   });
 
-  // Fetch activity logs without joins
+  // Fetch activity logs from both tables
   const fetchActivityLogs = async ({ queryKey }: { queryKey: [string, ActivityLogFilters] }) => {
     const [_, currentFilters] = queryKey;
     
-    let query = supabase
+    // Query user_activity_logs
+    let userActivityQuery = supabase
       .from('user_activity_logs')
-      .select('*')
+      .select('*, action_type, action_details, created_at, user_id, affected_user_id, affected_resource_type, affected_resource_id, ip_address, user_agent')
       .order('created_at', { ascending: false });
     
+    // Query pg_activity_logs
+    let pgActivityQuery = supabase
+      .from('pg_activity_logs')
+      .select('*, action_type, action_details, created_at, user_id, conversation_id')
+      .order('created_at', { ascending: false });
+    
+    // Apply filters to both queries
     if (currentFilters.userId) {
-      query = query.eq('user_id', currentFilters.userId);
+      userActivityQuery = userActivityQuery.eq('user_id', currentFilters.userId);
+      pgActivityQuery = pgActivityQuery.eq('user_id', currentFilters.userId);
     }
     
     if (currentFilters.actionType && currentFilters.actionType !== 'all') {
-      query = query.eq('action_type', currentFilters.actionType);
+      userActivityQuery = userActivityQuery.eq('action_type', currentFilters.actionType);
+      pgActivityQuery = pgActivityQuery.eq('action_type', currentFilters.actionType);
     }
     
     if (currentFilters.dateFrom) {
-      query = query.gte('created_at', currentFilters.dateFrom);
+      userActivityQuery = userActivityQuery.gte('created_at', currentFilters.dateFrom);
+      pgActivityQuery = pgActivityQuery.gte('created_at', currentFilters.dateFrom);
     }
     
     if (currentFilters.dateTo) {
-      query = query.lte('created_at', currentFilters.dateTo);
+      userActivityQuery = userActivityQuery.lte('created_at', currentFilters.dateTo);
+      pgActivityQuery = pgActivityQuery.lte('created_at', currentFilters.dateTo);
     }
 
     if (currentFilters.searchTerm) {
-      // We need to search in the jsonb field
-      query = query.or(`action_details.ilike.%${currentFilters.searchTerm}%`);
+      userActivityQuery = userActivityQuery.or(`action_details.ilike.%${currentFilters.searchTerm}%`);
+      pgActivityQuery = pgActivityQuery.or(`action_details.ilike.%${currentFilters.searchTerm}%`);
     }
     
-    if (currentFilters.limit) {
-      query = query.limit(currentFilters.limit);
-    }
+    // Execute both queries
+    const [userActivityResult, pgActivityResult] = await Promise.all([
+      userActivityQuery,
+      pgActivityQuery
+    ]);
     
-    if (currentFilters.offset !== undefined) {
-      query = query.range(
-        currentFilters.offset,
-        currentFilters.offset + (currentFilters.limit || DEFAULT_LIMIT) - 1
-      );
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error fetching activity logs:', error);
+    if (userActivityResult.error) {
+      console.error('Error fetching user activity logs:', userActivityResult.error);
       toast({
-        title: 'Error fetching activity logs',
-        description: error.message,
+        title: 'Error fetching user activity logs',
+        description: userActivityResult.error.message,
         variant: 'destructive',
       });
-      throw error;
+      throw userActivityResult.error;
     }
     
-    return data || [];
+    if (pgActivityResult.error) {
+      console.error('Error fetching pg activity logs:', pgActivityResult.error);
+      toast({
+        title: 'Error fetching pg activity logs',
+        description: pgActivityResult.error.message,
+        variant: 'destructive',
+      });
+      throw pgActivityResult.error;
+    }
+    
+    // Normalize pg_activity_logs to match the format of user_activity_logs
+    const normalizedPgLogs = (pgActivityResult.data || []).map(log => ({
+      ...log,
+      affected_resource_id: log.conversation_id,
+      affected_resource_type: log.conversation_id ? 'conversation' : null
+    }));
+    
+    // Combine results
+    const combinedLogs = [
+      ...(userActivityResult.data || []),
+      ...normalizedPgLogs
+    ];
+    
+    // Sort by created_at
+    combinedLogs.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    
+    // Apply pagination
+    if (currentFilters.limit !== undefined && currentFilters.offset !== undefined) {
+      const start = currentFilters.offset;
+      const end = start + currentFilters.limit;
+      return combinedLogs.slice(start, end);
+    }
+    
+    return combinedLogs;
   };
 
   const fetchUserProfiles = async (userIds: string[]) => {
@@ -176,39 +217,60 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
   });
 
   const countActivityLogs = async () => {
-    let query = supabase
+    // Count from user_activity_logs
+    let userActivityQuery = supabase
       .from('user_activity_logs')
       .select('id', { count: 'exact' });
     
+    // Count from pg_activity_logs
+    let pgActivityQuery = supabase
+      .from('pg_activity_logs')
+      .select('id', { count: 'exact' });
+    
+    // Apply the same filters to both
     if (filters.userId) {
-      query = query.eq('user_id', filters.userId);
+      userActivityQuery = userActivityQuery.eq('user_id', filters.userId);
+      pgActivityQuery = pgActivityQuery.eq('user_id', filters.userId);
     }
     
     if (filters.actionType && filters.actionType !== 'all') {
-      query = query.eq('action_type', filters.actionType);
+      userActivityQuery = userActivityQuery.eq('action_type', filters.actionType);
+      pgActivityQuery = pgActivityQuery.eq('action_type', filters.actionType);
     }
     
     if (filters.dateFrom) {
-      query = query.gte('created_at', filters.dateFrom);
+      userActivityQuery = userActivityQuery.gte('created_at', filters.dateFrom);
+      pgActivityQuery = pgActivityQuery.gte('created_at', filters.dateFrom);
     }
     
     if (filters.dateTo) {
-      query = query.lte('created_at', filters.dateTo);
+      userActivityQuery = userActivityQuery.lte('created_at', filters.dateTo);
+      pgActivityQuery = pgActivityQuery.lte('created_at', filters.dateTo);
     }
 
     if (filters.searchTerm) {
-      // We need to search in the jsonb field
-      query = query.or(`action_details.ilike.%${filters.searchTerm}%`);
+      userActivityQuery = userActivityQuery.or(`action_details.ilike.%${filters.searchTerm}%`);
+      pgActivityQuery = pgActivityQuery.or(`action_details.ilike.%${filters.searchTerm}%`);
     }
     
-    const { count, error } = await query;
+    // Execute both counts
+    const [userResult, pgResult] = await Promise.all([
+      userActivityQuery,
+      pgActivityQuery
+    ]);
     
-    if (error) {
-      console.error('Error counting activity logs:', error);
+    if (userResult.error) {
+      console.error('Error counting user activity logs:', userResult.error);
       return 0;
     }
     
-    return count || 0;
+    if (pgResult.error) {
+      console.error('Error counting pg activity logs:', pgResult.error);
+      return 0;
+    }
+    
+    // Return the sum of both counts
+    return (userResult.count || 0) + (pgResult.count || 0);
   };
 
   const { data: totalCount = 0 } = useQuery({

@@ -16,34 +16,20 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase environment variables');
     }
     
-    // Create Supabase client with the authorization header from the request
-    const supabaseClient = createClient(
+    // Create Supabase client with the service key for admin access
+    const supabaseAdmin = createClient(
       supabaseUrl,
-      supabaseAnonKey,
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      supabaseServiceKey
     );
     
-    // Verify that the user is authenticated
-    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-    if (sessionError || !session) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Extract log data from request
-    const { action_type, action_details, conversation_id } = await req.json();
+    // Extract user ID and data from request
+    const { action_type, action_details, conversation_id, user_id } = await req.json();
     
     // Validate required fields
     if (!action_type) {
@@ -53,16 +39,23 @@ serve(async (req) => {
       );
     }
 
+    if (!user_id) {
+      return new Response(
+        JSON.stringify({ error: 'user_id is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`[pg-coach-logger] Recording activity: ${action_type}`);
     if (action_details) {
-      console.log(`[pg-coach-logger] Details: ${JSON.stringify(action_details).substring(0, 100)}${action_details.length > 100 ? '...' : ''}`);
+      console.log(`[pg-coach-logger] Details: ${JSON.stringify(action_details).substring(0, 100)}${JSON.stringify(action_details).length > 100 ? '...' : ''}`);
     }
     
     // Insert into pg_activity_logs table
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabaseAdmin
       .from('pg_activity_logs')
       .insert({
-        user_id: session.user.id,
+        user_id,
         action_type,
         action_details: action_details || {},
         conversation_id: conversation_id || null

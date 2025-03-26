@@ -21,7 +21,37 @@ export function useLogActivity() {
     affectedResourceId,
   }: LogActivityParams) => {
     try {
-      // First try using the edge function
+      // Get current user ID
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      
+      if (!userId) {
+        console.error('Cannot log activity: No authenticated user');
+        return null;
+      }
+      
+      // First try using the pg-coach-logger for PG-specific logs
+      if (actionType.startsWith('chat_') || actionType === 'compass_analyze') {
+        const { data: pgLoggerData, error: pgLoggerError } = await supabase.functions.invoke(
+          'pg-coach-logger',
+          {
+            body: {
+              user_id: userId,
+              action_type: actionType,
+              action_details: actionDetails,
+              conversation_id: affectedResourceId,
+            },
+          }
+        );
+
+        if (!pgLoggerError) {
+          return pgLoggerData?.log_id;
+        }
+        
+        console.error('Error calling pg-coach-logger, falling back to legacy logger:', pgLoggerError);
+      }
+      
+      // Fallback to standard log-activity function
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
         'log-activity',
         {
