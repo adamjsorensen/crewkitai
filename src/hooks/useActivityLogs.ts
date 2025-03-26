@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,11 +26,11 @@ export interface ActivityLog {
   user?: {
     full_name: string;
     email: string;
-  };
+  } | null;
   affected_user?: {
     full_name: string;
     email: string;
-  };
+  } | null;
 }
 
 const DEFAULT_LIMIT = 20;
@@ -95,7 +94,10 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
       throw error;
     }
     
-    return { logs: data as ActivityLog[], count };
+    // Cast the data to ActivityLog[] with type assertion after validation
+    const logData = data as unknown as ActivityLog[];
+    
+    return { logs: logData, count };
   };
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -103,7 +105,6 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     queryFn: fetchActivityLogs,
   });
 
-  // Get count of all logs matching the current filter (without pagination)
   const countActivityLogs = async () => {
     let query = supabase
       .from('user_activity_logs')
@@ -144,7 +145,6 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     setFilters(prev => ({
       ...prev,
       ...newFilters,
-      // Reset offset when filters change (except when explicitly changing page)
       offset: newFilters.offset !== undefined ? newFilters.offset : 0,
     }));
   };

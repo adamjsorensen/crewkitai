@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,7 +59,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
   const queryClient = useQueryClient();
   const { logActivity } = useLogActivity();
 
-  // Fetch users with roles
   const { data, isLoading } = useQuery({
     queryKey: ["users", { page, pageSize, roleFilter }],
     queryFn: async () => {
@@ -71,7 +69,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
         .select("*")
         .order("full_name");
       
-      // Apply pagination
       const start = (page - 1) * pageSize;
       const end = start + pageSize - 1;
       query = query.range(start, end);
@@ -88,7 +85,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
         return { users: [], totalCount: 0 };
       }
 
-      // For each profile, get their role from user_roles
       const usersWithRoles = await Promise.all(
         profiles.map(async (profile) => {
           const { data: roleData, error: roleError } = await supabase
@@ -101,18 +97,16 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
             console.error(`Error fetching role for user ${profile.id}:`, roleError);
           }
 
-          // Transform to match our User type
           return {
             id: profile.id,
             full_name: profile.full_name || "",
             company_name: profile.company_name || "",
             email: profile.email || "",
-            role: roleData?.role || "user" // Default to 'user' if no role found
+            role: roleData?.role || "user"
           } as User;
         })
       );
 
-      // Get total count for pagination
       const { count: totalCount, error: countError } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true });
@@ -132,7 +126,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
   const totalCount = data?.totalCount || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  // Filter users based on search term and role filter
   const filteredUsers = users.filter((user: User) => {
     const matchesSearch = 
       user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -147,12 +140,10 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
     return matchesSearch && matchesRole;
   });
 
-  // Handle delete user dialog
   const handleDeleteClick = (user: User) => {
     setUserToDelete(user);
   };
 
-  // Handle select all checkbox
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedUsers(filteredUsers.map(user => user.id));
@@ -161,7 +152,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
     }
   };
 
-  // Handle individual user checkbox
   const handleSelectUser = (userId: string, checked: boolean) => {
     if (checked) {
       setSelectedUsers(prev => [...prev, userId]);
@@ -170,18 +160,16 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
     }
   };
 
-  // Bulk delete selected users
   const handleBulkDelete = async () => {
     if (selectedUsers.length === 0) return;
 
     if (confirm(`Are you sure you want to delete ${selectedUsers.length} users?`)) {
       try {
-        // Note: This will cascade delete from auth.users to profiles due to DB constraints
-        const { error } = await supabase.auth.admin.deleteUsers(selectedUsers);
+        for (const userId of selectedUsers) {
+          const { error } = await supabase.auth.admin.deleteUser(userId);
+          if (error) throw error;
+        }
 
-        if (error) throw error;
-
-        // Log activity
         await logActivity({
           actionType: 'bulk_delete_users',
           actionDetails: { count: selectedUsers.length, userIds: selectedUsers }
@@ -205,7 +193,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
     }
   };
 
-  // Export selected users as CSV
   const handleExportUsers = () => {
     const usersToExport = selectedUsers.length > 0
       ? filteredUsers.filter(user => selectedUsers.includes(user.id))
@@ -220,7 +207,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
       return;
     }
 
-    // Create CSV content
     const headers = ["Full Name", "Email", "Company", "Role"];
     const csvRows = [
       headers.join(","),
@@ -233,7 +219,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
     ];
     const csvContent = csvRows.join("\n");
 
-    // Trigger download
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -243,14 +228,12 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
     link.click();
     document.body.removeChild(link);
 
-    // Log activity
     logActivity({
       actionType: 'export_users',
       actionDetails: { count: usersToExport.length }
     });
   };
 
-  // Reset all filters
   const handleResetFilters = () => {
     setSearchTerm("");
     setRoleFilter("all");
@@ -293,7 +276,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
         </div>
       </div>
 
-      {/* Bulk actions */}
       {selectedUsers.length > 0 && (
         <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
           <span className="text-sm font-medium">{selectedUsers.length} selected</span>
@@ -412,7 +394,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
             </TableBody>
           </Table>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-4 border-t">
               <div className="flex items-center gap-2">
@@ -451,7 +432,6 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum: number;
                     
-                    // Logic for showing the correct page numbers
                     if (totalPages <= 5) {
                       pageNum = i + 1;
                     } else if (page <= 3) {
@@ -508,14 +488,12 @@ const UserList = ({ onViewUserDetails }: UserListProps) => {
         </Card>
       )}
 
-      {/* Delete User Dialog */}
       {userToDelete && (
         <DeleteUserDialog
           user={userToDelete}
           open={!!userToDelete}
           onOpenChange={() => setUserToDelete(null)}
           onSuccess={() => {
-            // Log this activity
             logActivity({
               actionType: 'delete_user',
               actionDetails: { 

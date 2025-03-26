@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +41,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 
-// Schema for user profile editing
 const userProfileSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),
   company_name: z.string().min(1, "Company name is required"),
@@ -73,11 +71,8 @@ const PasswordResetDialog = ({
     try {
       setIsLoading(true);
       
-      // Simulate a password reset - in a real app, you'd use auth.admin.resetUserPassword
-      // or send an email with a reset link
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Log the activity
       await logActivity({
         actionType: 'reset_password',
         actionDetails: { method: 'admin_initiated' },
@@ -223,7 +218,6 @@ const UserDetailsPage = () => {
     queryFn: async () => {
       if (!userId) throw new Error("User ID is required");
       
-      // Get the user profile
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -232,7 +226,6 @@ const UserDetailsPage = () => {
 
       if (profileError) throw profileError;
 
-      // Get the user role
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
@@ -241,30 +234,30 @@ const UserDetailsPage = () => {
 
       if (roleError) throw roleError;
 
-      // Return combined user data
       return {
         ...profile,
         role: roleData?.role || "user"
       } as User;
-    },
-    onSuccess: (data) => {
-      // Set form values when user data is loaded
-      form.reset({
-        full_name: data.full_name || "",
-        company_name: data.company_name || "",
-        email: data.email || "",
-        phone: data.phone || "",
-        website: data.website || "",
-        business_address: data.business_address || "",
-        company_description: data.company_description || "",
-        role: data.role || "user"
-      });
     }
   });
 
+  React.useEffect(() => {
+    if (user) {
+      form.reset({
+        full_name: user.full_name || "",
+        company_name: user.company_name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        website: user.website || "",
+        business_address: user.business_address || "",
+        company_description: user.company_description || "",
+        role: user.role || "user"
+      });
+    }
+  }, [user]);
+
   const updateUserMutation = useMutation({
     mutationFn: async (values: z.infer<typeof userProfileSchema>) => {
-      // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -280,9 +273,7 @@ const UserDetailsPage = () => {
 
       if (profileError) throw profileError;
 
-      // Update role if it changed
       if (user?.role !== values.role) {
-        // Check if role record exists
         const { data: existingRole } = await supabase
           .from("user_roles")
           .select("*")
@@ -290,7 +281,6 @@ const UserDetailsPage = () => {
           .maybeSingle();
 
         if (existingRole) {
-          // Update existing role
           const { error: roleError } = await supabase
             .from("user_roles")
             .update({ role: values.role })
@@ -298,7 +288,6 @@ const UserDetailsPage = () => {
 
           if (roleError) throw roleError;
         } else {
-          // Insert new role
           const { error: roleError } = await supabase
             .from("user_roles")
             .insert({ user_id: userId, role: values.role });
@@ -315,7 +304,6 @@ const UserDetailsPage = () => {
         description: "User profile has been updated successfully."
       });
       
-      // Log activity
       await logActivity({
         actionType: 'update_user',
         actionDetails: { 
@@ -343,7 +331,6 @@ const UserDetailsPage = () => {
     updateUserMutation.mutate(values);
   };
 
-  // Extract data for the user profile display
   const userDetails = user ? [
     { label: "Full Name", value: user.full_name, icon: <UserCog className="h-4 w-4 text-muted-foreground" /> },
     { label: "Email", value: user.email, icon: <Mail className="h-4 w-4 text-muted-foreground" /> },
@@ -378,7 +365,6 @@ const UserDetailsPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Back button and user header */}
       <div className="flex flex-col gap-6">
         <Button 
           variant="outline" 
@@ -404,7 +390,6 @@ const UserDetailsPage = () => {
         </div>
       </div>
 
-      {/* Tabs for different user information sections */}
       <Tabs defaultValue="profile">
         <TabsList>
           <TabsTrigger value="profile" className="flex items-center gap-1.5">
@@ -641,7 +626,6 @@ const UserDetailsPage = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Password Reset Dialog */}
       <PasswordResetDialog 
         open={isPasswordResetOpen}
         onOpenChange={setIsPasswordResetOpen}
