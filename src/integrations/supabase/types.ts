@@ -659,6 +659,41 @@ export type Database = {
         }
         Relationships: []
       }
+      pg_activity_logs: {
+        Row: {
+          action_details: Json | null
+          action_type: string
+          conversation_id: string | null
+          created_at: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action_details?: Json | null
+          action_type: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action_details?: Json | null
+          action_type?: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pg_activity_logs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "pg_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pg_conversations: {
         Row: {
           created_at: string
