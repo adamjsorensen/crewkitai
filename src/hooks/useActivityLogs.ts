@@ -34,6 +34,16 @@ export interface ActivityLog {
   } | null;
 }
 
+interface User {
+  id: string;
+  full_name: string;
+  email: string;
+}
+
+interface UserMap {
+  [key: string]: User;
+}
+
 const DEFAULT_LIMIT = 20;
 
 export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
@@ -44,16 +54,13 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     ...initialFilters,
   });
 
+  // Fetch activity logs without joins
   const fetchActivityLogs = async ({ queryKey }: { queryKey: [string, ActivityLogFilters] }) => {
     const [_, currentFilters] = queryKey;
     
     let query = supabase
       .from('user_activity_logs')
-      .select(`
-        *,
-        user:user_id(full_name, email),
-        affected_user:affected_user_id(full_name, email)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
     
     if (currentFilters.userId) {
@@ -95,12 +102,59 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
       throw error;
     }
     
-    return { logs: (data || []) as ActivityLog[], count: data?.length || 0 };
+    return data || [];
   };
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const fetchUserProfiles = async (userIds: string[]) => {
+    if (!userIds.length) return {};
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', userIds);
+
+    if (error) {
+      console.error('Error fetching user profiles:', error);
+      return {};
+    }
+
+    // Create a map of user profiles
+    const userMap: UserMap = {};
+    data?.forEach(user => {
+      userMap[user.id] = user;
+    });
+
+    return userMap;
+  };
+
+  const logsQuery = useQuery({
     queryKey: ['activityLogs', filters],
     queryFn: fetchActivityLogs,
+  });
+
+  // Extract unique user IDs from logs
+  const userIds = Array.from(new Set(
+    (logsQuery.data || []).flatMap(log => [
+      log.user_id,
+      log.affected_user_id
+    ]).filter(Boolean) as string[]
+  ));
+
+  // Fetch user profiles based on IDs from logs
+  const usersQuery = useQuery({
+    queryKey: ['activityLogUsers', userIds],
+    queryFn: () => fetchUserProfiles(userIds),
+    enabled: userIds.length > 0 && !logsQuery.isLoading,
+  });
+
+  // Combine logs with user data
+  const combinedLogs: ActivityLog[] = (logsQuery.data || []).map(log => {
+    const userMap = usersQuery.data || {};
+    return {
+      ...log,
+      user: log.user_id ? userMap[log.user_id] || null : null,
+      affected_user: log.affected_user_id ? userMap[log.affected_user_id] || null : null
+    };
   });
 
   const countActivityLogs = async () => {
@@ -147,14 +201,18 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     }));
   };
 
+  // Determine if we're still loading data
+  const isLoading = logsQuery.isLoading || (usersQuery.isLoading && userIds.length > 0);
+  const error = logsQuery.error || usersQuery.error;
+
   return {
-    logs: data?.logs || [],
+    logs: combinedLogs,
     count: totalCount,
     isLoading,
     error,
     filters,
     updateFilters,
-    refetch,
+    refetch: logsQuery.refetch,
     pagination: {
       pageCount: Math.ceil(totalCount / (filters.limit || DEFAULT_LIMIT)),
       currentPage: Math.floor((filters.offset || 0) / (filters.limit || DEFAULT_LIMIT)) + 1,

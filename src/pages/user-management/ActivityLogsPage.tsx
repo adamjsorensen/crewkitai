@@ -39,9 +39,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { ActivityLogListSkeleton } from "@/components/user-management/ActivityLogsSkeleton";
 
 // Common action types we might want to filter by
 const ACTION_TYPES = [
@@ -185,6 +185,15 @@ const ActivityLogsPage = () => {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
   const { toast } = useToast();
+  
+  // Parse URL search params if any
+  React.useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const userId = searchParams.get('user');
+    if (userId) {
+      updateFilters({ userId });
+    }
+  }, []);
 
   // Get logs with pagination
   const { 
@@ -224,8 +233,14 @@ const ActivityLogsPage = () => {
       actionType: undefined,
       dateFrom: undefined,
       dateTo: undefined,
+      userId: undefined,
       offset: 0
     });
+    
+    // Remove user param from URL if present
+    const url = new URL(window.location.href);
+    url.searchParams.delete('user');
+    window.history.replaceState({}, '', url.toString());
   };
 
   // Export logs as CSV
@@ -376,6 +391,7 @@ const ActivityLogsPage = () => {
                 size="icon" 
                 onClick={handleExportLogs}
                 title="Export logs"
+                disabled={isLoading || logs.length === 0}
               >
                 <Download className="h-4 w-4" />
               </Button>
@@ -383,19 +399,20 @@ const ActivityLogsPage = () => {
           </div>
 
           {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="flex items-center justify-between px-4 py-3 border-b">
-                  <div className="flex gap-3 items-center">
-                    <Skeleton className="h-6 w-6 rounded-full" />
-                    <div className="space-y-1.5">
-                      <Skeleton className="h-4 w-40" />
-                      <Skeleton className="h-3 w-28" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-5 w-24" />
-                </div>
-              ))}
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Timestamp</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <ActivityLogListSkeleton />
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <>

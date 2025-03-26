@@ -1,10 +1,14 @@
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const ActivityLogsPage = () => {
+  const navigate = useNavigate();
+
   return (
     <Card className="p-6">
       <h3 className="text-lg font-semibold mb-4">User Activity Logs</h3>
@@ -26,6 +30,15 @@ const ActivityLogsPage = () => {
         <li>Login/logout events</li>
         <li>Profile updates</li>
       </ul>
+
+      <div className="mt-6">
+        <Button 
+          variant="outline" 
+          onClick={() => navigate("/dashboard/user-management/activity-logs")}
+        >
+          View Activity Logs
+        </Button>
+      </div>
     </Card>
   );
 };
