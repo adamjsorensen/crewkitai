@@ -38,8 +38,8 @@ const CollapsibleSidebar = () => {
     }
     
     // Special case for user management
-    if (path.startsWith("/dashboard/admin/users")) {
-      return location.pathname.startsWith("/dashboard/admin/users");
+    if (path.startsWith("/dashboard/user-management")) {
+      return location.pathname.startsWith("/dashboard/user-management");
     }
     
     // For AI settings and other admin paths
@@ -52,7 +52,7 @@ const CollapsibleSidebar = () => {
     return location.pathname.startsWith(path);
   };
 
-  // Updated nav items with PainterGrowth AI above Content
+  // Updated nav items with User Management as a top-level item
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
@@ -73,10 +73,18 @@ const CollapsibleSidebar = () => {
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
 
-  // Updated to have separate admin menu items
+  // Add User Management as top-level item for admins
+  if (isAdmin) {
+    navItems.push({ 
+      name: "User Management", 
+      icon: Users, 
+      path: "/dashboard/user-management/user-list" 
+    });
+  }
+
+  // Admin console as a separate section
   const adminItems = [
-    { name: "AI Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
-    { name: "User Management", icon: Users, path: "/dashboard/admin/users/user-list" },
+    { name: "Admin Console", icon: Shield, path: "/dashboard/admin/ai-settings" },
   ];
 
   return (

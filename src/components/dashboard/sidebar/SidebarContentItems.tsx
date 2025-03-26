@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -63,17 +64,27 @@ const SidebarContentItems = () => {
   ];
 
   const adminItems = [
-    { name: "AI Settings", icon: Shield, path: "/dashboard/admin/ai-settings" },
-    { name: "User Management", icon: Users, path: "/dashboard/admin/users/user-list" },
+    { name: "Admin Console", icon: Shield, path: "/dashboard/admin/ai-settings" },
   ];
+
+  // Add User Management as its own top-level item for admins
+  if (isAdmin) {
+    navItems.push({ 
+      name: "User Management", 
+      icon: Users, 
+      path: "/dashboard/user-management/user-list" 
+    });
+  }
 
   const isItemActive = (itemPath: string) => {
     if (itemPath === "/dashboard") {
       return location.pathname === "/dashboard";
     }
-    if (itemPath.startsWith("/dashboard/admin/users")) {
-      return location.pathname.startsWith("/dashboard/admin/users");
+    // Special case for user management
+    if (itemPath.startsWith("/dashboard/user-management")) {
+      return location.pathname.startsWith("/dashboard/user-management");
     }
+    // Special case for admin console
     if (itemPath === "/dashboard/admin/ai-settings") {
       return location.pathname.startsWith("/dashboard/admin/") && 
              !location.pathname.startsWith("/dashboard/admin/users");

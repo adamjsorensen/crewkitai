@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,19 +25,18 @@ import CompassPage from "./pages/CompassPage"; // Strategic Planner page
 import AiSettingsPage from "./pages/admin/AiSettingsPage";
 import FeatureFlagsPage from "./pages/admin/FeatureFlagsPage";
 import CompassSettingsPage from "./pages/admin/CompassSettingsPage"; // CompassSettingsPage import
-import UsersPage from "./pages/admin/UsersPage"; // Old Users page import
 import ContentPage from "./pages/content/ContentPage"; // New Content page
 import { useEffect } from "react";
 import { prefetchWelcomeContent } from "./hooks/useWelcomeContent";
 import { useNeedsOnboarding } from "./hooks/useNeedsOnboarding";
 import { useOnboardingSteps } from "./hooks/useOnboardingSteps";
 
-// New User Management Pages
-import UserManagementPage from "./pages/admin/UserManagementPage";
-import UserListPage from "./pages/admin/users/UserListPage";
-import AddUserPage from "./pages/admin/users/AddUserPage";
-import ActivityLogsPage from "./pages/admin/users/ActivityLogsPage";
-import UserDetailsPage from "./pages/admin/users/UserDetailsPage";
+// New Admin Pages
+import UserManagementPage from "./pages/user-management/UserManagementPage";
+import UserListPage from "./pages/user-management/UserListPage";
+import AddUserPage from "./pages/user-management/AddUserPage";
+import ActivityLogsPage from "./pages/user-management/ActivityLogsPage";
+import UserDetailsPage from "./pages/user-management/UserDetailsPage";
 
 // Create query client with optimal settings for caching
 const queryClient = new QueryClient({
@@ -107,14 +105,14 @@ const AppContent = () => {
         <Route path="/dashboard/admin/feature-flags" element={<AuthenticatedRoute element={<FeatureFlagsPage />} />} />
         <Route path="/dashboard/admin/compass-settings" element={<AuthenticatedRoute element={<CompassSettingsPage />} />} />
         
-        {/* New User Management Routes */}
-        <Route path="/dashboard/admin/users" element={<AuthenticatedRoute element={<UserManagementPage />} />}>
+        {/* User Management Routes (now separate from Admin) */}
+        <Route path="/dashboard/user-management" element={<AuthenticatedRoute element={<UserManagementPage />} />}>
           <Route index element={<Navigate to="user-list" replace />} />
           <Route path="user-list" element={<UserListPage />} />
           <Route path="add-user" element={<AddUserPage />} />
           <Route path="activity-logs" element={<ActivityLogsPage />} />
         </Route>
-        <Route path="/dashboard/admin/users/user-details/:userId" element={<AuthenticatedRoute element={<UserDetailsPage />} />} />
+        <Route path="/dashboard/user-management/user-details/:userId" element={<AuthenticatedRoute element={<UserDetailsPage />} />} />
         
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />

@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Shield, Settings, Users, Database, BrainCircuit, ToggleLeft, Compass } from "lucide-react";
+import { Shield, Settings, Database, BrainCircuit, ToggleLeft, Compass } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 interface AdminLayoutProps {
@@ -42,12 +42,6 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
   }
 
   const handleTabChange = (value: string) => {
-    // Special case for users tab which now has its own route structure
-    if (value === "users") {
-      navigate("/dashboard/admin/users/user-list");
-      return;
-    }
-    
     navigate(`/dashboard/admin/${value}`);
   };
 
@@ -60,7 +54,7 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight">Admin Console</h1>
-            <p className="text-muted-foreground">Manage application settings and users</p>
+            <p className="text-muted-foreground">Manage application settings and configuration</p>
           </div>
         </div>
         
@@ -80,10 +74,6 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
               <TabsTrigger value="feature-flags" className="flex items-center gap-1.5">
                 <ToggleLeft className="h-4 w-4" />
                 <span>Feature Flags</span>
-              </TabsTrigger>
-              <TabsTrigger value="users" className="flex items-center gap-1.5">
-                <Users className="h-4 w-4" />
-                <span>Users</span>
               </TabsTrigger>
               <TabsTrigger value="app-settings" className="flex items-center gap-1.5">
                 <Settings className="h-4 w-4" />
