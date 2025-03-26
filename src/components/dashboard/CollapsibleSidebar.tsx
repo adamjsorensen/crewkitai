@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,7 +53,7 @@ const CollapsibleSidebar = () => {
     return location.pathname.startsWith(path);
   };
 
-  // Updated nav items with User Management as a top-level item
+  // Updated nav items without User Management as a top-level item
   const navItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
@@ -73,18 +74,10 @@ const CollapsibleSidebar = () => {
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
   ];
 
-  // Add User Management as top-level item for admins
-  if (isAdmin) {
-    navItems.push({ 
-      name: "User Management", 
-      icon: Users, 
-      path: "/dashboard/user-management/user-list" 
-    });
-  }
-
-  // Admin console as a separate section
+  // Admin console section with User Management
   const adminItems = [
     { name: "Admin Console", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "User Management", icon: Users, path: "/dashboard/user-management/user-list" },
   ];
 
   return (

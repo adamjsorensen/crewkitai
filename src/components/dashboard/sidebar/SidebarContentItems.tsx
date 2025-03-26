@@ -65,16 +65,8 @@ const SidebarContentItems = () => {
 
   const adminItems = [
     { name: "Admin Console", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "User Management", icon: Users, path: "/dashboard/user-management/user-list" },
   ];
-
-  // Add User Management as its own top-level item for admins
-  if (isAdmin) {
-    navItems.push({ 
-      name: "User Management", 
-      icon: Users, 
-      path: "/dashboard/user-management/user-list" 
-    });
-  }
 
   const isItemActive = (itemPath: string) => {
     if (itemPath === "/dashboard") {
