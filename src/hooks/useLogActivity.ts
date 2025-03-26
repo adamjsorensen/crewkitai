@@ -58,8 +58,8 @@ export function useLogActivity() {
         return rpcData;
       }
 
-      return functionData.log_id;
-    } catch (error) {
+      return functionData?.log_id;
+    } catch (error: any) {
       console.error('Error logging activity:', error);
       // Only show toast in development
       if (process.env.NODE_ENV === 'development') {

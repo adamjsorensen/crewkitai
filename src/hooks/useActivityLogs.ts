@@ -230,7 +230,7 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
 
   return {
     logs: combinedLogs,
-    count: totalCount,
+    totalCount,
     isLoading,
     error,
     filters,

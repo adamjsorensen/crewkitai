@@ -46,7 +46,6 @@ export const useSendMessageMutation = () => {
       // Create a new conversation if needed
       if (!actualConversationId) {
         try {
-          // Using pg_conversations table instead of conversations
           const { data: newConversation, error } = await supabase
             .from('pg_conversations')
             .insert({
@@ -102,7 +101,7 @@ export const useSendMessageMutation = () => {
       ]);
 
       try {
-        // Save user message to database - using pg_messages instead of messages
+        // Save user message to database
         const { error: messageError } = await supabase
           .from('pg_messages')
           .insert({
@@ -149,7 +148,7 @@ export const useSendMessageMutation = () => {
           )
         );
 
-        // Save assistant message to database - using pg_messages instead of messages
+        // Save assistant message to database
         const { error: assistantError } = await supabase
           .from('pg_messages')
           .insert({

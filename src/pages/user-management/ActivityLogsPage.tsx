@@ -24,8 +24,8 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Clock, Download, Filter, Search, X } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { CalendarIcon, Clock, Download, Search, X } from "lucide-react";
 import { format } from "date-fns";
 import UserManagementLayout from "@/components/user-management/UserManagementLayout";
 import { useActivityLogs, ActivityLog } from "@/hooks/useActivityLogs";
@@ -50,6 +50,8 @@ import {
   PopoverTrigger 
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { ActivityLogDetails } from "@/components/user-management/ActivityLogDetails";
+import { ActivityLogRow } from "@/components/user-management/ActivityLogRow";
 
 const ACTION_TYPES = [
   { value: "all", label: "All Activities" },
@@ -128,7 +130,6 @@ const ActivityLogsPage: React.FC = () => {
     }
   };
 
-  // Format the action type for display
   const formatActionType = (actionType: string) => {
     return actionType
       .split('_')
@@ -136,7 +137,6 @@ const ActivityLogsPage: React.FC = () => {
       .join(' ');
   };
 
-  // Check if string is JSON
   const isJsonString = (str: string) => {
     try {
       JSON.parse(str);
@@ -146,7 +146,6 @@ const ActivityLogsPage: React.FC = () => {
     }
   };
 
-  // Format content for display
   const formatContent = (content: string) => {
     if (isJsonString(content)) {
       try {
@@ -159,7 +158,6 @@ const ActivityLogsPage: React.FC = () => {
     return content;
   };
 
-  // Truncate long content with ellipsis
   const truncateContent = (content: string, maxLength = 100) => {
     if (!content) return "";
     if (content.length <= maxLength) return content;
@@ -173,7 +171,7 @@ const ActivityLogsPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold">Activity Logs</h2>
             <Badge variant="outline" className="ml-2">
-              {pagination.pageCount > 0 ? pagination.pageCount * pagination.pageSize : 0} Records
+              {logs.length} Records
             </Badge>
           </div>
           
@@ -337,79 +335,11 @@ const ActivityLogsPage: React.FC = () => {
                   </TableRow>
                 ) : (
                   logs.map((log) => (
-                    <TableRow 
+                    <ActivityLogRow 
                       key={log.id} 
-                      className="cursor-pointer hover:bg-muted/60" 
+                      log={log}
                       onClick={() => setSelectedLog(log)}
-                    >
-                      <TableCell className="whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {format(new Date(log.created_at), "dd MMM yyyy")}
-                          </span>
-                          <span className="text-xs text-muted-foreground flex items-center">
-                            <Clock className="mr-1 h-3 w-3" />
-                            {format(new Date(log.created_at), "hh:mm a")}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {log.user ? (
-                          <div className="flex flex-col">
-                            <span className="font-medium">{log.user.full_name}</span>
-                            <span className="text-xs text-muted-foreground">{log.user.email}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Unknown user</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          className={getActionBadgeColor(log.action_type)}
-                          variant="outline"
-                        >
-                          {formatActionType(log.action_type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-sm">
-                        {log.action_type === "chat_message" ? (
-                          <div className="text-sm">
-                            <span className="font-medium">Prompt:</span>{" "}
-                            {truncateContent(log.action_details?.user_message || "No prompt found")}
-                          </div>
-                        ) : log.action_type === "chat_response" ? (
-                          <div className="text-sm">
-                            <span className="font-medium">Prompt:</span>{" "}
-                            {truncateContent(log.action_details?.prompt || "No prompt found")}
-                            <br />
-                            <span className="font-medium">Response:</span>{" "}
-                            {truncateContent(log.action_details?.response || "No response found")}
-                          </div>
-                        ) : log.action_type === "compass_analyze" ? (
-                          <div className="text-sm">
-                            <span className="font-medium">Input:</span>{" "}
-                            {truncateContent(log.action_details?.input_text || "No input found")}
-                            <br />
-                            <span className="font-medium">Tasks:</span>{" "}
-                            {log.action_details?.tasks ? `${log.action_details.tasks.length} tasks generated` : "No tasks found"}
-                          </div>
-                        ) : log.action_type === "content_generated" ? (
-                          <div className="text-sm">
-                            <span className="font-medium">Type:</span>{" "}
-                            {log.action_details?.content_type || "Unknown"}
-                            <br />
-                            <span className="font-medium">Content:</span>{" "}
-                            {truncateContent(log.action_details?.generated_content || "No content found")}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">
-                            {Object.keys(log.action_details || {}).length > 0
-                              ? truncateContent(JSON.stringify(log.action_details))
-                              : "No details available"}
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
+                    />
                   ))
                 )}
               </TableBody>
@@ -426,16 +356,20 @@ const ActivityLogsPage: React.FC = () => {
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious 
-                    onClick={() => pagination.onPageChange(Math.max(1, pagination.currentPage - 1))}
-                    aria-disabled={pagination.currentPage === 1}
+                    onClick={() => pagination.currentPage > 1 ? 
+                      pagination.onPageChange(pagination.currentPage - 1) : undefined
+                    }
                     className={pagination.currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    aria-disabled={pagination.currentPage === 1}
                   />
                 </PaginationItem>
                 <PaginationItem>
                   <PaginationNext 
-                    onClick={() => pagination.onPageChange(Math.min(pagination.pageCount, pagination.currentPage + 1))}
-                    aria-disabled={pagination.currentPage === pagination.pageCount}
+                    onClick={() => pagination.currentPage < pagination.pageCount ? 
+                      pagination.onPageChange(pagination.currentPage + 1) : undefined
+                    }
                     className={pagination.currentPage === pagination.pageCount ? "pointer-events-none opacity-50" : ""}
+                    aria-disabled={pagination.currentPage === pagination.pageCount}
                   />
                 </PaginationItem>
               </PaginationContent>
@@ -464,188 +398,7 @@ const ActivityLogsPage: React.FC = () => {
             </DialogHeader>
             
             {selectedLog && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground mb-1">Timestamp</h3>
-                    <p>{format(new Date(selectedLog.created_at), "PPP p")}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground mb-1">Action Type</h3>
-                    <Badge className={getActionBadgeColor(selectedLog.action_type)}>
-                      {formatActionType(selectedLog.action_type)}
-                    </Badge>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground mb-1">User</h3>
-                    <p>{selectedLog.user ? selectedLog.user.full_name : "Unknown"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedLog.user ? selectedLog.user.email : ""}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground mb-1">Related Resource</h3>
-                    <p>
-                      {selectedLog.affected_resource_type ? (
-                        <>
-                          {selectedLog.affected_resource_type}
-                          {selectedLog.affected_resource_id && (
-                            <span className="text-sm text-muted-foreground ml-1">
-                              (ID: {selectedLog.affected_resource_id})
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        "None"
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {selectedLog.action_type === "chat_message" && (
-                  <div>
-                    <h3 className="font-semibold mb-2">User Message</h3>
-                    <Card className="bg-muted/50">
-                      <CardContent className="p-4 whitespace-pre-wrap">
-                        {selectedLog.action_details?.user_message || "No message content"}
-                      </CardContent>
-                    </Card>
-                    {selectedLog.action_details?.conversation_id && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Conversation ID: {selectedLog.action_details.conversation_id}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {selectedLog.action_type === "chat_response" && (
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold mb-2">User Prompt</h3>
-                      <Card className="bg-blue-50 dark:bg-blue-950">
-                        <CardContent className="p-4 whitespace-pre-wrap">
-                          {selectedLog.action_details?.prompt || "No prompt content"}
-                        </CardContent>
-                      </Card>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">AI Response</h3>
-                      <Card className="bg-green-50 dark:bg-green-950">
-                        <CardContent className="p-4 whitespace-pre-wrap">
-                          {selectedLog.action_details?.response || "No response content"}
-                        </CardContent>
-                      </Card>
-                    </div>
-                    {selectedLog.action_details?.conversation_id && (
-                      <p className="text-sm text-muted-foreground">
-                        Conversation ID: {selectedLog.action_details.conversation_id}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {selectedLog.action_type === "compass_analyze" && (
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold mb-2">Input Text</h3>
-                      <Card className="bg-muted/50">
-                        <CardContent className="p-4 whitespace-pre-wrap">
-                          {selectedLog.action_details?.input_text || "No input text"}
-                        </CardContent>
-                      </Card>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Generated Tasks</h3>
-                      {selectedLog.action_details?.tasks && selectedLog.action_details.tasks.length > 0 ? (
-                        <div className="space-y-2">
-                          {selectedLog.action_details.tasks.map((task: any, index: number) => (
-                            <Card key={index} className="bg-purple-50 dark:bg-purple-950">
-                              <CardContent className="p-4">
-                                <div className="font-medium">{task.title || task.text || `Task ${index + 1}`}</div>
-                                {task.priority && (
-                                  <Badge className="mt-1">
-                                    {typeof task.priority === 'string' 
-                                      ? task.priority.charAt(0).toUpperCase() + task.priority.slice(1) 
-                                      : task.priority}
-                                  </Badge>
-                                )}
-                                {task.due_date && (
-                                  <div className="text-sm text-muted-foreground mt-1">
-                                    Due: {task.due_date}
-                                  </div>
-                                )}
-                                {task.reasoning && (
-                                  <div className="text-sm mt-2">
-                                    <span className="font-medium">Reasoning:</span> {task.reasoning}
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-muted-foreground">No tasks generated</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {selectedLog.action_type === "content_generated" && (
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold mb-2">Content Type</h3>
-                      <p>{selectedLog.action_details?.content_type || "Unknown"}</p>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Prompt</h3>
-                      <Card className="bg-muted/50">
-                        <CardContent className="p-4 whitespace-pre-wrap">
-                          {selectedLog.action_details?.prompt || "No prompt provided"}
-                        </CardContent>
-                      </Card>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Generated Content</h3>
-                      <Card className="bg-amber-50 dark:bg-amber-950">
-                        <CardContent className="p-4 whitespace-pre-wrap font-mono text-sm">
-                          {selectedLog.action_details?.generated_content || "No content generated"}
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                )}
-
-                {!["chat_message", "chat_response", "compass_analyze", "content_generated"].includes(selectedLog.action_type) && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Details</h3>
-                    {Object.keys(selectedLog.action_details || {}).length > 0 ? (
-                      <Card className="bg-muted/50">
-                        <CardContent className="p-4">
-                          <pre className="whitespace-pre-wrap font-mono text-sm">
-                            {JSON.stringify(selectedLog.action_details, null, 2)}
-                          </pre>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <p className="text-muted-foreground">No details available</p>
-                    )}
-                  </div>
-                )}
-
-                {selectedLog.ip_address && (
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">IP Address:</span> {selectedLog.ip_address}
-                  </div>
-                )}
-
-                {selectedLog.user_agent && (
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">User Agent:</span> {selectedLog.user_agent}
-                  </div>
-                )}
-              </div>
+              <ActivityLogDetails log={selectedLog} />
             )}
 
             <DialogFooter>
