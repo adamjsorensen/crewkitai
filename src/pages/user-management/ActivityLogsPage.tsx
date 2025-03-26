@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Table, 
@@ -27,7 +28,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarIcon, Clock, Download, Search, X } from "lucide-react";
 import { format } from "date-fns";
-import UserManagementLayout from "@/components/user-management/UserManagementLayout";
 import { useActivityLogs, ActivityLog } from "@/hooks/useActivityLogs";
 import { ActivityLogListSkeleton } from "@/components/user-management/ActivityLogsSkeleton";
 import {
@@ -112,304 +112,250 @@ const ActivityLogsPage: React.FC = () => {
     setShowExportOptions(false);
   };
 
-  const getActionBadgeColor = (actionType: string) => {
-    switch (actionType) {
-      case "chat_message":
-        return "bg-blue-100 text-blue-800";
-      case "chat_response":
-        return "bg-green-100 text-green-800";
-      case "compass_analyze":
-        return "bg-purple-100 text-purple-800";
-      case "content_generated":
-        return "bg-amber-100 text-amber-800";
-      case "login":
-      case "logout":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const formatActionType = (actionType: string) => {
-    return actionType
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
-
-  const isJsonString = (str: string) => {
-    try {
-      JSON.parse(str);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-
-  const formatContent = (content: string) => {
-    if (isJsonString(content)) {
-      try {
-        const parsed = JSON.parse(content);
-        return JSON.stringify(parsed, null, 2);
-      } catch (e) {
-        return content;
-      }
-    }
-    return content;
-  };
-
-  const truncateContent = (content: string, maxLength = 100) => {
-    if (!content) return "";
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + "...";
-  };
-
   return (
-    <UserManagementLayout>
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold">Activity Logs</h2>
-            <Badge variant="outline" className="ml-2">
-              {logs.length} Records
-            </Badge>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl font-bold">Activity Logs</h2>
+          <Badge variant="outline" className="ml-2">
+            {logs.length} Records
+          </Badge>
+        </div>
+        
+        <div className="flex gap-2 w-full sm:w-auto">
+          <div className="relative flex-grow sm:flex-grow-0">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search logs..."
+              className="pl-8 w-full sm:w-[200px]"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            />
           </div>
           
-          <div className="flex gap-2 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search logs..."
-                className="pl-8 w-full sm:w-[200px]"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
-            </div>
-            
-            <Select
-              value={filters.actionType || "all"}
-              onValueChange={(value) => updateFilters({ actionType: value })}
-            >
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                {ACTION_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Select
+            value={filters.actionType || "all"}
+            onValueChange={(value) => updateFilters({ actionType: value })}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              {ACTION_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setShowExportOptions(!showExportOptions)}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Export logs</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          {filters.actionType !== "all" || dateFrom || dateTo || searchTerm ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
                     variant="outline" 
                     size="icon"
-                    onClick={() => setShowExportOptions(!showExportOptions)}
+                    onClick={clearFilters}
                   >
-                    <Download className="h-4 w-4" />
+                    <X className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Export logs</TooltipContent>
+                <TooltipContent>Clear filters</TooltipContent>
               </Tooltip>
             </TooltipProvider>
-
-            {filters.actionType !== "all" || dateFrom || dateTo || searchTerm ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={clearFilters}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Clear filters</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : null}
-          </div>
+          ) : null}
         </div>
+      </div>
 
-        <div className="flex flex-wrap gap-2 items-center">
-          <Popover open={isFromOpen} onOpenChange={setIsFromOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="justify-start text-left font-normal"
-                size="sm"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateFrom ? format(dateFrom, "PPP") : "From Date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={dateFrom}
-                onSelect={(date) => {
-                  setDateFrom(date);
-                  setIsFromOpen(false);
-                  if (date) {
-                    updateFilters({ dateFrom: format(date, "yyyy-MM-dd") });
-                  }
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-
-          <Popover open={isToOpen} onOpenChange={setIsToOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="justify-start text-left font-normal"
-                size="sm"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateTo ? format(dateTo, "PPP") : "To Date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={dateTo}
-                onSelect={(date) => {
-                  setDateTo(date);
-                  setIsToOpen(false);
-                  if (date) {
-                    updateFilters({ dateTo: format(date, "yyyy-MM-dd") });
-                  }
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-
-          {showExportOptions && (
-            <div className="flex gap-2 items-center ml-auto">
-              <Select
-                value={exportFormat}
-                onValueChange={(value: "csv" | "json") => setExportFormat(value)}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Format" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="csv">CSV</SelectItem>
-                  <SelectItem value="json">JSON</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button size="sm" onClick={handleExport}>
-                Export
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[180px]">Timestamp</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <ActivityLogListSkeleton />
-                ) : logs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      No activity logs found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  logs.map((log) => (
-                    <ActivityLogRow 
-                      key={log.id} 
-                      log={log}
-                      onClick={() => setSelectedLog(log)}
-                    />
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {pagination.pageCount > 1 && (
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-muted-foreground">
-              Showing page {pagination.currentPage} of {pagination.pageCount}
-            </div>
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    onClick={() => pagination.currentPage > 1 ? 
-                      pagination.onPageChange(pagination.currentPage - 1) : undefined
-                    }
-                    className={pagination.currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                    aria-disabled={pagination.currentPage === 1}
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext 
-                    onClick={() => pagination.currentPage < pagination.pageCount ? 
-                      pagination.onPageChange(pagination.currentPage + 1) : undefined
-                    }
-                    className={pagination.currentPage === pagination.pageCount ? "pointer-events-none opacity-50" : ""}
-                    aria-disabled={pagination.currentPage === pagination.pageCount}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-            <Select
-              value={pagination.pageSize.toString()}
-              onValueChange={(value) => pagination.onPageSizeChange(parseInt(value))}
+      <div className="flex flex-wrap gap-2 items-center">
+        <Popover open={isFromOpen} onOpenChange={setIsFromOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="justify-start text-left font-normal"
+              size="sm"
             >
-              <SelectTrigger className="w-[80px]">
-                <SelectValue />
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateFrom ? format(dateFrom, "PPP") : "From Date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={dateFrom}
+              onSelect={(date) => {
+                setDateFrom(date);
+                setIsFromOpen(false);
+                if (date) {
+                  updateFilters({ dateFrom: format(date, "yyyy-MM-dd") });
+                }
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+
+        <Popover open={isToOpen} onOpenChange={setIsToOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="justify-start text-left font-normal"
+              size="sm"
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateTo ? format(dateTo, "PPP") : "To Date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={dateTo}
+              onSelect={(date) => {
+                setDateTo(date);
+                setIsToOpen(false);
+                if (date) {
+                  updateFilters({ dateTo: format(date, "yyyy-MM-dd") });
+                }
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+
+        {showExportOptions && (
+          <div className="flex gap-2 items-center ml-auto">
+            <Select
+              value={exportFormat}
+              onValueChange={(value: "csv" | "json") => setExportFormat(value)}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="csv">CSV</SelectItem>
+                <SelectItem value="json">JSON</SelectItem>
               </SelectContent>
             </Select>
+            <Button size="sm" onClick={handleExport}>
+              Export
+            </Button>
           </div>
         )}
-
-        <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Activity Details</DialogTitle>
-            </DialogHeader>
-            
-            {selectedLog && (
-              <ActivityLogDetails log={selectedLog} />
-            )}
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedLog(null)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
-    </UserManagementLayout>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[180px]">Timestamp</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Details</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <ActivityLogListSkeleton />
+              ) : logs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    No activity logs found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                logs.map((log) => (
+                  <ActivityLogRow 
+                    key={log.id} 
+                    log={log}
+                    onClick={() => setSelectedLog(log)}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {pagination.pageCount > 1 && (
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-muted-foreground">
+            Showing page {pagination.currentPage} of {pagination.pageCount}
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => pagination.currentPage > 1 ? 
+                    pagination.onPageChange(pagination.currentPage - 1) : undefined
+                  }
+                  className={pagination.currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  aria-disabled={pagination.currentPage === 1}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => pagination.currentPage < pagination.pageCount ? 
+                    pagination.onPageChange(pagination.currentPage + 1) : undefined
+                  }
+                  className={pagination.currentPage === pagination.pageCount ? "pointer-events-none opacity-50" : ""}
+                  aria-disabled={pagination.currentPage === pagination.pageCount}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+          <Select
+            value={pagination.pageSize.toString()}
+            onValueChange={(value) => pagination.onPageSizeChange(parseInt(value))}
+          >
+            <SelectTrigger className="w-[80px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Activity Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedLog && (
+            <ActivityLogDetails log={selectedLog} />
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedLog(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
