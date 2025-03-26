@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Table, 
@@ -61,6 +60,8 @@ const ACTION_TYPES = [
   { value: "login", label: "Login" },
   { value: "logout", label: "Logout" },
   { value: "profile_update", label: "Profile Update" },
+  { value: "delete_user", label: "User Deletion" },
+  { value: "bulk_delete_users", label: "Bulk User Deletion" },
 ];
 
 const ActivityLogsPage: React.FC = () => {
@@ -172,7 +173,7 @@ const ActivityLogsPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold">Activity Logs</h2>
             <Badge variant="outline" className="ml-2">
-              {pagination.pageCount > 0 ? pagination.count : 0} Records
+              {pagination.pageCount > 0 ? pagination.pageCount * pagination.pageSize : 0} Records
             </Badge>
           </div>
           
@@ -426,13 +427,15 @@ const ActivityLogsPage: React.FC = () => {
                 <PaginationItem>
                   <PaginationPrevious 
                     onClick={() => pagination.onPageChange(Math.max(1, pagination.currentPage - 1))}
-                    disabled={pagination.currentPage === 1}
+                    aria-disabled={pagination.currentPage === 1}
+                    className={pagination.currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                   />
                 </PaginationItem>
                 <PaginationItem>
                   <PaginationNext 
                     onClick={() => pagination.onPageChange(Math.min(pagination.pageCount, pagination.currentPage + 1))}
-                    disabled={pagination.currentPage === pagination.pageCount}
+                    aria-disabled={pagination.currentPage === pagination.pageCount}
+                    className={pagination.currentPage === pagination.pageCount ? "pointer-events-none opacity-50" : ""}
                   />
                 </PaginationItem>
               </PaginationContent>

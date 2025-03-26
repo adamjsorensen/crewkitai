@@ -46,13 +46,13 @@ export const useSendMessageMutation = () => {
       // Create a new conversation if needed
       if (!actualConversationId) {
         try {
+          // Using pg_conversations table instead of conversations
           const { data: newConversation, error } = await supabase
-            .from('conversations')
+            .from('pg_conversations')
             .insert({
               user_id: user.id,
               title: userMessage.slice(0, 50) + (userMessage.length > 50 ? '...' : ''),
-              last_message: userMessage,
-              last_updated: new Date().toISOString()
+              updated_at: new Date().toISOString()
             })
             .select()
             .single();
@@ -79,10 +79,11 @@ export const useSendMessageMutation = () => {
           id: userMessageId,
           content: userMessage,
           role: 'user',
+          timestamp: new Date(), // Add timestamp for Message type compatibility
           created_at: new Date().toISOString(),
           conversation_id: actualConversationId || '',
           image_url: imageUrl
-        }
+        } as Message
       ]);
 
       // Add placeholder for assistant message
@@ -93,16 +94,17 @@ export const useSendMessageMutation = () => {
           id: assistantMessageId,
           content: '',
           role: 'assistant',
+          timestamp: new Date(), // Add timestamp for Message type compatibility
           created_at: new Date().toISOString(),
           conversation_id: actualConversationId || '',
           isPlaceholder: true
-        }
+        } as Message
       ]);
 
       try {
-        // Save user message to database
+        // Save user message to database - using pg_messages instead of messages
         const { error: messageError } = await supabase
-          .from('messages')
+          .from('pg_messages')
           .insert({
             id: userMessageId,
             conversation_id: actualConversationId,
@@ -147,9 +149,9 @@ export const useSendMessageMutation = () => {
           )
         );
 
-        // Save assistant message to database
+        // Save assistant message to database - using pg_messages instead of messages
         const { error: assistantError } = await supabase
-          .from('messages')
+          .from('pg_messages')
           .insert({
             id: assistantMessageId,
             conversation_id: actualConversationId,
@@ -163,12 +165,10 @@ export const useSendMessageMutation = () => {
 
         // Update conversation last message and title if this is the first message
         const { error: updateError } = await supabase
-          .from('conversations')
+          .from('pg_conversations')
           .update({
-            last_message: userMessage,
-            last_updated: new Date().toISOString(),
-            last_message_at: new Date().toISOString(),
-            title: messages.length <= 2 ? userMessage.slice(0, 50) + (userMessage.length > 50 ? '...' : '') : undefined
+            title: messages.length <= 2 ? userMessage.slice(0, 50) + (userMessage.length > 50 ? '...' : '') : undefined,
+            updated_at: new Date().toISOString()
           })
           .eq('id', actualConversationId);
 
