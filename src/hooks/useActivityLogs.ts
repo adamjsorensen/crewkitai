@@ -22,10 +22,10 @@ export interface ActivityLog {
   ip_address?: string;
   user_agent?: string;
   created_at: string;
-  affected_user_id?: string;
-  affected_resource_type?: string;
-  affected_resource_id?: string;
-  conversation_id?: string;
+  affected_user_id?: string | null;
+  affected_resource_type?: string | null;
+  affected_resource_id?: string | null;
+  conversation_id?: string | null;
   user?: {
     full_name: string;
     email: string;
@@ -128,7 +128,10 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     const normalizedPgLogs = (pgActivityResult.data || []).map(log => ({
       ...log,
       affected_resource_id: log.conversation_id,
-      affected_resource_type: log.conversation_id ? 'conversation' : null
+      affected_resource_type: log.conversation_id ? 'conversation' : null,
+      affected_user_id: null,
+      ip_address: null,
+      user_agent: null
     }));
     
     // Combine results
@@ -193,7 +196,7 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
       if (log.affected_user_id) userIds.push(log.affected_user_id);
     });
     
-    return [...new Set(userIds)];
+    return [...new Set(userIds.filter(id => id))];
   };
 
   // Get unique user IDs safely
