@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, Search, X } from "lucide-react";
+import { Download, Search, X, Calendar } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -36,6 +36,8 @@ const ACTION_TYPES = [
   { value: "login", label: "Login" },
   { value: "logout", label: "Logout" },
   { value: "profile_update", label: "Profile Update" },
+  { value: "delete_user", label: "User Deletion" },
+  { value: "bulk_delete_users", label: "Bulk User Deletion" },
 ];
 
 export const ActivityLogsFilters: React.FC<ActivityLogsFiltersProps> = ({
@@ -60,53 +62,55 @@ export const ActivityLogsFilters: React.FC<ActivityLogsFiltersProps> = ({
         />
       </div>
       
-      <Select
-        value={actionType}
-        onValueChange={setActionType}
-      >
-        <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder="Filter by type" />
-        </SelectTrigger>
-        <SelectContent>
-          {ACTION_TYPES.map((type) => (
-            <SelectItem key={type.value} value={type.value}>
-              {type.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={onExport}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Export logs</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      {actionType !== "all" || searchTerm ? (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={actionType}
+          onValueChange={setActionType}
+        >
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            {ACTION_TYPES.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
                 variant="outline" 
                 size="icon"
-                onClick={onClearFilters}
+                onClick={onExport}
               >
-                <X className="h-4 w-4" />
+                <Download className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Clear filters</TooltipContent>
+            <TooltipContent>Export logs</TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      ) : null}
+
+        {actionType !== "all" || searchTerm ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={onClearFilters}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Clear filters</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
+      </div>
     </div>
   );
 };

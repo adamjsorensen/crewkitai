@@ -9,6 +9,7 @@ interface ActivityLogFilters {
   actionType?: string;
   dateFrom?: string;
   dateTo?: string;
+  searchTerm?: string;
   limit?: number;
   offset?: number;
 }
@@ -78,12 +79,17 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     if (currentFilters.dateTo) {
       query = query.lte('created_at', currentFilters.dateTo);
     }
+
+    if (currentFilters.searchTerm) {
+      // We need to search in the jsonb field
+      query = query.or(`action_details.ilike.%${currentFilters.searchTerm}%`);
+    }
     
     if (currentFilters.limit) {
       query = query.limit(currentFilters.limit);
     }
     
-    if (currentFilters.offset) {
+    if (currentFilters.offset !== undefined) {
       query = query.range(
         currentFilters.offset,
         currentFilters.offset + (currentFilters.limit || DEFAULT_LIMIT) - 1
@@ -108,10 +114,15 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
   const fetchUserProfiles = async (userIds: string[]) => {
     if (!userIds.length) return {};
 
+    // Filter out null or undefined values and deduplicate
+    const validUserIds = [...new Set(userIds.filter(id => id))];
+    
+    if (validUserIds.length === 0) return {};
+
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, email')
-      .in('id', userIds);
+      .in('id', validUserIds);
 
     if (error) {
       console.error('Error fetching user profiles:', error);
@@ -132,13 +143,20 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     queryFn: fetchActivityLogs,
   });
 
-  // Extract unique user IDs from logs
-  const userIds = Array.from(new Set(
-    (logsQuery.data || []).flatMap(log => [
-      log.user_id,
-      log.affected_user_id
-    ]).filter(Boolean) as string[]
-  ));
+  // Extract unique user IDs from logs, safely handling undefined values
+  const getUsersFromLogs = () => {
+    const userIds: string[] = [];
+    
+    (logsQuery.data || []).forEach(log => {
+      if (log.user_id) userIds.push(log.user_id);
+      if (log.affected_user_id) userIds.push(log.affected_user_id);
+    });
+    
+    return [...new Set(userIds)];
+  };
+
+  // Get unique user IDs safely
+  const userIds = getUsersFromLogs();
 
   // Fetch user profiles based on IDs from logs
   const usersQuery = useQuery({
@@ -176,6 +194,11 @@ export function useActivityLogs(initialFilters: ActivityLogFilters = {}) {
     
     if (filters.dateTo) {
       query = query.lte('created_at', filters.dateTo);
+    }
+
+    if (filters.searchTerm) {
+      // We need to search in the jsonb field
+      query = query.or(`action_details.ilike.%${filters.searchTerm}%`);
     }
     
     const { count, error } = await query;

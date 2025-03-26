@@ -50,7 +50,7 @@ function App() {
               <Route path="/dashboard/admin/app-settings" element={<AppSettingsPage />} />
               <Route path="/dashboard/admin/database" element={<DatabasePage />} />
               
-              {/* User management routes */}
+              {/* User management routes - consolidated under one path pattern */}
               <Route path="/dashboard/user-management" element={<UserManagementPage />}>
                 <Route path="user-list" element={<UserListPage />} />
                 <Route path="add-user" element={<AddUserPage />} />

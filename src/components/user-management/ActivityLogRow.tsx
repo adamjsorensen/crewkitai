@@ -33,6 +33,9 @@ export const ActivityLogRow: React.FC<ActivityLogRowProps> = ({ log, onClick }) 
       case "login":
       case "logout":
         return "bg-gray-100 text-gray-800";
+      case "delete_user":
+      case "bulk_delete_users":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -45,6 +48,25 @@ export const ActivityLogRow: React.FC<ActivityLogRowProps> = ({ log, onClick }) 
     return content.substring(0, maxLength) + "...";
   };
 
+  // Format date and time safely
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "dd MMM yyyy");
+    } catch (error) {
+      console.error("Invalid date format:", dateString);
+      return "Invalid date";
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "hh:mm a");
+    } catch (error) {
+      console.error("Invalid time format:", dateString);
+      return "Invalid time";
+    }
+  };
+
   return (
     <TableRow 
       className="cursor-pointer hover:bg-muted/60" 
@@ -53,19 +75,19 @@ export const ActivityLogRow: React.FC<ActivityLogRowProps> = ({ log, onClick }) 
       <TableCell className="whitespace-nowrap">
         <div className="flex flex-col">
           <span className="font-medium">
-            {format(new Date(log.created_at), "dd MMM yyyy")}
+            {formatDate(log.created_at)}
           </span>
           <span className="text-xs text-muted-foreground flex items-center">
             <Clock className="mr-1 h-3 w-3" />
-            {format(new Date(log.created_at), "hh:mm a")}
+            {formatTime(log.created_at)}
           </span>
         </div>
       </TableCell>
       <TableCell>
         {log.user ? (
           <div className="flex flex-col">
-            <span className="font-medium">{log.user.full_name}</span>
-            <span className="text-xs text-muted-foreground">{log.user.email}</span>
+            <span className="font-medium">{log.user.full_name || "Unnamed User"}</span>
+            <span className="text-xs text-muted-foreground">{log.user.email || "No email"}</span>
           </div>
         ) : (
           <span className="text-muted-foreground">Unknown user</span>
@@ -108,6 +130,16 @@ export const ActivityLogRow: React.FC<ActivityLogRowProps> = ({ log, onClick }) 
             <br />
             <span className="font-medium">Content:</span>{" "}
             {truncateContent(log.action_details?.generated_content || "No content found")}
+          </div>
+        ) : log.action_type === "delete_user" ? (
+          <div className="text-sm">
+            <span className="font-medium">User:</span>{" "}
+            {log.action_details?.user_name || log.action_details?.user_email || "Unknown user"}
+          </div>
+        ) : log.action_type === "bulk_delete_users" ? (
+          <div className="text-sm">
+            <span className="font-medium">Count:</span>{" "}
+            {log.action_details?.count || 0} users deleted
           </div>
         ) : (
           <div className="text-sm text-muted-foreground">
