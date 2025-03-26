@@ -104,6 +104,18 @@ export const ActivityLogDetails: React.FC<ActivityLogDetailsProps> = ({ log }) =
               </CardContent>
             </Card>
           </div>
+          
+          {log.action_details?.system_prompt && (
+            <div>
+              <h3 className="font-semibold mb-2">System Prompt</h3>
+              <Card className="bg-purple-50 dark:bg-purple-950">
+                <CardContent className="p-4 whitespace-pre-wrap font-mono text-sm">
+                  {log.action_details.system_prompt}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
           <div>
             <h3 className="font-semibold mb-2">AI Response</h3>
             <Card className="bg-green-50 dark:bg-green-950">

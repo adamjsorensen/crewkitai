@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1';
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import 'https://deno.land/x/xhr@0.3.0/mod.ts';
@@ -560,7 +561,7 @@ serve(async (req) => {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', actualConversationId);
 
-    // Log AI response to activity logs - updated to pass userId
+    // Log AI response to activity logs - updated to pass userId and include system prompt
     await logActivity(
       supabaseAdmin,
       userId, 
@@ -568,6 +569,7 @@ serve(async (req) => {
       {
         prompt: message,
         response: aiResponse,
+        system_prompt: systemPrompt,
         conversation_id: actualConversationId,
         is_think_mode: isThinkMode,
         has_image: !!imageUrl
