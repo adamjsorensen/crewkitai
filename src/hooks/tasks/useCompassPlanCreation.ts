@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CompassAnalyzeResponse } from '@/types/compass';
+import { useLogActivity } from '@/hooks/useLogActivity';
 
 type UseCompassPlanCreationProps = {
   onPlanCreated: (planId: string) => void;
@@ -14,6 +15,7 @@ export const useCompassPlanCreation = ({ onPlanCreated, onTasksGenerated }: UseC
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { logCompassAnalysis } = useLogActivity();
 
   const createPlan = async (input: string) => {
     if (!input.trim()) {
@@ -71,6 +73,11 @@ export const useCompassPlanCreation = ({ onPlanCreated, onTasksGenerated }: UseC
       }
       
       console.log("Function response:", data);
+      
+      // Log the compass analysis activity
+      if (data && Array.isArray(data.tasks)) {
+        await logCompassAnalysis(input, data.tasks, planData.id);
+      }
       
       // Notify parent component that plan was created
       onPlanCreated(planData.id);

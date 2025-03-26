@@ -4,6 +4,7 @@ import { Message } from '../types';
 import { User } from '@supabase/supabase-js';
 import { useSendMessageMutation } from '../mutations/useSendMessageMutation';
 import { useImageUpload } from './useImageUpload';
+import { useLogActivity } from '@/hooks/useLogActivity';
 
 interface UseSendMessageProps {
   user: User | null;
@@ -39,6 +40,8 @@ export const useSendMessage = ({
   
   // Use the message mutation
   const sendMessageMutation = useSendMessageMutation();
+  // Use the activity logging hook
+  const { logChatMessage, logChatResponse } = useLogActivity();
 
   const handleSendMessage = useCallback(async (input: string, imageFile: File | null, isThinkMode: boolean) => {
     if ((!input.trim() && !imageFile) || !user) {
@@ -86,6 +89,9 @@ export const useSendMessage = ({
           contentLength: m.content?.length || 0
         })));
       
+      // Log the user's message to activity logs
+      await logChatMessage(input.trim(), conversationId || undefined);
+      
       // We've simplified the approach here - we don't add the user message to UI
       // in this hook anymore, that's now done in the mutation
       const startTime = performance.now();
@@ -101,6 +107,11 @@ export const useSendMessage = ({
         onConversationCreated
       });
       const endTime = performance.now();
+      
+      // Log the AI response to activity logs
+      if (result?.response) {
+        await logChatResponse(input.trim(), result.response, result.conversationId || conversationId || undefined);
+      }
       
       // Check the message state after mutation
       console.log('[useSendMessage] Message state after mutation:', {
@@ -161,7 +172,9 @@ export const useSendMessage = ({
     sendMessageMutation,
     setMessages,
     setIsThinkMode,
-    onConversationCreated
+    onConversationCreated,
+    logChatMessage,
+    logChatResponse
   ]);
 
   return {

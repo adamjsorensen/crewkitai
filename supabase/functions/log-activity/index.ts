@@ -34,7 +34,23 @@ serve(async (req) => {
 
     const { action_type, action_details, affected_user_id, affected_resource_type, affected_resource_id } = await req.json()
 
+    // Log the activity operation
     console.log(`Logging activity: ${action_type} by user ${session.user.id}`)
+    
+    // For AI interactions, log more details
+    if (action_type.includes('chat') || action_type === 'compass_analyze' || action_type === 'content_generated') {
+      console.log(`AI interaction: ${action_type}`)
+      
+      // Truncate very large content for logging purposes
+      const truncatedDetails = { ...action_details }
+      for (const key in truncatedDetails) {
+        if (typeof truncatedDetails[key] === 'string' && truncatedDetails[key].length > 100) {
+          truncatedDetails[key] = truncatedDetails[key].substring(0, 100) + '...'
+        }
+      }
+      
+      console.log(`Details: ${JSON.stringify(truncatedDetails)}`)
+    }
 
     const { data, error } = await supabaseClient.rpc(
       'log_user_activity',

@@ -17,7 +17,8 @@ export const ActivityLogSkeleton = () => {
         <Skeleton className="h-6 w-24 rounded-full" />
       </TableCell>
       <TableCell className="max-w-sm">
-        <Skeleton className="h-4 w-full max-w-[250px]" />
+        <Skeleton className="h-4 w-full max-w-[250px] mb-1" />
+        <Skeleton className="h-3 w-3/4 max-w-[200px]" />
       </TableCell>
     </TableRow>
   );

@@ -61,14 +61,72 @@ export function useLogActivity() {
       return functionData.log_id;
     } catch (error) {
       console.error('Error logging activity:', error);
-      toast({
-        title: 'Failed to log activity',
-        description: error.message,
-        variant: 'destructive',
-      });
+      // Only show toast in development
+      if (process.env.NODE_ENV === 'development') {
+        toast({
+          title: 'Failed to log activity',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
       return null;
     }
   };
 
-  return { logActivity };
+  // AI interaction logging helper methods
+  const logChatMessage = async (message: string, conversationId?: string) => {
+    return logActivity({
+      actionType: 'chat_message',
+      actionDetails: {
+        user_message: message,
+        conversation_id: conversationId,
+      },
+      affectedResourceType: 'conversation',
+      affectedResourceId: conversationId,
+    });
+  };
+
+  const logChatResponse = async (prompt: string, response: string, conversationId?: string) => {
+    return logActivity({
+      actionType: 'chat_response',
+      actionDetails: {
+        prompt,
+        response,
+        conversation_id: conversationId,
+      },
+      affectedResourceType: 'conversation',
+      affectedResourceId: conversationId,
+    });
+  };
+
+  const logCompassAnalysis = async (inputText: string, tasks: any[], planId: string) => {
+    return logActivity({
+      actionType: 'compass_analyze',
+      actionDetails: {
+        input_text: inputText,
+        tasks,
+      },
+      affectedResourceType: 'compass_plan',
+      affectedResourceId: planId,
+    });
+  };
+
+  const logContentGeneration = async (prompt: string, generatedContent: string, contentType: string) => {
+    return logActivity({
+      actionType: 'content_generated',
+      actionDetails: {
+        prompt,
+        generated_content: generatedContent,
+        content_type: contentType,
+      },
+    });
+  };
+
+  return { 
+    logActivity,
+    logChatMessage,
+    logChatResponse,
+    logCompassAnalysis,
+    logContentGeneration
+  };
 }

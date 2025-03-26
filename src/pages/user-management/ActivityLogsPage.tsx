@@ -28,12 +28,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { AlertCircle, Calendar, Download, FilterX, Search, User } from "lucide-react";
+import { AlertCircle, Calendar, Code, Download, FilterX, MessageSquare, PenTool, Search, User } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ActivityLogListSkeleton } from "@/components/user-management/ActivityLogsSkeleton";
 import {
   Dialog,
   DialogContent,
@@ -41,12 +41,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ActivityLogListSkeleton } from "@/components/user-management/ActivityLogsSkeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
-// Common action types we might want to filter by
+// Enhanced action types we support logging for
 const ACTION_TYPES = [
+  { value: "all", label: "All Actions" },
   { value: "login", label: "Login" },
   { value: "logout", label: "Logout" },
+  { value: "chat_message", label: "Chat Message" },
+  { value: "chat_response", label: "AI Response" },
+  { value: "compass_plan_created", label: "Compass Plan Created" },
+  { value: "compass_task_completed", label: "Task Completed" },
+  { value: "compass_analyze", label: "Task Analysis" },
+  { value: "content_generated", label: "Content Generated" },
   { value: "create_user", label: "Create User" },
   { value: "update_user", label: "Update User" },
   { value: "delete_user", label: "Delete User" },
@@ -59,6 +67,12 @@ const getActivityDescription = (log: ActivityLog): string => {
   const actionTypeMap: Record<string, string> = {
     login: "logged in",
     logout: "logged out",
+    chat_message: "sent a message to AI",
+    chat_response: "received AI response",
+    compass_plan_created: "created a Compass plan",
+    compass_task_completed: "completed a task",
+    compass_analyze: "analyzed tasks with AI",
+    content_generated: "generated content",
     create_user: "created a user",
     update_user: "updated a user",
     delete_user: "deleted a user",
@@ -80,7 +94,7 @@ const getActivityDescription = (log: ActivityLog): string => {
   return description;
 };
 
-// Get badge for action type
+// Get badge for action type with appropriate icon
 const getActionBadge = (actionType: string) => {
   const badgeStyles: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
     login: { 
@@ -90,6 +104,30 @@ const getActionBadge = (actionType: string) => {
     logout: { 
       variant: "outline", 
       icon: <User className="h-3 w-3 mr-1" /> 
+    },
+    chat_message: { 
+      variant: "secondary", 
+      icon: <MessageSquare className="h-3 w-3 mr-1" /> 
+    },
+    chat_response: { 
+      variant: "default", 
+      icon: <MessageSquare className="h-3 w-3 mr-1" /> 
+    },
+    compass_plan_created: { 
+      variant: "secondary", 
+      icon: <PenTool className="h-3 w-3 mr-1" /> 
+    },
+    compass_task_completed: { 
+      variant: "default", 
+      icon: <PenTool className="h-3 w-3 mr-1" /> 
+    },
+    compass_analyze: { 
+      variant: "secondary", 
+      icon: <Code className="h-3 w-3 mr-1" /> 
+    },
+    content_generated: { 
+      variant: "secondary", 
+      icon: <PenTool className="h-3 w-3 mr-1" /> 
     },
     create_user: { 
       variant: "default", 
@@ -123,60 +161,171 @@ const getActionBadge = (actionType: string) => {
   );
 };
 
+// Render JSON content in a readable format
+const JsonContent = ({ content }: { content: any }) => {
+  if (!content) return null;
+  
+  const formatContent = (content: any) => {
+    if (typeof content === 'string') {
+      // If content is a string but looks like JSON, try to parse it
+      try {
+        const parsed = JSON.parse(content);
+        return (
+          <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-96">
+            {JSON.stringify(parsed, null, 2)}
+          </pre>
+        );
+      } catch (e) {
+        // If not parseable as JSON, just display as text
+        return <p className="whitespace-pre-wrap">{content}</p>;
+      }
+    } else {
+      // For objects, format as JSON
+      return (
+        <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-96">
+          {JSON.stringify(content, null, 2)}
+        </pre>
+      );
+    }
+  };
+  
+  return formatContent(content);
+};
+
+// Enhanced activity log details with support for AI content
 const ActivityLogDetails = ({ log }: { log: ActivityLog }) => {
+  const [activeTab, setActiveTab] = useState<string>("details");
+  
+  // Determine if this is an AI interaction log
+  const isAiInteraction = log.action_type.includes('chat') || 
+                         log.action_type === 'compass_analyze' || 
+                         log.action_type === 'content_generated';
+  
+  // Extract prompt and response from action details
+  const prompt = log.action_details?.prompt || log.action_details?.user_message || log.action_details?.input_text;
+  const response = log.action_details?.response || log.action_details?.ai_response || log.action_details?.generated_content;
+  const generatedTasks = log.action_details?.tasks;
+                         
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <h4 className="text-sm font-semibold text-muted-foreground mb-1">User</h4>
-          <p>{log.user?.full_name || 'Unknown'} ({log.user?.email || 'No email'})</p>
-        </div>
-        
-        <div>
-          <h4 className="text-sm font-semibold text-muted-foreground mb-1">Date & Time</h4>
-          <p>{format(new Date(log.created_at), 'PPpp')}</p>
-        </div>
-        
-        <div>
-          <h4 className="text-sm font-semibold text-muted-foreground mb-1">Action</h4>
-          <div className="flex items-center gap-2">
-            {getActionBadge(log.action_type)}
-          </div>
-        </div>
-        
-        {log.affected_user_id && (
-          <div>
-            <h4 className="text-sm font-semibold text-muted-foreground mb-1">Affected User</h4>
-            <p>{log.affected_user?.full_name || 'Unknown'} ({log.affected_user?.email || 'No email'})</p>
-          </div>
-        )}
-        
-        {log.ip_address && (
-          <div>
-            <h4 className="text-sm font-semibold text-muted-foreground mb-1">IP Address</h4>
-            <p>{log.ip_address}</p>
-          </div>
-        )}
-        
-        {log.user_agent && (
-          <div className="md:col-span-2">
-            <h4 className="text-sm font-semibold text-muted-foreground mb-1">User Agent</h4>
-            <p className="text-sm break-words">{log.user_agent}</p>
-          </div>
-        )}
-      </div>
-      
-      {Object.keys(log.action_details || {}).length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-muted-foreground mb-1">Action Details</h4>
-          <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-40">
-            {JSON.stringify(log.action_details, null, 2)}
-          </pre>
-        </div>
+      {isAiInteraction && (
+        <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="details">Basic Details</TabsTrigger>
+            {prompt && <TabsTrigger value="prompt">Prompt</TabsTrigger>}
+            {response && <TabsTrigger value="response">AI Response</TabsTrigger>}
+            {generatedTasks && <TabsTrigger value="tasks">Generated Tasks</TabsTrigger>}
+            <TabsTrigger value="raw">Raw Data</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="details">
+            <BasicDetails log={log} />
+          </TabsContent>
+          
+          {prompt && (
+            <TabsContent value="prompt">
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">User Prompt</h4>
+              <div className="bg-muted/40 p-4 rounded-md border border-border/60">
+                <p className="whitespace-pre-wrap text-sm">{prompt}</p>
+              </div>
+            </TabsContent>
+          )}
+          
+          {response && (
+            <TabsContent value="response">
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">AI Response</h4>
+              <div className={cn(
+                "bg-muted/30 p-4 rounded-md border border-border/60 max-h-[400px] overflow-y-auto",
+                "prose prose-sm prose-slate dark:prose-invert"
+              )}>
+                <div className="whitespace-pre-wrap text-sm">{response}</div>
+              </div>
+            </TabsContent>
+          )}
+          
+          {generatedTasks && (
+            <TabsContent value="tasks">
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Generated Tasks</h4>
+              <div className="bg-muted/30 p-4 rounded-md border border-border/60">
+                <ul className="space-y-2">
+                  {Array.isArray(generatedTasks) ? generatedTasks.map((task, i) => (
+                    <li key={i} className="bg-background p-3 rounded border border-border/60">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant={
+                          task.priority === 'High' ? 'destructive' : 
+                          task.priority === 'Medium' ? 'default' : 
+                          'secondary'
+                        } className="text-xs">
+                          {task.priority}
+                        </Badge>
+                        <span className="text-sm font-medium">{task.task_text}</span>
+                      </div>
+                      {task.reasoning && (
+                        <p className="text-xs text-muted-foreground italic">{task.reasoning}</p>
+                      )}
+                    </li>
+                  )) : (
+                    <JsonContent content={generatedTasks} />
+                  )}
+                </ul>
+              </div>
+            </TabsContent>
+          )}
+          
+          <TabsContent value="raw">
+            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Raw Action Details</h4>
+            <JsonContent content={log.action_details} />
+          </TabsContent>
+        </Tabs>
       )}
+      
+      {!isAiInteraction && <BasicDetails log={log} />}
     </div>
   );
 };
+
+// Basic details component extracted for reuse
+const BasicDetails = ({ log }: { log: ActivityLog }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <h4 className="text-sm font-semibold text-muted-foreground mb-1">User</h4>
+      <p>{log.user?.full_name || 'Unknown'} ({log.user?.email || 'No email'})</p>
+    </div>
+    
+    <div>
+      <h4 className="text-sm font-semibold text-muted-foreground mb-1">Date & Time</h4>
+      <p>{format(new Date(log.created_at), 'PPpp')}</p>
+    </div>
+    
+    <div>
+      <h4 className="text-sm font-semibold text-muted-foreground mb-1">Action</h4>
+      <div className="flex items-center gap-2">
+        {getActionBadge(log.action_type)}
+      </div>
+    </div>
+    
+    {log.affected_user_id && (
+      <div>
+        <h4 className="text-sm font-semibold text-muted-foreground mb-1">Affected User</h4>
+        <p>{log.affected_user?.full_name || 'Unknown'} ({log.affected_user?.email || 'No email'})</p>
+      </div>
+    )}
+    
+    {log.ip_address && (
+      <div>
+        <h4 className="text-sm font-semibold text-muted-foreground mb-1">IP Address</h4>
+        <p>{log.ip_address}</p>
+      </div>
+    )}
+    
+    {log.user_agent && (
+      <div className="md:col-span-2">
+        <h4 className="text-sm font-semibold text-muted-foreground mb-1">User Agent</h4>
+        <p className="text-sm break-words">{log.user_agent}</p>
+      </div>
+    )}
+  </div>
+);
 
 const ActivityLogsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -219,7 +368,9 @@ const ActivityLogsPage = () => {
       (log.user?.full_name?.toLowerCase() || '').includes(searchLower) ||
       (log.user?.email?.toLowerCase() || '').includes(searchLower) ||
       (log.affected_user?.full_name?.toLowerCase() || '').includes(searchLower) ||
-      log.action_type.toLowerCase().includes(searchLower)
+      log.action_type.toLowerCase().includes(searchLower) ||
+      (typeof log.action_details === 'object' && 
+        JSON.stringify(log.action_details).toLowerCase().includes(searchLower))
     );
   });
 
@@ -285,6 +436,30 @@ const ActivityLogsPage = () => {
     }
   };
 
+  // Get a preview of content for AI interactions
+  const getContentPreview = (log: ActivityLog): string => {
+    if (!log.action_details) return "";
+    
+    // Extract relevant content based on action type
+    let content = "";
+    if (log.action_type === 'chat_message') {
+      content = log.action_details.user_message || log.action_details.prompt || "";
+    } else if (log.action_type === 'chat_response') {
+      content = log.action_details.ai_response || log.action_details.response || "";
+    } else if (log.action_type === 'compass_analyze') {
+      content = log.action_details.input_text || "";
+    } else if (log.action_type === 'content_generated') {
+      content = log.action_details.prompt || "";
+    }
+    
+    // Truncate long content
+    if (content && typeof content === 'string') {
+      return content.length > 50 ? `${content.substring(0, 50)}...` : content;
+    }
+    
+    return "";
+  };
+
   return (
     <>
       <h3 className="text-lg font-semibold mb-4">User Activity Logs</h3>
@@ -313,7 +488,6 @@ const ActivityLogsPage = () => {
                   <SelectValue placeholder="Filter by action" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Actions</SelectItem>
                   {ACTION_TYPES.map(action => (
                     <SelectItem key={action.value} value={action.value}>
                       {action.label}
@@ -430,7 +604,7 @@ const ActivityLogsPage = () => {
                         <TableHead>Timestamp</TableHead>
                         <TableHead>User</TableHead>
                         <TableHead>Action</TableHead>
-                        <TableHead>Details</TableHead>
+                        <TableHead>Details / Content</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -453,7 +627,17 @@ const ActivityLogsPage = () => {
                             {getActionBadge(log.action_type)}
                           </TableCell>
                           <TableCell className="max-w-sm truncate">
-                            {getActivityDescription(log)}
+                            {log.action_type.includes('chat') || 
+                             log.action_type === 'compass_analyze' || 
+                             log.action_type === 'content_generated' 
+                              ? (
+                                <div className="text-sm">
+                                  <p className="font-medium">{getActivityDescription(log)}</p>
+                                  <p className="text-xs text-muted-foreground italic truncate">
+                                    {getContentPreview(log)}
+                                  </p>
+                                </div>
+                              ) : getActivityDescription(log)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -545,7 +729,7 @@ const ActivityLogsPage = () => {
 
       {/* Activity Log Details Dialog */}
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Activity Log Details</DialogTitle>
           </DialogHeader>
