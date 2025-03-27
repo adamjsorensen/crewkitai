@@ -3,7 +3,6 @@ import { useCallback, useState } from 'react';
 import { Message } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '@supabase/supabase-js';
-import { useImageAnalysis } from './useImageAnalysis';
 import { useSendMessage } from './useSendMessage';
 import { useRetryMessage } from './useRetryMessage';
 import { useRegenerateMessage } from './useRegenerateMessage';
@@ -66,18 +65,6 @@ export const useMessageHandler = ({
     setIsLoading,
     setError,
     conversationId
-  });
-  
-  const {
-    analyzeImage,
-    isAnalyzing
-  } = useImageAnalysis({
-    user,
-    conversationId,
-    onConversationCreated,
-    setMessages,
-    setError,
-    scrollToBottom
   });
 
   const fillInputWithExample = useCallback((question: string) => {
@@ -167,8 +154,6 @@ export const useMessageHandler = ({
     handleSendMessage,
     prepareUserMessageUI,
     handleRetry,
-    handleRegenerateMessage,
-    analyzeImage,
-    isAnalyzing
+    handleRegenerateMessage
   };
 };
