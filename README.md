@@ -42,6 +42,7 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 - Supabase
+- Graphlit (docs available online at docs.graphlit.com and locally at graphlitllms.md)
 
 ## Deployment
 

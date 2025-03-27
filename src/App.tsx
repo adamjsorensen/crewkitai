@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -23,10 +23,33 @@ import UserListPage from "@/pages/user-management/UserListPage";
 import AddUserPage from "@/pages/user-management/AddUserPage";
 import ActivityLogsPage from "@/pages/user-management/ActivityLogsPage";
 import UserDetailsPage from "@/pages/user-management/UserDetailsPage";
+import { setupGraphlitCollections, isGraphlitAvailable } from "@/services/graphlitService";
 
 const queryClient = new QueryClient();
 
 function App() {
+  // Initialize Graphlit RAG collections on app start
+  useEffect(() => {
+    const initializeRag = async () => {
+      try {
+        // Check if Graphlit is available
+        const available = await isGraphlitAvailable();
+        
+        if (available) {
+          console.log('Initializing Graphlit RAG collections...');
+          const result = await setupGraphlitCollections();
+          console.log('Graphlit RAG initialization result:', result);
+        } else {
+          console.log('Graphlit RAG system not available, skipping initialization');
+        }
+      } catch (error) {
+        console.error('Error initializing Graphlit RAG:', error);
+      }
+    };
+    
+    initializeRag();
+  }, []);
+  
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
