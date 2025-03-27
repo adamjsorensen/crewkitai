@@ -7,9 +7,9 @@ import { Loader2, ArrowRight, HelpCircle, Sparkles, Brain } from 'lucide-react';
 import { 
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import CustomTooltipProvider from './CustomTooltipProvider';
 
 interface CompassInputFormProps {
   onSubmit: (input: string) => Promise<boolean | void>;
@@ -55,7 +55,7 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({
               onChange={(e) => setInput(e.target.value)}
               disabled={isProcessing}
             />
-            <TooltipProvider>
+            <CustomTooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="absolute top-2 right-2">
@@ -75,7 +75,7 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({
                   <p>Type anything that's on your mind - tasks, ideas, or to-dos. Our AI will organize and prioritize them for you.</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
+            </CustomTooltipProvider>
           </div>
           
           <div className="bg-muted/30 rounded-md p-3">
