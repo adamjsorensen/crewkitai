@@ -81,6 +81,11 @@ const SidebarContentItems = () => {
       return location.pathname.startsWith("/dashboard/admin/") && 
              !location.pathname.startsWith("/dashboard/admin/users");
     }
+    // Handle redirect from ai-coach to pg-coach
+    if (itemPath === "/dashboard/pg-coach") {
+      return location.pathname === "/dashboard/pg-coach" || 
+             location.pathname === "/dashboard/ai-coach";
+    }
     return location.pathname.startsWith(itemPath);
   };
 

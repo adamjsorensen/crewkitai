@@ -49,6 +49,15 @@ const PgCoachPage = () => {
       });
       navigate("/auth");
     }
+    
+    // Check if redirected from old AI Coach path
+    if (document.referrer.includes('/dashboard/ai-coach')) {
+      toast({
+        title: "Welcome to the improved PainterGrowth AI",
+        description: "We've upgraded our AI assistant with enhanced capabilities to better support your painting business.",
+        duration: 5000,
+      });
+    }
   }, [user, isAuthLoading, navigate, toast]);
 
   if (isAuthLoading) {

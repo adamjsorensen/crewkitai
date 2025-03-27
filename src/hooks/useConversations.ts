@@ -18,30 +18,34 @@ type Conversation = {
 const fetchConversations = async (userId: string | undefined) => {
   if (!userId) return [];
 
-  // Limit fetch to a reasonable number to improve performance
+  // This is kept for backward compatibility but should now redirect to PG conversations
+  console.warn('Legacy useConversations hook used - redirecting to PG conversations');
+  
+  // In the migration phase, we might want to fetch both and combine
+  // For now, just use the pg_conversations directly
   const { data, error } = await supabase
-    .from('ai_coach_conversations')
+    .from('pg_conversations')
     .select('*')
     .eq('user_id', userId)
-    .eq('is_root', true)
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(50); // More reasonable limit for mobile
+    .limit(50);
 
   if (error) throw error;
 
-  // Transform data to conversation format - more efficient
+  // Transform data to conversation format
   return data.map(conv => ({
     id: conv.id,
     title: conv.title || 'Untitled conversation',
-    lastMessage: conv.user_message.substring(0, 60) + (conv.user_message.length > 60 ? '...' : ''),
+    lastMessage: '', // We don't have this in pg_conversations directly
     timestamp: new Date(conv.created_at),
     pinned: conv.pinned || false
   }));
 };
 
+// This hook now acts as a redirect to usePgConversations
 export const useConversations = () => {
-  // Use PG Coach conversations by default
+  // Use PgCoach conversations instead
   return usePgConversations();
 };
 

@@ -57,6 +57,9 @@ function App() {
                 <Route path="activity-logs" element={<ActivityLogsPage />} />
                 <Route path="user-details/:userId" element={<UserDetailsPage />} />
               </Route>
+              
+              {/* Redirect any old /dashboard/ai-coach routes to /dashboard/pg-coach */}
+              <Route path="/dashboard/ai-coach" element={<Navigate to="/dashboard/pg-coach" replace />} />
             </Routes>
           </Router>
           <Toaster />

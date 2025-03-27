@@ -109,24 +109,24 @@ export const useSendMessageMutation = () => {
             conversation_id: actualConversationId,
             content: userMessage,
             role: 'user',
-            user_id: user.id,
             image_url: imageUrl
           });
 
         if (messageError) throw messageError;
 
-        // Call edge function to get AI response
-        console.log('[useSendMessageMutation] Calling AI coach function with thinkMode:', isThinkMode);
-        const { data: aiResponse, error: aiError } = await supabase.functions.invoke('ai-coach', {
+        // Call edge function to get AI response - Use pg-coach instead of ai-coach
+        console.log('[useSendMessageMutation] Calling PG coach function with thinkMode:', isThinkMode);
+        const { data: aiResponse, error: aiError } = await supabase.functions.invoke('pg-coach', {
           body: {
             message: userMessage,
             imageUrl: imageUrl,
-            isThinkMode: isThinkMode
+            isThinkMode: isThinkMode,
+            conversationId: actualConversationId
           }
         });
 
         if (aiError) throw aiError;
-        if (!aiResponse) throw new Error('Empty response from AI coach');
+        if (!aiResponse) throw new Error('Empty response from PG coach');
 
         // Extract the response and suggested follow-ups
         const { response, suggestedFollowUps = [] } = aiResponse;
@@ -156,13 +156,12 @@ export const useSendMessageMutation = () => {
             conversation_id: actualConversationId,
             content: response,
             role: 'assistant',
-            user_id: user.id,
             metadata: { suggestedFollowUps }
           });
 
         if (assistantError) throw assistantError;
 
-        // Update conversation last message and title if this is the first message
+        // Update conversation title if this is the first message
         const { error: updateError } = await supabase
           .from('pg_conversations')
           .update({
