@@ -1,16 +1,10 @@
+
 import { createClient } from '@supabase/supabase-js';
+import { supabase as projectSupabase } from '@/integrations/supabase/client';
 
-// Supabase client configuration
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://your-project-ref.supabase.co';
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'your-anon-key';
-
-// Create a single supabase client for the entire app
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-  }
-});
+// This file is being deprecated in favor of using the client from src/integrations/supabase/client.ts
+// Export the existing supabase client to maintain compatibility with existing code
+export const supabase = projectSupabase;
 
 /**
  * Get the current authenticated user

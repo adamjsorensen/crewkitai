@@ -1,3 +1,4 @@
+
 /**
  * Graphlit RAG Service for CrewKitAI
  * Handles collection management and initialization

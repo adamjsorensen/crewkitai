@@ -1,17 +1,18 @@
+
 /**
  * Utilities for working with MCP tools
  * Supports both Windsurf MCP and Supabase Edge Function
  */
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 // MCP server configuration
 const MCP_CONFIG = {
   // Supabase Edge Function URL constructed from env variables or defaults
-  edgeFunctionUrl: process.env.REACT_APP_SUPABASE_EDGE_FUNCTION_URL || 
-    `${process.env.REACT_APP_SUPABASE_URL || 'https://your-project-ref.supabase.co'}/functions/v1/graphlit-mcp`,
+  edgeFunctionUrl: import.meta.env.VITE_SUPABASE_EDGE_FUNCTION_URL || 
+    `${import.meta.env.VITE_SUPABASE_URL || 'https://cicnpivviiqycyudgxxg.supabase.co'}/functions/v1/graphlit-mcp`,
   
   // Default to using Windsurf in development when available
-  useWindsurfWhenAvailable: process.env.NODE_ENV === 'development'
+  useWindsurfWhenAvailable: import.meta.env.DEV
 };
 
 /**
