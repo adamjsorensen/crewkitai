@@ -8,9 +8,14 @@ import CompassInputForm from './input/CompassInputForm';
 interface CompassInputProps {
   onPlanCreated: (planId: string) => void;
   onTasksGenerated?: (response: CompassAnalyzeResponse) => void;
+  onHelpClick?: () => void; // Add new prop
 }
 
-const CompassInput: React.FC<CompassInputProps> = ({ onPlanCreated, onTasksGenerated }) => {
+const CompassInput: React.FC<CompassInputProps> = ({ 
+  onPlanCreated, 
+  onTasksGenerated,
+  onHelpClick, 
+}) => {
   const { createPlan, isProcessing } = useCompassPlanCreation({ 
     onPlanCreated, 
     onTasksGenerated 
@@ -29,6 +34,7 @@ const CompassInput: React.FC<CompassInputProps> = ({ onPlanCreated, onTasksGener
       <CompassInputForm 
         onSubmit={createPlan} 
         isProcessing={isProcessing} 
+        onHelpClick={onHelpClick}
       />
     </Card>
   );

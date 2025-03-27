@@ -186,6 +186,11 @@ const CompassPage = () => {
       localStorage.setItem('compassFeatureIntroNeverShow', 'true');
     }
   };
+
+  // New function to show the onboarding overlay when help button is clicked
+  const handleHelpClick = () => {
+    setShowOnboardingOverlay(true);
+  };
   
   const OnboardingOverlay = () => (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -278,6 +283,7 @@ const CompassPage = () => {
           onCompleteTask={handleCompleteTask}
           onSetReminder={handleSetReminder}
           onAddToCalendar={handleAddToCalendar}
+          onHelpClick={handleHelpClick}
         />
       </div>
       

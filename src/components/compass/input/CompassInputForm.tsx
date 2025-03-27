@@ -14,9 +14,14 @@ import {
 interface CompassInputFormProps {
   onSubmit: (input: string) => Promise<boolean | void>;
   isProcessing: boolean;
+  onHelpClick?: () => void; // Add new prop for help button click
 }
 
-const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcessing }) => {
+const CompassInputForm: React.FC<CompassInputFormProps> = ({ 
+  onSubmit, 
+  isProcessing,
+  onHelpClick, 
+}) => {
   const [input, setInput] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,7 +59,13 @@ const CompassInputForm: React.FC<CompassInputFormProps> = ({ onSubmit, isProcess
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="absolute top-2 right-2">
-                    <Button type="button" size="sm" variant="outline" className="h-8 w-8 p-0 rounded-full">
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-8 w-8 p-0 rounded-full"
+                      onClick={onHelpClick} // Add onClick handler
+                    >
                       <HelpCircle className="h-4 w-4" />
                       <span className="sr-only">Help</span>
                     </Button>

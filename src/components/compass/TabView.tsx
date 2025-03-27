@@ -15,6 +15,7 @@ interface TabViewProps {
   onCompleteTask: (taskId: string) => void;
   onSetReminder: (taskId: string) => void;
   onAddToCalendar: (taskId: string) => void;
+  onHelpClick?: () => void; // Add new prop
 }
 
 const TabView: React.FC<TabViewProps> = ({
@@ -23,7 +24,8 @@ const TabView: React.FC<TabViewProps> = ({
   onPlanCreated,
   onCompleteTask,
   onSetReminder,
-  onAddToCalendar
+  onAddToCalendar,
+  onHelpClick
 }) => {
   return (
     <Tabs defaultValue="create" className="w-full">
@@ -40,7 +42,10 @@ const TabView: React.FC<TabViewProps> = ({
       
       <TabsContent value="create" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
         <div className="space-y-6">
-          <CompassInput onPlanCreated={onPlanCreated} />
+          <CompassInput 
+            onPlanCreated={onPlanCreated} 
+            onHelpClick={onHelpClick}
+          />
         </div>
       </TabsContent>
       
