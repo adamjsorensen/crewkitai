@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePgConversations } from '@/hooks/usePgConversations';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { Card } from '@/components/ui/card';
-import PgChatInterface from '@/components/pg-coach/PgChatInterface';
+import PgChatInterface from '@/components/pg-coach/chat/PgChatInterface';
 import PgConversationDialog from '@/components/pg-coach/PgConversationDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 

@@ -1,18 +1,28 @@
 
 import React from 'react';
-// Replace with a proper implementation or a placeholder component
-const PgChatInterface = () => {
+import { useIsMobile } from '@/hooks/use-mobile';
+import PgChatInterface from './chat/PgChatInterface';
+
+/**
+ * This component redirects to the new implementation in the chat directory
+ * to maintain backward compatibility with existing imports
+ */
+const PgChatInterfaceWrapper: React.FC<{
+  conversationId?: string | null;
+  onConversationStart?: (id: string) => void;
+  onNewChat?: () => void;
+  onOpenHistory: () => void;
+}> = (props) => {
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="p-8 flex flex-col items-center justify-center min-h-[60vh]">
-      <h2 className="text-2xl font-semibold mb-4">PainterGrowth AI Coach</h2>
-      <p className="text-muted-foreground text-center max-w-md mb-6">
-        The AI Coach interface is currently being upgraded to provide you with better guidance for your painting business.
-      </p>
-      <div className="border rounded-md p-6 w-full max-w-lg text-center">
-        <p>Check back soon for the new and improved AI Coach experience!</p>
-      </div>
-    </div>
+    <PgChatInterface 
+      conversationId={props.conversationId}
+      onConversationStart={props.onConversationStart}
+      onNewChat={props.onNewChat}
+      onOpenHistory={props.onOpenHistory}
+    />
   );
 };
 
-export default PgChatInterface;
+export default PgChatInterfaceWrapper;

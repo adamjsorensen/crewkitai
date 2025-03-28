@@ -2,24 +2,50 @@
 import { useState, useCallback } from 'react';
 import { safeMcpCall } from '@/lib/mcpUtils';
 
+interface RagSource {
+  id: string;
+  name: string;
+  snippets: string[];
+  score: number;
+  metadata?: Record<string, any>;
+}
+
+interface RetrieveOptions {
+  limit?: number;
+  threshold?: number;
+  metadata?: Record<string, any>;
+}
+
+interface IngestTextParams {
+  name: string;
+  text: string;
+  textType: "MARKDOWN" | "HTML" | "TEXT";
+  metadata?: Record<string, any>;
+}
+
+interface IngestUrlParams {
+  url: string;
+  metadata?: Record<string, any>;
+}
+
 /**
  * Hook to interact with Graphlit RAG system through MCP server
  * Provides methods for retrieving context, storing conversations and tasks
  */
 export function useGraphlitRag() {
   const [isLoading, setIsLoading] = useState(false);
-  const [lastSources, setLastSources] = useState<any[]>([]);
+  const [lastSources, setLastSources] = useState<RagSource[]>([]);
 
   /**
    * Retrieve relevant sources based on a prompt
    * @param prompt User query or task description
    * @param options Additional options for retrieval
    */
-  const retrieveContextForPrompt = useCallback(async (prompt: string, options = {}) => {
+  const retrieveContextForPrompt = useCallback(async (prompt: string, options: RetrieveOptions = {}) => {
     setIsLoading(true);
     try {
       // Direct MCP call to Graphlit using safety utility
-      const result = await safeMcpCall('graphlit-mcp-server', 'mcp0_retrieveSources', {
+      const result = await safeMcpCall<{ sources?: RagSource[] }>('graphlit-mcp-server', 'mcp0_retrieveSources', {
         prompt,
         ...options
       });
@@ -49,11 +75,11 @@ export function useGraphlitRag() {
       const content = `# ${title}\n\n**User:** ${userMessage}\n\n**AI:** ${aiResponse}`;
       
       // Ingest directly using MCP with safety utility
-      return await safeMcpCall('graphlit-mcp-server', 'mcp0_ingestText', {
+      return await safeMcpCall<string | null>('graphlit-mcp-server', 'mcp0_ingestText', {
         name: `PainterGrowth Coach: ${title || new Date().toLocaleString()}`,
         text: content,
         textType: "MARKDOWN"
-      });
+      } as IngestTextParams);
     } catch (error) {
       console.error('Error storing conversation in RAG:', error);
       return null;
@@ -79,11 +105,11 @@ export function useGraphlitRag() {
         task.category ? `**Category:** ${task.category}` : ''
       }`;
       
-      return await safeMcpCall('graphlit-mcp-server', 'mcp0_ingestText', {
+      return await safeMcpCall<string | null>('graphlit-mcp-server', 'mcp0_ingestText', {
         name: `Strategic Compass: ${task.title}`,
         text: content,
         textType: "MARKDOWN"
-      });
+      } as IngestTextParams);
     } catch (error) {
       console.error('Error storing task in RAG:', error);
       return null;
@@ -97,11 +123,11 @@ export function useGraphlitRag() {
    */
   const storeKnowledge = useCallback(async (title: string, content: string) => {
     try {
-      return await safeMcpCall('graphlit-mcp-server', 'mcp0_ingestText', {
+      return await safeMcpCall<string | null>('graphlit-mcp-server', 'mcp0_ingestText', {
         name: `Knowledge: ${title}`,
         text: content,
         textType: "MARKDOWN"
-      });
+      } as IngestTextParams);
     } catch (error) {
       console.error('Error storing knowledge in RAG:', error);
       return null;
@@ -114,9 +140,9 @@ export function useGraphlitRag() {
    */
   const ingestUrl = useCallback(async (url: string) => {
     try {
-      return await safeMcpCall('graphlit-mcp-server', 'mcp0_ingestUrl', {
+      return await safeMcpCall<string | null>('graphlit-mcp-server', 'mcp0_ingestUrl', {
         url
-      });
+      } as IngestUrlParams);
     } catch (error) {
       console.error('Error ingesting URL in RAG:', error);
       return null;
