@@ -16,6 +16,7 @@ import {
   SliderHorizontal,
   BookOpen,
   Save,
+  ListFilter
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -80,6 +81,11 @@ export const SidebarContentItems = () => {
       
       {/* Content Generation Links */}
       <SidebarItem 
+        href="/dashboard/content" 
+        icon={FileText} 
+        title="Content Creation" 
+      />
+      <SidebarItem 
         href="/dashboard/prompt-library" 
         icon={BookOpen} 
         title="Prompt Library" 
@@ -90,11 +96,6 @@ export const SidebarContentItems = () => {
         title="Saved Content" 
       />
       
-      <SidebarItem
-        href="/dashboard/content"
-        icon={FileText}
-        title="Content Resources"
-      />
       <SidebarItem
         href="/dashboard/financial"
         icon={BarChart3}
@@ -128,6 +129,11 @@ export const SidebarContentItems = () => {
             href="/dashboard/admin/parameters"
             icon={SliderHorizontal}
             title="Manage Parameters"
+          />
+          <SidebarItem
+            href="/dashboard/admin/generations"
+            icon={ListFilter}
+            title="Content Generations"
           />
           <SidebarItem
             href="/dashboard/admin/content-settings"

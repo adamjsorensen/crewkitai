@@ -21,6 +21,7 @@ import AppSettingsPage from "@/pages/admin/AppSettingsPage";
 import DatabasePage from "@/pages/admin/DatabasePage";
 import PromptsPage from "@/pages/admin/PromptsPage";
 import ParametersPage from "@/pages/admin/ParametersPage";
+import GenerationsLogPage from "@/pages/admin/GenerationsLogPage";
 import UserManagementPage from "@/pages/user-management/UserManagementPage";
 import UserListPage from "@/pages/user-management/UserListPage";
 import AddUserPage from "@/pages/user-management/AddUserPage";
@@ -85,11 +86,12 @@ function App() {
               <Route path="/dashboard/admin/content-settings" element={<ContentSettingsPage />} />
               <Route path="/dashboard/admin/prompts" element={<PromptsPage />} />
               <Route path="/dashboard/admin/parameters" element={<ParametersPage />} />
+              <Route path="/dashboard/admin/generations" element={<GenerationsLogPage />} />
               <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
               <Route path="/dashboard/admin/app-settings" element={<AppSettingsPage />} />
               <Route path="/dashboard/admin/database" element={<DatabasePage />} />
               
-              {/* User management routes - consolidated under one path pattern */}
+              {/* User management routes */}
               <Route path="/dashboard/user-management" element={<UserManagementPage />}>
                 <Route path="user-list" element={<UserListPage />} />
                 <Route path="add-user" element={<AddUserPage />} />
