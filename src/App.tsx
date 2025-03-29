@@ -15,9 +15,12 @@ import ProfilePage from "@/pages/profile/ProfilePage";
 import SettingsPage from "@/pages/profile/SettingsPage";
 import AISettingsPage from "@/pages/admin/AiSettingsPage";
 import CompassSettingsPage from "@/pages/admin/CompassSettingsPage";
+import ContentSettingsPage from "@/pages/admin/ContentSettingsPage";
 import FeatureFlagsPage from "@/pages/admin/FeatureFlagsPage";
 import AppSettingsPage from "@/pages/admin/AppSettingsPage";
 import DatabasePage from "@/pages/admin/DatabasePage";
+import PromptsPage from "@/pages/admin/PromptsPage";
+import ParametersPage from "@/pages/admin/ParametersPage";
 import UserManagementPage from "@/pages/user-management/UserManagementPage";
 import UserListPage from "@/pages/user-management/UserListPage";
 import AddUserPage from "@/pages/user-management/AddUserPage";
@@ -69,6 +72,9 @@ function App() {
               {/* Admin routes */}
               <Route path="/dashboard/admin/ai-settings" element={<AISettingsPage />} />
               <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
+              <Route path="/dashboard/admin/content-settings" element={<ContentSettingsPage />} />
+              <Route path="/dashboard/admin/prompts" element={<PromptsPage />} />
+              <Route path="/dashboard/admin/parameters" element={<ParametersPage />} />
               <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
               <Route path="/dashboard/admin/app-settings" element={<AppSettingsPage />} />
               <Route path="/dashboard/admin/database" element={<DatabasePage />} />

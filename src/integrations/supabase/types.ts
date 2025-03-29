@@ -458,6 +458,38 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_prompts: {
+        Row: {
+          base_prompt_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          base_prompt_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          base_prompt_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_prompts_base_prompt_id_fkey"
+            columns: ["base_prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -544,6 +576,208 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      graphlit_collections: {
+        Row: {
+          created_at: string
+          description: string | null
+          graphlit_collection_id: string | null
+          id: string
+          is_public: boolean
+          is_system: boolean
+          name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          graphlit_collection_id?: string | null
+          id?: string
+          is_public?: boolean
+          is_system?: boolean
+          name: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          graphlit_collection_id?: string | null
+          id?: string
+          is_public?: boolean
+          is_system?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      graphlit_config: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          key: string
+          updated_at: string
+          value: Json | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: never
+          key: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: never
+          key?: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Relationships: []
+      }
+      graphlit_content_items: {
+        Row: {
+          collection_id: string
+          content_type: string | null
+          created_at: string
+          file_path: string | null
+          graphlit_collection_id: string | null
+          graphlit_content_id: string | null
+          id: string
+          is_public: boolean
+          name: string | null
+          owner_id: string | null
+          source_url: string | null
+          state: string | null
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          collection_id: string
+          content_type?: string | null
+          created_at?: string
+          file_path?: string | null
+          graphlit_collection_id?: string | null
+          graphlit_content_id?: string | null
+          id?: string
+          is_public?: boolean
+          name?: string | null
+          owner_id?: string | null
+          source_url?: string | null
+          state?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          collection_id?: string
+          content_type?: string | null
+          created_at?: string
+          file_path?: string | null
+          graphlit_collection_id?: string | null
+          graphlit_content_id?: string | null
+          id?: string
+          is_public?: boolean
+          name?: string | null
+          owner_id?: string | null
+          source_url?: string | null
+          state?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "graphlit_content_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "graphlit_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      graphlit_content_tags: {
+        Row: {
+          content_item_id: string
+          tag_id: string
+        }
+        Insert: {
+          content_item_id: string
+          tag_id: string
+        }
+        Update: {
+          content_item_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "graphlit_content_tags_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "graphlit_content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "graphlit_content_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "graphlit_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      graphlit_tags: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      graphlit_user_collections: {
+        Row: {
+          collection_id: string
+          created_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "graphlit_user_collections_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "graphlit_collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       jobs: {
         Row: {
@@ -659,6 +893,47 @@ export type Database = {
         }
         Relationships: []
       }
+      parameter_tweaks: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          id: string
+          name: string
+          order: number | null
+          parameter_id: string | null
+          sub_prompt: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          id?: string
+          name: string
+          order?: number | null
+          parameter_id?: string | null
+          sub_prompt: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          id?: string
+          name?: string
+          order?: number | null
+          parameter_id?: string | null
+          sub_prompt?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parameter_tweaks_parameter_id_fkey"
+            columns: ["parameter_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_parameters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pg_activity_logs: {
         Row: {
           action_details: Json | null
@@ -696,6 +971,8 @@ export type Database = {
       }
       pg_conversations: {
         Row: {
+          archived: boolean | null
+          archived_at: string | null
           created_at: string
           id: string
           pinned: boolean
@@ -704,6 +981,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived?: boolean | null
+          archived_at?: string | null
           created_at?: string
           id?: string
           pinned?: boolean
@@ -712,6 +991,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived?: boolean | null
+          archived_at?: string | null
           created_at?: string
           id?: string
           pinned?: boolean
@@ -803,6 +1084,278 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      prompt_additional_context: {
+        Row: {
+          context_text: string
+          created_at: string
+          custom_prompt_id: string
+          id: string
+        }
+        Insert: {
+          context_text: string
+          created_at?: string
+          custom_prompt_id: string
+          id?: string
+        }
+        Update: {
+          context_text?: string
+          created_at?: string
+          custom_prompt_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_additional_context_custom_prompt_id_fkey"
+            columns: ["custom_prompt_id"]
+            isOneToOne: true
+            referencedRelation: "custom_prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_customizations: {
+        Row: {
+          created_at: string
+          custom_prompt_id: string
+          id: string
+          parameter_tweak_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_prompt_id: string
+          id?: string
+          parameter_tweak_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_prompt_id?: string
+          id?: string
+          parameter_tweak_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_customizations_custom_prompt_id_fkey"
+            columns: ["custom_prompt_id"]
+            isOneToOne: false
+            referencedRelation: "custom_prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_customizations_parameter_tweak_id_fkey"
+            columns: ["parameter_tweak_id"]
+            isOneToOne: false
+            referencedRelation: "parameter_tweaks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_generations: {
+        Row: {
+          created_at: string
+          created_by: string
+          custom_prompt_id: string
+          generated_content: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          custom_prompt_id: string
+          generated_content: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          custom_prompt_id?: string
+          generated_content?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_generations_custom_prompt_id_fkey"
+            columns: ["custom_prompt_id"]
+            isOneToOne: false
+            referencedRelation: "custom_prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_parameter_rules: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_required: boolean | null
+          order: number | null
+          parameter_id: string
+          prompt_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          order?: number | null
+          parameter_id: string
+          prompt_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          order?: number | null
+          parameter_id?: string
+          prompt_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_parameter_rules_parameter_id_fkey"
+            columns: ["parameter_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_parameters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_parameter_rules_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_parameters: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          type: Database["public"]["Enums"]["prompt_parameter_type"]
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          type: Database["public"]["Enums"]["prompt_parameter_type"]
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["prompt_parameter_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          hub_area: Database["public"]["Enums"]["hub_area_type"] | null
+          icon_name: string | null
+          id: string
+          is_category: boolean
+          is_default: boolean | null
+          parent_id: string | null
+          prompt: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          hub_area?: Database["public"]["Enums"]["hub_area_type"] | null
+          icon_name?: string | null
+          id?: string
+          is_category?: boolean
+          is_default?: boolean | null
+          parent_id?: string | null
+          prompt?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          hub_area?: Database["public"]["Enums"]["hub_area_type"] | null
+          icon_name?: string | null
+          id?: string
+          is_category?: boolean
+          is_default?: boolean | null
+          parent_id?: string | null
+          prompt?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_generations: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          original_generation_id: string | null
+          slug: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          original_generation_id?: string | null
+          slug?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          original_generation_id?: string | null
+          slug?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_generations_original_generation_id_fkey"
+            columns: ["original_generation_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_generations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
@@ -952,6 +1505,19 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      hub_area_type:
+        | "marketing"
+        | "sales"
+        | "operations"
+        | "client_communications"
+        | "general"
+      prompt_parameter_type:
+        | "tone_and_style"
+        | "audience"
+        | "length"
+        | "focus"
+        | "format"
+        | "custom"
     }
     CompositeTypes: {
       [_ in never]: never
