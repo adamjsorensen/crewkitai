@@ -61,16 +61,16 @@ export function useAIContentSettings() {
                 settings.systemPrompt = value;
                 break;
               case 'content_generator_temperature':
-                settings.temperature = parseFloat(value);
+                settings.temperature = parseFloat(value.toString());
                 break;
               case 'content_generator_max_tokens':
-                settings.maxTokens = parseInt(value);
+                settings.maxTokens = parseInt(value.toString());
                 break;
               case 'content_generator_model':
                 settings.model = value;
                 break;
               case 'content_modifier_temperature':
-                settings.contentModifierTemperature = parseFloat(value);
+                settings.contentModifierTemperature = parseFloat(value.toString());
                 break;
             }
           } catch (e) {

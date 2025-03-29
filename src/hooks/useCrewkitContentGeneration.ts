@@ -16,7 +16,7 @@ interface ModifyContentParams {
 
 export function useCrewkitContentGeneration() {
   const { toast } = useToast();
-  const logActivity = useLogActivity();
+  const { logActivity } = useLogActivity();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isModifying, setIsModifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export function useCrewkitContentGeneration() {
         // Log the activity
         await logActivity({
           actionType: 'content_generated',
-          details: {
+          actionDetails: {
             promptId: customPromptId,
             generationId: data.generationId
           }
@@ -81,7 +81,7 @@ export function useCrewkitContentGeneration() {
         // Log the activity
         await logActivity({
           actionType: 'content_modified',
-          details: {
+          actionDetails: {
             originalLength: content.length,
             modifiedLength: data.modifiedContent.length,
             modification

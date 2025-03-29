@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { PromptCard } from "@/components/content/PromptCard";
-import { CategoryTile } from "@/components/content/CategoryTile";
-import { CustomPromptWizard } from "@/components/content/CustomPromptWizard";
+import PromptCard from "@/components/content/PromptCard";
+import CategoryTile from "@/components/content/CategoryTile";
+import CustomPromptWizard from "@/components/content/CustomPromptWizard";
 import { useCrewkitPrompts } from "@/hooks/useCrewkitPrompts";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,23 +19,23 @@ const PromptLibrary = () => {
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   
-  // Load prompts with the updated useCrewkitPrompts hook
-  const { prompts, categories, isLoading, isError } = useCrewkitPrompts();
+  const { prompts, isLoading, isError } = useCrewkitPrompts();
   
-  // Filter prompts based on search term and category
+  const categories = React.useMemo(() => {
+    if (!prompts) return [];
+    return prompts.filter(prompt => prompt.is_category === true);
+  }, [prompts]);
+  
   const filteredPrompts = React.useMemo(() => {
     if (!prompts) return [];
     
     return prompts.filter(prompt => {
-      // Filter by search term
       const matchesSearch = searchTerm === "" ||
         prompt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (prompt.description && prompt.description.toLowerCase().includes(searchTerm.toLowerCase()));
       
-      // Filter by selected category
       const matchesCategory = !selectedCategory || prompt.parent_id === selectedCategory;
       
-      // Filter by active tab
       const matchesTab = activeTab === 'all' || 
         (activeTab === 'marketing' && prompt.hub_area === 'marketing') ||
         (activeTab === 'sales' && prompt.hub_area === 'sales') ||
@@ -46,7 +45,6 @@ const PromptLibrary = () => {
     });
   }, [prompts, searchTerm, selectedCategory, activeTab]);
   
-  // Filter categories based on active tab
   const filteredCategories = React.useMemo(() => {
     if (!categories) return [];
     
@@ -161,7 +159,6 @@ const PromptLibrary = () => {
           </TabsContent>
         </Tabs>
         
-        {/* Custom Prompt Wizard Dialog */}
         {selectedPrompt && (
           <CustomPromptWizard
             promptId={selectedPrompt}
@@ -237,7 +234,6 @@ const ContentDisplay = ({
     );
   }
   
-  // If a category is selected, show prompts from that category
   if (selectedCategory) {
     return (
       <div className="space-y-6">
@@ -281,7 +277,6 @@ const ContentDisplay = ({
     );
   }
   
-  // Display categories and prompts
   return (
     <div className="space-y-6">
       {categories.length > 0 && (

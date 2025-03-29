@@ -28,10 +28,12 @@ const SavedContentDetailPage = () => {
     queryKey: ['saved-content', slug],
     queryFn: () => getSavedContentBySlug(slug || ""),
     enabled: !!slug,
-    onSuccess: (data) => {
-      setTitle(data.title);
-      setContent(data.content);
-      setContentId(data.id);
+    onSettled: (data) => {
+      if (data) {
+        setTitle(data.title);
+        setContent(data.content);
+        setContentId(data.id);
+      }
     }
   });
 

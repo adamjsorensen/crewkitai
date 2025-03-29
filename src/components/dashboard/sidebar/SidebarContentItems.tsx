@@ -13,7 +13,7 @@ import {
   Flag,
   Wrench,
   Sparkles,
-  SliderHorizontal,
+  SlidersHorizontal,
   BookOpen,
   Save,
   ListFilter
