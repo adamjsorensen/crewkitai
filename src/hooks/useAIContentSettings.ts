@@ -45,15 +45,20 @@ export const useAIContentSettings = () => {
         throw new Error(`Error fetching AI settings: ${error.message}`);
       }
 
+      // Parse JSON if it's a string
+      const valueObj = typeof data.value === 'string' 
+        ? JSON.parse(data.value) 
+        : data.value;
+      
       // Convert string values to numbers where needed
       return {
-        model: data.value.model || defaultSettings.model,
-        temperature: Number(data.value.temperature || defaultSettings.temperature),
-        max_tokens: Number(data.value.max_tokens || defaultSettings.max_tokens),
-        top_p: Number(data.value.top_p || defaultSettings.top_p),
-        frequency_penalty: Number(data.value.frequency_penalty || defaultSettings.frequency_penalty),
-        presence_penalty: Number(data.value.presence_penalty || defaultSettings.presence_penalty),
-        api_key: data.value.api_key || undefined
+        model: valueObj.model || defaultSettings.model,
+        temperature: Number(valueObj.temperature || defaultSettings.temperature),
+        max_tokens: Number(valueObj.max_tokens || defaultSettings.max_tokens),
+        top_p: Number(valueObj.top_p || defaultSettings.top_p),
+        frequency_penalty: Number(valueObj.frequency_penalty || defaultSettings.frequency_penalty),
+        presence_penalty: Number(valueObj.presence_penalty || defaultSettings.presence_penalty),
+        api_key: valueObj.api_key || undefined
       } as AIContentSettings;
     }
   });

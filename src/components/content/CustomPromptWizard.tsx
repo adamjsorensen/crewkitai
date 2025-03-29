@@ -1,18 +1,18 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { v4 as uuidv4 } from "uuid";
-import { useCrewkitPromptParameters, ParameterWithTweaks } from "@/hooks/useCrewkitPromptParameters";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader, SparklesIcon } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
+import { ChevronLeft, ChevronRight, Loader, Sparkles, Wand2 } from "lucide-react";
+import { useCrewkitPromptParameters, ParameterWithTweaks, ParameterTweak } from "@/hooks/useCrewkitPromptParameters";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CustomPromptWizardProps {
   promptId: string;
@@ -20,99 +20,70 @@ interface CustomPromptWizardProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type WizardStep = 'parameters' | 'additional-context' | 'review' | 'generating';
-
 const CustomPromptWizard = ({ promptId, open, onOpenChange }: CustomPromptWizardProps) => {
-  const [currentStep, setCurrentStep] = useState<WizardStep>('parameters');
-  const [selectedTweaks, setSelectedTweaks] = useState<Record<string, string>>({});
-  const [additionalContext, setAdditionalContext] = useState('');
-  const [currentParameterIndex, setCurrentParameterIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
-  
+  const { toast } = useToast();
   const { getParametersForPrompt } = useCrewkitPromptParameters();
-  const [parametersWithTweaks, setParametersWithTweaks] = useState<ParameterWithTweaks[]>([]);
   
-  React.useEffect(() => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [parameters, setParameters] = useState<ParameterWithTweaks[]>([]);
+  const [selectedTweaks, setSelectedTweaks] = useState<Record<string, string>>({});
+  const [additionalContext, setAdditionalContext] = useState("");
+  
+  useEffect(() => {
     if (open && promptId) {
-      // Reset state when dialog opens
-      setCurrentStep('parameters');
-      setSelectedTweaks({});
-      setAdditionalContext('');
-      setCurrentParameterIndex(0);
-      
-      // Load parameters with tweaks for this prompt
-      const loadParameters = async () => {
-        try {
-          const params = await getParametersForPrompt(promptId);
-          setParametersWithTweaks(params);
-        } catch (error) {
-          console.error('Error loading parameters:', error);
-          toast({
-            title: 'Error loading customization options',
-            description: 'Could not load customization options for this prompt',
-            variant: 'destructive',
-          });
-        }
-      };
-      
       loadParameters();
     }
-  }, [open, promptId, getParametersForPrompt, toast]);
+  }, [open, promptId]);
   
-  const currentParameter = parametersWithTweaks[currentParameterIndex];
-  const isLastParameter = currentParameterIndex === parametersWithTweaks.length - 1;
+  const loadParameters = async () => {
+    setIsLoading(true);
+    try {
+      const params = await getParametersForPrompt(promptId);
+      setParameters(params);
+      // Initialize selectedTweaks with empty values
+      const initialTweaks: Record<string, string> = {};
+      params.forEach(param => {
+        if (param.tweaks?.length > 0) {
+          initialTweaks[param.id] = "";
+        }
+      });
+      setSelectedTweaks(initialTweaks);
+    } catch (error) {
+      console.error("Error loading parameters:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load parameters for prompt customization",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const handleTweakSelection = (parameterId: string, tweakId: string) => {
-    setSelectedTweaks({
-      ...selectedTweaks,
-      [parameterId]: tweakId,
-    });
+    setSelectedTweaks(prev => ({ ...prev, [parameterId]: tweakId }));
   };
   
-  const handleNextParameter = () => {
-    if (isLastParameter) {
-      setCurrentStep('additional-context');
-    } else {
-      setCurrentParameterIndex(currentParameterIndex + 1);
+  const handleNext = () => {
+    if (currentStepIndex < steps.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
     }
   };
   
-  const handlePreviousParameter = () => {
-    if (currentParameterIndex > 0) {
-      setCurrentParameterIndex(currentParameterIndex - 1);
+  const handleBack = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
     }
   };
   
-  const handleSkipParameter = () => {
-    if (isLastParameter) {
-      setCurrentStep('additional-context');
-    } else {
-      setCurrentParameterIndex(currentParameterIndex + 1);
-    }
-  };
-  
-  const handleBackToParameters = () => {
-    setCurrentStep('parameters');
-    setCurrentParameterIndex(parametersWithTweaks.length - 1);
-  };
-  
-  const handleContinueToReview = () => {
-    setCurrentStep('review');
-  };
-  
-  const handleBackToContext = () => {
-    setCurrentStep('additional-context');
-  };
-  
-  const handleGenerateContent = async () => {
-    setIsLoading(true);
-    setCurrentStep('generating');
-    
+  const handleGenerate = async () => {
+    setIsGenerating(true);
     try {
-      // Create a custom prompt record
-      const { data: customPrompt, error: customPromptError } = await supabase
+      // 1. Create custom prompt
+      const { data: customPrompt, error: promptError } = await supabase
         .from('custom_prompts')
         .insert({
           base_prompt_id: promptId,
@@ -121,298 +92,297 @@ const CustomPromptWizard = ({ promptId, open, onOpenChange }: CustomPromptWizard
         .select()
         .single();
       
-      if (customPromptError) {
-        throw new Error(`Failed to create custom prompt: ${customPromptError.message}`);
-      }
+      if (promptError) throw new Error(`Error creating custom prompt: ${promptError.message}`);
       
-      // Save selected tweaks
-      const tweakInserts = Object.entries(selectedTweaks).map(([parameterId, tweakId]) => ({
-        custom_prompt_id: customPrompt.id,
-        parameter_tweak_id: tweakId,
-      }));
+      // 2. Save parameter tweaks selections
+      const customizationPromises = Object.entries(selectedTweaks)
+        .filter(([_, tweakId]) => tweakId) // Only save non-empty selections
+        .map(([parameterId, tweakId]) => 
+          supabase
+            .from('prompt_customizations')
+            .insert({
+              custom_prompt_id: customPrompt.id,
+              parameter_tweak_id: tweakId
+            })
+        );
       
-      if (tweakInserts.length > 0) {
-        const { error: tweaksError } = await supabase
-          .from('prompt_customizations')
-          .insert(tweakInserts);
-        
-        if (tweaksError) {
-          throw new Error(`Failed to save parameter selections: ${tweaksError.message}`);
-        }
-      }
-      
-      // Save additional context if provided
+      // 3. Save additional context if provided
       if (additionalContext.trim()) {
-        const { error: contextError } = await supabase
-          .from('prompt_additional_context')
-          .insert({
-            custom_prompt_id: customPrompt.id,
-            context_text: additionalContext.trim()
-          });
-        
-        if (contextError) {
-          throw new Error(`Failed to save additional context: ${contextError.message}`);
-        }
+        customizationPromises.push(
+          supabase
+            .from('prompt_additional_context')
+            .insert({
+              custom_prompt_id: customPrompt.id,
+              context_text: additionalContext.trim()
+            })
+        );
       }
       
-      // Generate content using Supabase Edge Function
-      const { data: generationData, error: generationError } = await supabase.functions
-        .invoke('crewkit-generate-content', {
-          body: {
-            customPromptId: customPrompt.id
-          }
-        });
+      // 4. Execute all customization promises
+      await Promise.all(customizationPromises);
       
-      if (generationError) {
-        throw new Error(`Error generating content: ${generationError.message}`);
-      }
-      
-      // Navigate to the generated content page
-      navigate(`/dashboard/generated/${generationData.generationId}`);
-      onOpenChange(false);
-      
-    } catch (error) {
-      console.error('Error in content generation:', error);
-      toast({
-        title: 'Error generating content',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-        variant: 'destructive',
+      // 5. Generate content
+      const response = await supabase.functions.invoke('crewkit-generate-content', {
+        body: { customPromptId: customPrompt.id }
       });
-      setCurrentStep('review');
-      setIsLoading(false);
+      
+      if (response.error) throw new Error(`Error generating content: ${response.error.message}`);
+      
+      // 6. Close wizard and navigate to generated content
+      onOpenChange(false);
+      navigate(`/dashboard/generated/${response.data.generationId}`);
+      
+      toast({
+        title: "Content Generated",
+        description: "Your content has been successfully generated",
+      });
+    } catch (error: any) {
+      console.error("Error generating content:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred while generating content",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
   
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 'parameters':
-        if (parametersWithTweaks.length === 0) {
-          return (
-            <div className="flex justify-center items-center h-64">
-              <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          );
-        }
+  const ParameterStep = ({ parameter }: { parameter: ParameterWithTweaks }) => {
+    if (!parameter.tweaks || parameter.tweaks.length === 0) {
+      return <p>No options available for this parameter.</p>;
+    }
+    
+    const isRequired = parameter.rule?.is_required;
+    
+    return (
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-medium">{parameter.name}</h3>
+          {parameter.description && (
+            <p className="text-sm text-muted-foreground">{parameter.description}</p>
+          )}
+          {isRequired && (
+            <p className="text-sm text-destructive mt-1">* Required</p>
+          )}
+        </div>
         
-        if (!currentParameter) {
-          return (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No customization options available for this prompt</p>
-              <Button className="mt-4" onClick={() => setCurrentStep('additional-context')}>
-                Continue
-              </Button>
-            </div>
-          );
-        }
-        
-        return (
-          <div className="space-y-6">
-            <div>
-              <h4 className="text-lg font-medium">
-                Customize: {currentParameter.name}
-              </h4>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">
-                {currentParameter.description || `Select an option for ${currentParameter.name}`}
-              </p>
-              
-              <RadioGroup
-                value={selectedTweaks[currentParameter.id] || ''}
-                onValueChange={(value) => handleTweakSelection(currentParameter.id, value)}
-                className="space-y-3"
+        <RadioGroup
+          value={selectedTweaks[parameter.id] || ""}
+          onValueChange={(value) => handleTweakSelection(parameter.id, value)}
+        >
+          <div className="grid grid-cols-1 gap-3">
+            {parameter.tweaks.map((tweak) => (
+              <Label
+                key={tweak.id}
+                className="flex items-start space-x-3 space-y-0 rounded-md border p-3 cursor-pointer hover:bg-accent"
               >
-                {currentParameter.tweaks?.map((tweak) => (
-                  <div key={tweak.id} className="flex items-start space-x-3 p-2 rounded-md hover:bg-accent">
-                    <RadioGroupItem value={tweak.id} id={tweak.id} className="mt-1" />
-                    <div className="space-y-1.5 cursor-pointer" onClick={() => handleTweakSelection(currentParameter.id, tweak.id)}>
-                      <Label htmlFor={tweak.id} className="font-medium">{tweak.name}</Label>
-                      <p className="text-sm text-muted-foreground">{tweak.sub_prompt}</p>
-                    </div>
+                <RadioGroupItem value={tweak.id} className="mt-1" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="font-medium">{tweak.name}</div>
+                  <div className="text-sm text-muted-foreground line-clamp-2">
+                    {tweak.sub_prompt}
                   </div>
-                ))}
-              </RadioGroup>
-            </div>
-          </div>
-        );
-        
-      case 'additional-context':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h4 className="text-lg font-medium">Additional Context</h4>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">
-                Provide any additional context or specific information to include in the generated content
-              </p>
-              
-              <Textarea
-                value={additionalContext}
-                onChange={(e) => setAdditionalContext(e.target.value)}
-                placeholder="Enter any specific details, company information, or context to include in the content..."
-                className="h-32"
-              />
-            </div>
-          </div>
-        );
-        
-      case 'review':
-        return (
-          <div className="space-y-6">
-            <h4 className="text-lg font-medium">Review Your Customizations</h4>
-            <ScrollArea className="h-[300px] pr-4">
-              <div className="space-y-4">
-                {Object.entries(selectedTweaks).length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Selected Options</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {Object.entries(selectedTweaks).map(([parameterId, tweakId]) => {
-                          const parameter = parametersWithTweaks.find(p => p.id === parameterId);
-                          const tweak = parameter?.tweaks.find(t => t.id === tweakId);
-                          return (
-                            <div key={parameterId} className="space-y-1">
-                              <div className="text-sm font-medium">{parameter?.name}:</div>
-                              <div className="text-sm text-muted-foreground pl-3">{tweak?.name}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-                
-                {additionalContext && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Additional Context</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm whitespace-pre-wrap">{additionalContext}</div>
-                    </CardContent>
-                  </Card>
-                )}
-                
-                {Object.entries(selectedTweaks).length === 0 && !additionalContext && (
-                  <div className="text-center py-4">
-                    <p className="text-muted-foreground">No customizations added. The base prompt will be used as-is.</p>
+                </div>
+              </Label>
+            ))}
+            
+            {!isRequired && (
+              <Label
+                className="flex items-start space-x-3 space-y-0 rounded-md border p-3 cursor-pointer hover:bg-accent"
+              >
+                <RadioGroupItem value="" className="mt-1" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="font-medium">Skip this parameter</div>
+                  <div className="text-sm text-muted-foreground">
+                    Don't include any specific {parameter.name.toLowerCase()} customization
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+                </div>
+              </Label>
+            )}
           </div>
-        );
-        
-      case 'generating':
-        return (
-          <div className="flex flex-col items-center justify-center py-10">
-            <Loader className="h-10 w-10 animate-spin text-primary" />
-            <h3 className="mt-4 text-xl font-semibold">Generating Content</h3>
-            <p className="text-center text-muted-foreground mt-2">
-              Please wait while we generate your content using AI...
-            </p>
-          </div>
-        );
-        
-      default:
-        return null;
-    }
+        </RadioGroup>
+      </div>
+    );
   };
   
-  const renderFooter = () => {
-    switch (currentStep) {
-      case 'parameters':
-        return (
-          <>
-            <Button
-              variant="outline"
-              onClick={handleSkipParameter}
-              disabled={parametersWithTweaks.length === 0}
-            >
-              Skip
-            </Button>
-            <div className="flex gap-2">
-              {currentParameterIndex > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={handlePreviousParameter}
-                >
-                  Previous
-                </Button>
+  const AdditionalContextStep = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-medium">Additional Context</h3>
+        <p className="text-sm text-muted-foreground">
+          Add any specific details or instructions that should be included in your content
+        </p>
+      </div>
+      
+      <Textarea
+        placeholder="Enter additional context, specific requirements, or information about your business..."
+        className="min-h-[200px]"
+        value={additionalContext}
+        onChange={(e) => setAdditionalContext(e.target.value)}
+      />
+    </div>
+  );
+  
+  const ReviewStep = () => {
+    // Get the selected tweaks with their details
+    const selectedTweakDetails: { parameter: string; tweak: string }[] = [];
+    
+    parameters.forEach(param => {
+      const tweakId = selectedTweaks[param.id];
+      if (tweakId) {
+        const tweak = param.tweaks.find(t => t.id === tweakId);
+        if (tweak) {
+          selectedTweakDetails.push({
+            parameter: param.name,
+            tweak: tweak.name
+          });
+        }
+      }
+    });
+    
+    return (
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-medium">Review Your Selections</h3>
+          <p className="text-sm text-muted-foreground">
+            Review your customization choices before generating content
+          </p>
+        </div>
+        
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div>
+              <h4 className="text-sm font-medium mb-2">Selected Customizations:</h4>
+              {selectedTweakDetails.length > 0 ? (
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  {selectedTweakDetails.map((item, index) => (
+                    <li key={index}>
+                      <span className="font-medium">{item.parameter}:</span> {item.tweak}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No customizations selected.</p>
               )}
-              <Button
-                onClick={handleNextParameter}
-                disabled={
-                  parametersWithTweaks.length === 0 ||
-                  (currentParameter?.rule?.is_required && !selectedTweaks[currentParameter?.id])
-                }
-              >
-                {isLastParameter ? 'Continue' : 'Next'}
-              </Button>
             </div>
-          </>
-        );
-        
-      case 'additional-context':
-        return (
-          <>
-            <Button
-              variant="outline"
-              onClick={handleBackToParameters}
-              disabled={parametersWithTweaks.length === 0}
-            >
-              Back
-            </Button>
-            <Button onClick={handleContinueToReview}>
-              Continue
-            </Button>
-          </>
-        );
-        
-      case 'review':
-        return (
-          <>
-            <Button
-              variant="outline"
-              onClick={handleBackToContext}
-            >
-              Back
-            </Button>
-            <Button 
-              onClick={handleGenerateContent}
-              className="gap-1.5"
-              disabled={isLoading}
-            >
-              <SparklesIcon className="h-4 w-4" />
-              <span>Generate Content</span>
-            </Button>
-          </>
-        );
-        
-      case 'generating':
-        return null;
-        
-      default:
-        return null;
+            
+            {additionalContext && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Additional Context:</h4>
+                <p className="text-sm bg-muted p-3 rounded">
+                  {additionalContext}
+                </p>
+              </div>
+            )}
+            
+            {selectedTweakDetails.length === 0 && !additionalContext && (
+              <div className="text-amber-500 text-sm">
+                Warning: You haven't selected any customizations or provided additional context.
+                Your generated content will use the default prompt settings.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+  
+  // Define wizard steps
+  const steps = [
+    ...parameters.map(param => ({
+      label: param.name,
+      content: <ParameterStep parameter={param} />
+    })),
+    {
+      label: "Additional Context",
+      content: <AdditionalContextStep />
+    },
+    {
+      label: "Review",
+      content: <ReviewStep />
     }
+  ];
+  
+  // Check if we can proceed to next step
+  const canProceed = () => {
+    if (currentStepIndex < parameters.length) {
+      const param = parameters[currentStepIndex];
+      // If the parameter is required, check if a tweak is selected
+      return !param.rule?.is_required || !!selectedTweaks[param.id];
+    }
+    return true;
   };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[640px]">
         <DialogHeader>
-          <DialogTitle>Customize Prompt</DialogTitle>
-          <DialogDescription>
-            Tailor this prompt to your specific needs before generating content
-          </DialogDescription>
+          <DialogTitle>Customize Your Content</DialogTitle>
         </DialogHeader>
         
-        <div className="py-4">
-          {renderStepContent()}
-        </div>
-        
-        <DialogFooter className="flex justify-between">
-          {renderFooter()}
-        </DialogFooter>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <Tabs value={`step-${currentStepIndex}`} className="w-full">
+              <TabsList className="grid grid-cols-3">
+                <TabsTrigger value="step-parameters" disabled>Parameters</TabsTrigger>
+                <TabsTrigger value="step-context" disabled>Context</TabsTrigger>
+                <TabsTrigger value="step-review" disabled>Review</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            <div className="min-h-[300px]">
+              {steps[currentStepIndex]?.content || <div>Loading...</div>}
+            </div>
+            
+            <Separator />
+            
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={currentStepIndex === 0}
+                className="gap-1.5"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>Back</span>
+              </Button>
+              
+              {currentStepIndex < steps.length - 1 ? (
+                <Button
+                  onClick={handleNext}
+                  disabled={!canProceed()}
+                  className="gap-1.5"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  className="gap-1.5"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader className="h-4 w-4 animate-spin" />
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      <span>Generate Content</span>
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,5 +1,6 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Routes, Route, useNavigate, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import AuthPage from "@/pages/auth/AuthPage";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
@@ -9,174 +10,79 @@ import ProfilePage from "@/pages/dashboard/ProfilePage";
 import CompassPage from "@/pages/dashboard/CompassPage";
 import PGCoachPage from "@/pages/dashboard/PGCoachPage";
 import AISettingsPage from "@/pages/admin/AISettingsPage";
-import ContentSettingsPage from "@/pages/admin/ContentSettingsPage";
+import PromptsPage from "@/pages/admin/PromptsPage";
 import UserListPage from "@/pages/admin/UserListPage";
 import UserDetailsPage from "@/pages/admin/UserDetailsPage";
 import FinancialPage from "@/pages/dashboard/FinancialPage";
-import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
-
-// New content generation related pages
+import ParametersPage from "@/pages/admin/ParametersPage";
+import ContentSettingsPage from "@/pages/admin/ContentSettingsPage";
 import PromptLibraryPage from "@/pages/dashboard/PromptLibraryPage";
 import PromptPage from "@/pages/dashboard/PromptPage";
 import GeneratedContentPage from "@/pages/dashboard/GeneratedContentPage";
-import SavedContentListPage from "@/pages/dashboard/SavedContentListPage";
 import SavedContentPage from "@/pages/dashboard/SavedContentPage";
-import PromptManagementPage from "@/pages/admin/PromptManagementPage";
-import ParametersManagementPage from "@/pages/admin/ParametersManagementPage";
-import GenerationsPage from "@/pages/admin/GenerationsPage";
+import SavedContentDetailPage from "@/pages/dashboard/SavedContentDetailPage";
+
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { Toaster } from "@/components/ui/toaster";
 
 function App() {
-  // Create a client
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 1000 * 60 * 5, // 5 minutes
-        retry: 1,
-      },
-    },
-  });
+  return (
+    <ThemeProvider defaultTheme="light" storageKey="crewkit-ui-theme">
+      <AuthProvider>
+        <SidebarProvider>
+          <MainApp />
+          <Toaster />
+        </SidebarProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+function MainApp() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && !location.pathname.startsWith("/auth") && location.pathname !== "/") {
+      navigate("/auth");
+    }
+  }, [isAuthenticated, isLoading, navigate, location.pathname]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="crewkit-ui-theme">
-        <AuthProvider>
-          <Router>
-            <SidebarProvider>
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/auth" element={<AuthPage />} />
-
-                {/* Protected Dashboard Routes */}
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="/dashboard/settings" element={
-                  <ProtectedRoute>
-                    <SettingsPage />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="/dashboard/profile" element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="/dashboard/compass" element={
-                  <ProtectedRoute>
-                    <CompassPage />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="/dashboard/pg-coach" element={
-                  <ProtectedRoute>
-                    <PGCoachPage />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="/dashboard/ai-coach" element={
-                  <ProtectedRoute>
-                    <Navigate to="/dashboard/pg-coach" replace />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/dashboard/financial" element={
-                  <ProtectedRoute>
-                    <FinancialPage />
-                  </ProtectedRoute>
-                } />
-
-                {/* Content Generation Routes */}
-                <Route path="/dashboard/prompt-library" element={
-                  <ProtectedRoute>
-                    <PromptLibraryPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/dashboard/prompt/:promptId" element={
-                  <ProtectedRoute>
-                    <PromptPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/dashboard/generated/:generationId" element={
-                  <ProtectedRoute>
-                    <GeneratedContentPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/dashboard/saved-content" element={
-                  <ProtectedRoute>
-                    <SavedContentListPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/dashboard/saved-content/:slug" element={
-                  <ProtectedRoute>
-                    <SavedContentPage />
-                  </ProtectedRoute>
-                } />
-
-                {/* Admin Routes */}
-                <Route path="/dashboard/admin/ai-settings" element={
-                  <ProtectedRoute adminOnly>
-                    <AISettingsPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/dashboard/admin/content-settings" element={
-                  <ProtectedRoute adminOnly>
-                    <ContentSettingsPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/dashboard/admin/prompts" element={
-                  <ProtectedRoute adminOnly>
-                    <PromptManagementPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/dashboard/admin/parameters" element={
-                  <ProtectedRoute adminOnly>
-                    <ParametersManagementPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/dashboard/admin/generations" element={
-                  <ProtectedRoute adminOnly>
-                    <GenerationsPage />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="/dashboard/user-management/user-list" element={
-                  <ProtectedRoute adminOnly>
-                    <UserListPage />
-                  </ProtectedRoute>
-                } />
-
-                <Route path="/dashboard/user-management/user/:userId" element={
-                  <ProtectedRoute adminOnly>
-                    <UserDetailsPage />
-                  </ProtectedRoute>
-                } />
-
-                {/* Fallback */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </SidebarProvider>
-          </Router>
-        </AuthProvider>
-        <Toaster />
-      </ThemeProvider>
-    </QueryClientProvider>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/auth" element={<AuthPage />} />
+      
+      {/* Dashboard Routes */}
+      <Route path="/dashboard" element={<ProtectedRoute element={<DashboardPage />} />} />
+      <Route path="/dashboard/settings" element={<ProtectedRoute element={<SettingsPage />} />} />
+      <Route path="/dashboard/profile" element={<ProtectedRoute element={<ProfilePage />} />} />
+      <Route path="/dashboard/compass" element={<ProtectedRoute element={<CompassPage />} />} />
+      <Route path="/dashboard/pg-coach" element={<ProtectedRoute element={<PGCoachPage />} />} />
+      <Route path="/dashboard/ai-coach" element={<Navigate to="/dashboard/pg-coach" replace />} />
+      <Route path="/dashboard/financial" element={<ProtectedRoute element={<FinancialPage />} />} />
+      
+      {/* Content Generator Routes */}
+      <Route path="/dashboard/prompt-library" element={<ProtectedRoute element={<PromptLibraryPage />} />} />
+      <Route path="/dashboard/prompt/:promptId" element={<ProtectedRoute element={<PromptPage />} />} />
+      <Route path="/dashboard/generated/:generationId" element={<ProtectedRoute element={<GeneratedContentPage />} />} />
+      <Route path="/dashboard/saved-content" element={<ProtectedRoute element={<SavedContentPage />} />} />
+      <Route path="/dashboard/saved-content/:slug" element={<ProtectedRoute element={<SavedContentDetailPage />} />} />
+      
+      {/* Admin Routes */}
+      <Route path="/dashboard/admin/ai-settings" element={<ProtectedRoute element={<AISettingsPage />} adminOnly />} />
+      <Route path="/dashboard/admin/prompts" element={<ProtectedRoute element={<PromptsPage />} adminOnly />} />
+      <Route path="/dashboard/admin/parameters" element={<ProtectedRoute element={<ParametersPage />} adminOnly />} />
+      <Route path="/dashboard/admin/content-settings" element={<ProtectedRoute element={<ContentSettingsPage />} adminOnly />} />
+      <Route path="/dashboard/admin/users" element={<ProtectedRoute element={<UserListPage />} adminOnly />} />
+      <Route path="/dashboard/admin/users/:userId" element={<ProtectedRoute element={<UserDetailsPage />} adminOnly />} />
+      
+      {/* Catch all for unknown routes */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }
 

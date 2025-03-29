@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash } from "lucide-react";
-import { ParameterTweak, PromptParameter, useCrewkitPromptParameters } from "@/hooks/useCrewkitPromptParameters";
+import { ParameterTweak, ParameterWithTweaks, useCrewkitPromptParameters } from "@/hooks/useCrewkitPromptParameters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -19,7 +19,7 @@ import EditTweakDialog from "./EditTweakDialog";
 
 type TweaksTableProps = {
   tweaks: ParameterTweak[];
-  parameters: PromptParameter[];
+  parameters: ParameterWithTweaks[];
   isLoading: boolean;
 };
 
@@ -156,7 +156,9 @@ const TweaksTable = ({ tweaks, parameters, isLoading }: TweaksTableProps) => {
           tweak={editTweak}
           parameters={parameters}
           open={!!editTweak}
-          onOpenChange={(open) => !open && setEditTweak(null)}
+          onOpenChange={(open) => {
+            if (!open) setEditTweak(null);
+          }}
         />
       )}
     </>

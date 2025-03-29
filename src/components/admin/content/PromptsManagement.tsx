@@ -1,246 +1,208 @@
 
-import React from "react";
-import { useCrewkitPrompts, Prompt } from "@/hooks/useCrewkitPrompts";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Pencil, Trash, Folders, FileText } from "lucide-react";
+import React, { useState } from "react";
+import { Prompt } from "@/hooks/useCrewkitPrompts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCrewkitPrompts } from "@/hooks/useCrewkitPrompts";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { PlusCircle, FolderOpen, FileText, Pencil, Trash, Loader, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
-type PromptsManagementProps = {
+interface PromptsManagementProps {
   hub: string;
   prompts: Prompt[];
   isLoading: boolean;
   onCreatePrompt: (parentId: string | null, isCategory: boolean) => void;
-};
+}
 
 const PromptsManagement = ({ hub, prompts, isLoading, onCreatePrompt }: PromptsManagementProps) => {
-  const { toast } = useToast();
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; promptId: string | null }>({
+    open: false, 
+    promptId: null
+  });
   const { deletePrompt } = useCrewkitPrompts();
-  
-  const rootCategories = prompts.filter(p => p.is_category && !p.parent_id);
-  const rootPrompts = prompts.filter(p => !p.is_category && !p.parent_id && p.hub_area === hub);
-  
-  const handleDeletePrompt = (promptId: string, title: string) => {
-    if (window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
-      deletePrompt.mutate(promptId, {
+  const { toast } = useToast();
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  const handleDeleteClick = (promptId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteConfirm({ open: true, promptId });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirm.promptId) {
+      deletePrompt.mutate(deleteConfirm.promptId, {
         onSuccess: () => {
+          setDeleteConfirm({ open: false, promptId: null });
+        },
+        onError: (error) => {
           toast({
-            title: "Prompt deleted",
-            description: `"${title}" has been deleted successfully.`,
+            title: "Error deleting prompt",
+            description: error.message,
+            variant: "destructive",
           });
         }
       });
     }
   };
-  
-  if (isLoading) {
+
+  const renderPromptItems = (items: Prompt[], parentId: string | null = null) => {
+    const filteredItems = items.filter(item => 
+      item.parent_id === parentId && 
+      (item.hub_area === hub || (item.is_category && !item.hub_area))
+    );
+
+    if (filteredItems.length === 0) {
+      return (
+        <div className="p-4 text-center text-muted-foreground">
+          {parentId 
+            ? "No items in this category. Add some prompts or subcategories."
+            : "No prompts or categories found. Start by creating a new prompt or category."}
+        </div>
+      );
+    }
+
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map(i => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-5 w-1/2 mb-2" />
-              <Skeleton className="h-4 w-full" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-20 w-full" />
-            </CardContent>
-          </Card>
+      <div className="space-y-3">
+        {filteredItems.map(item => (
+          <div key={item.id}>
+            <Card
+              className={`transition-colors hover:bg-accent/50 ${item.is_category ? 'cursor-pointer' : ''}`}
+              onClick={item.is_category ? () => toggleCategory(item.id) : undefined}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {item.is_category ? (
+                      <>
+                        <FolderOpen className="h-5 w-5 text-primary" />
+                        <span className="font-medium">{item.title}</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <span>{item.title}</span>
+                      </>
+                    )}
+                    {item.hub_area && (
+                      <Badge variant="outline" className="ml-2 text-xs capitalize">
+                        {item.hub_area}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {item.is_category && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCreatePrompt(item.id, false);
+                        }}
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => handleDeleteClick(item.id, e)}
+                    >
+                      <Trash className="h-4 w-4 text-destructive" />
+                    </Button>
+                    {item.is_category && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                      >
+                        <ChevronRight
+                          className={`h-4 w-4 transition-transform ${
+                            expandedCategories[item.id] ? "rotate-90" : ""
+                          }`}
+                        />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {item.description && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {item.description}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Render nested items if category is expanded */}
+            {item.is_category && expandedCategories[item.id] && (
+              <div className="ml-6 mt-3">
+                {renderPromptItems(prompts, item.id)}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 gap-1.5"
+                  onClick={() => onCreatePrompt(item.id, true)}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>Add Subcategory</span>
+                </Button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
     );
-  }
-  
-  if (rootCategories.length === 0 && rootPrompts.length === 0) {
+  };
+
+  if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>No prompts yet</CardTitle>
-          <CardDescription>
-            Get started by creating categories and prompts for this hub
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex space-x-2">
-            <Button onClick={() => onCreatePrompt(null, true)} variant="outline" size="sm">
-              <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
-              New Category
-            </Button>
-            <Button onClick={() => onCreatePrompt(null, false)} size="sm">
-              <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
-              New Prompt
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex justify-center items-center h-64">
+        <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
-      {/* Categories Section */}
-      {rootCategories.length > 0 && (
-        <div>
-          <h3 className="text-lg font-medium mb-3">Categories</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rootCategories.map(category => (
-              <CategoryCard 
-                key={category.id} 
-                category={category} 
-                onCreatePrompt={onCreatePrompt}
-                onDelete={handleDeletePrompt}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="space-y-4">
+        {renderPromptItems(prompts)}
+      </div>
       
-      {/* Prompts Section */}
-      {rootPrompts.length > 0 && (
-        <div>
-          <h3 className="text-lg font-medium mb-3">Prompts</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rootPrompts.map(prompt => (
-              <PromptCard 
-                key={prompt.id} 
-                prompt={prompt} 
-                onDelete={handleDeletePrompt}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      <AlertDialog 
+        open={deleteConfirm.open} 
+        onOpenChange={(isOpen) => 
+          setDeleteConfirm({ ...deleteConfirm, open: isOpen })
+        }
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this prompt and all its contents. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  );
-};
-
-const CategoryCard = ({ 
-  category, 
-  onCreatePrompt,
-  onDelete
-}: { 
-  category: Prompt; 
-  onCreatePrompt: (parentId: string | null, isCategory: boolean) => void;
-  onDelete: (id: string, title: string) => void;
-}) => {
-  // Fetch child prompts and categories
-  const { prompts: childPrompts, isLoading } = useCrewkitPrompts(category.id);
-  
-  const childCategories = childPrompts.filter(p => p.is_category);
-  const actualPrompts = childPrompts.filter(p => !p.is_category);
-  
-  return (
-    <Card className="relative overflow-hidden group">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Folders className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base truncate">{category.title}</CardTitle>
-          </div>
-          <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" className="h-7 w-7">
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7 text-destructive"
-              onClick={() => onDelete(category.id, category.title)}
-            >
-              <Trash className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-        {category.description && (
-          <CardDescription className="mt-2 line-clamp-2">
-            {category.description}
-          </CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="pb-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex gap-2">
-            <Badge variant="outline" className="text-xs px-1">
-              {`${childCategories.length} categories`}
-            </Badge>
-            <Badge variant="outline" className="text-xs px-1">
-              {`${actualPrompts.length} prompts`}
-            </Badge>
-          </div>
-        </div>
-        <div className="mt-2 flex gap-2">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="h-8 text-xs flex items-center gap-1.5"
-            onClick={() => onCreatePrompt(category.id, true)}
-          >
-            <PlusCircle className="h-3 w-3" />
-            <span>Add Category</span>
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="h-8 text-xs flex items-center gap-1.5"
-            onClick={() => onCreatePrompt(category.id, false)}
-          >
-            <PlusCircle className="h-3 w-3" />
-            <span>Add Prompt</span>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-const PromptCard = ({ 
-  prompt, 
-  onDelete
-}: { 
-  prompt: Prompt; 
-  onDelete: (id: string, title: string) => void;
-}) => {
-  return (
-    <Card className="relative overflow-hidden group">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base truncate">{prompt.title}</CardTitle>
-          </div>
-          <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" className="h-7 w-7">
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7 text-destructive"
-              onClick={() => onDelete(prompt.id, prompt.title)}
-            >
-              <Trash className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-        {prompt.description && (
-          <CardDescription className="mt-2 line-clamp-2">
-            {prompt.description}
-          </CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="h-24 overflow-hidden text-xs text-muted-foreground opacity-70">
-        <ScrollArea className="h-full">
-          {prompt.prompt ? (
-            <div className="font-mono">{prompt.prompt.substring(0, 300)}{prompt.prompt.length > 300 ? '...' : ''}</div>
-          ) : (
-            <div className="italic">No prompt content</div>
-          )}
-        </ScrollArea>
-      </CardContent>
-    </Card>
   );
 };
 

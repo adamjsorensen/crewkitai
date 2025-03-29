@@ -11,36 +11,27 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash } from "lucide-react";
-import { PromptParameter, useCrewkitPromptParameters } from "@/hooks/useCrewkitPromptParameters";
+import { ParameterWithTweaks, useCrewkitPromptParameters } from "@/hooks/useCrewkitPromptParameters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EditParameterDialog from "./EditParameterDialog";
 
 type ParametersTableProps = {
-  parameters: PromptParameter[];
+  parameters: ParameterWithTweaks[];
   isLoading: boolean;
-};
-
-const parameterTypeLabels: Record<string, { label: string; variant: "default" | "outline" | "secondary" }> = {
-  tone_and_style: { label: "Tone & Style", variant: "default" },
-  audience: { label: "Audience", variant: "secondary" },
-  length: { label: "Length", variant: "outline" },
-  focus: { label: "Focus", variant: "secondary" },
-  format: { label: "Format", variant: "default" },
-  custom: { label: "Custom", variant: "outline" },
 };
 
 const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
   const { toast } = useToast();
   const { deleteParameter } = useCrewkitPromptParameters();
-  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; parameter: PromptParameter | null }>({
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; parameter: ParameterWithTweaks | null }>({
     open: false,
     parameter: null,
   });
-  const [editParameter, setEditParameter] = useState<PromptParameter | null>(null);
+  const [editParameter, setEditParameter] = useState<ParameterWithTweaks | null>(null);
 
-  const handleDeleteClick = (parameter: PromptParameter) => {
+  const handleDeleteClick = (parameter: ParameterWithTweaks) => {
     setDeleteConfirm({ open: true, parameter });
   };
 
@@ -58,8 +49,20 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
     setDeleteConfirm({ open: false, parameter: null });
   };
 
-  const handleEditClick = (parameter: PromptParameter) => {
+  const handleEditClick = (parameter: ParameterWithTweaks) => {
     setEditParameter(parameter);
+  };
+
+  const getParameterTypeLabel = (type: string) => {
+    const typeMap: Record<string, string> = {
+      tone_and_style: "Tone & Style",
+      audience: "Audience",
+      length: "Length",
+      focus: "Focus",
+      format: "Format",
+      custom: "Custom"
+    };
+    return typeMap[type] || type;
   };
 
   if (isLoading) {
@@ -86,10 +89,11 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[200px]">Name</TableHead>
-              <TableHead>Description</TableHead>
+              <TableHead className="w-[180px]">Name</TableHead>
               <TableHead className="w-[150px]">Type</TableHead>
-              <TableHead className="w-[100px]">Status</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead className="w-[100px]">Tweaks</TableHead>
+              <TableHead className="w-[80px]">Status</TableHead>
               <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -97,16 +101,13 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
             {parameters.map((parameter) => (
               <TableRow key={parameter.id}>
                 <TableCell className="font-medium">{parameter.name}</TableCell>
-                <TableCell>{parameter.description || "—"}</TableCell>
-                <TableCell>
-                  {parameter.type in parameterTypeLabels ? (
-                    <Badge variant={parameterTypeLabels[parameter.type].variant}>
-                      {parameterTypeLabels[parameter.type].label}
-                    </Badge>
-                  ) : (
-                    parameter.type
-                  )}
+                <TableCell>{getParameterTypeLabel(parameter.type)}</TableCell>
+                <TableCell className="max-w-md">
+                  <div className="truncate">
+                    {parameter.description || "—"}
+                  </div>
                 </TableCell>
+                <TableCell>{parameter.tweaks?.length || 0}</TableCell>
                 <TableCell>
                   <Badge variant={parameter.active ? "default" : "secondary"}>
                     {parameter.active ? "Active" : "Inactive"}
@@ -143,8 +144,7 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete the parameter "{deleteConfirm.parameter?.name}". This action cannot be undone,
-              and all associated tweaks will also be deleted.
+              This will delete the parameter "{deleteConfirm.parameter?.name}" and all associated tweaks. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -160,7 +160,9 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
         <EditParameterDialog
           parameter={editParameter}
           open={!!editParameter}
-          onOpenChange={(open) => !open && setEditParameter(null)}
+          onOpenChange={(open) => {
+            if (!open) setEditParameter(null);
+          }}
         />
       )}
     </>
