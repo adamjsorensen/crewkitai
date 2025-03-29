@@ -1,92 +1,68 @@
 
 import React from "react";
-import { AIContentSettings } from "@/hooks/useAIContentSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { AIContentSettings } from "@/hooks/useAIContentSettings";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader } from "lucide-react";
 
 const formSchema = z.object({
-  systemPrompt: z.string().min(10, "System prompt must be at least 10 characters"),
-  temperature: z.number().min(0).max(1),
-  maxTokens: z.number().int().min(100).max(4096),
-  model: z.string().min(1, "Please select a model"),
-  contentModifierTemperature: z.number().min(0).max(1),
+  model: z.string(),
+  temperature: z.coerce.number().min(0).max(1),
+  max_tokens: z.coerce.number().min(1).max(8000),
+  top_p: z.coerce.number().min(0).max(1),
+  frequency_penalty: z.coerce.number().min(-2).max(2),
+  presence_penalty: z.coerce.number().min(-2).max(2),
+  api_key: z.string().optional(),
 });
 
 interface AIContentSettingsFormProps {
-  settings: AIContentSettings;
+  settings: AIContentSettings | null;
   isLoading: boolean;
-  onUpdateSettings: (settings: Partial<AIContentSettings>) => Promise<boolean>;
+  onUpdateSettings: (settings: AIContentSettings) => void;
 }
 
 const AIContentSettingsForm = ({ settings, isLoading, onUpdateSettings }: AIContentSettingsFormProps) => {
-  const [isSaving, setIsSaving] = React.useState(false);
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      systemPrompt: settings.systemPrompt,
-      temperature: settings.temperature,
-      maxTokens: settings.maxTokens,
-      model: settings.model,
-      contentModifierTemperature: settings.contentModifierTemperature
+    defaultValues: settings || {
+      model: "gpt-4o",
+      temperature: 0.7,
+      max_tokens: 2048,
+      top_p: 1.0,
+      frequency_penalty: 0.0,
+      presence_penalty: 0.0,
     },
   });
 
-  // Update form when settings change
   React.useEffect(() => {
-    if (!isLoading) {
-      form.reset({
-        systemPrompt: settings.systemPrompt,
-        temperature: settings.temperature,
-        maxTokens: settings.maxTokens,
-        model: settings.model,
-        contentModifierTemperature: settings.contentModifierTemperature
-      });
+    if (settings) {
+      form.reset(settings);
     }
-  }, [settings, isLoading, form]);
+  }, [settings, form]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSaving(true);
-    try {
-      await onUpdateSettings(values);
-      form.reset(values);
-    } finally {
-      setIsSaving(false);
-    }
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    onUpdateSettings(values);
   };
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex justify-center items-center h-40">
-            <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex justify-center items-center h-64">
+        <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
@@ -95,7 +71,7 @@ const AIContentSettingsForm = ({ settings, isLoading, onUpdateSettings }: AICont
       <CardHeader>
         <CardTitle>AI Settings</CardTitle>
         <CardDescription>
-          Configure AI models and parameters used for content generation
+          Configure AI model and parameters for content generation
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -106,44 +82,20 @@ const AIContentSettingsForm = ({ settings, isLoading, onUpdateSettings }: AICont
               name="model"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>AI Model</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <FormLabel>Model</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a model" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="gpt-4o-mini">GPT-4o Mini (Fast, Efficient)</SelectItem>
-                      <SelectItem value="gpt-4o">GPT-4o (Most Powerful)</SelectItem>
+                      <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
+                      <SelectItem value="gpt-4o">GPT-4o</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Choose the AI model to use for content generation
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="systemPrompt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>System Prompt</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="You are an expert content writer for painting professionals..."
-                      className="min-h-[150px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Default system instructions given to the AI for all content generation
+                    The AI model to use for content generation
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -156,18 +108,12 @@ const AIContentSettingsForm = ({ settings, isLoading, onUpdateSettings }: AICont
                 name="temperature"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Temperature: {field.value.toFixed(1)}</FormLabel>
+                    <FormLabel>Temperature</FormLabel>
                     <FormControl>
-                      <Slider
-                        min={0}
-                        max={1}
-                        step={0.1}
-                        value={[field.value]}
-                        onValueChange={(vals) => field.onChange(vals[0])}
-                      />
+                      <Input type="number" step="0.1" min="0" max="1" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Controls creativity (0 = deterministic, 1 = creative)
+                      Controls randomness (0-1)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -176,21 +122,83 @@ const AIContentSettingsForm = ({ settings, isLoading, onUpdateSettings }: AICont
 
               <FormField
                 control={form.control}
-                name="contentModifierTemperature"
+                name="max_tokens"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Modification Temperature: {field.value.toFixed(1)}</FormLabel>
+                    <FormLabel>Max Tokens</FormLabel>
                     <FormControl>
-                      <Slider
-                        min={0}
-                        max={1}
-                        step={0.1}
-                        value={[field.value]}
-                        onValueChange={(vals) => field.onChange(vals[0])}
-                      />
+                      <Input type="number" min="1" max="8000" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Temperature for content modification requests
+                      Maximum length of generated content
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="top_p"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Top P</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.1" min="0" max="1" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Controls diversity via nucleus sampling
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="frequency_penalty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Frequency Penalty</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.1" min="-2" max="2" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Reduces repetition of frequent tokens
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="presence_penalty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Presence Penalty</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.1" min="-2" max="2" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Encourages new topics
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="api_key"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>API Key (Optional)</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Using default key" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormDescription>
+                      Custom API key for this feature
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -198,39 +206,7 @@ const AIContentSettingsForm = ({ settings, isLoading, onUpdateSettings }: AICont
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="maxTokens"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Max Tokens</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={100}
-                      max={4096}
-                      {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Maximum tokens (words) allowed in generated responses
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Settings"
-              )}
-            </Button>
+            <Button type="submit">Save Settings</Button>
           </form>
         </Form>
       </CardContent>

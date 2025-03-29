@@ -1,4 +1,3 @@
-
 import React from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useQuery } from "@tanstack/react-query";
@@ -44,7 +43,11 @@ const GenerationsPage = () => {
       const { data, error } = await supabase
         .from('prompt_generations')
         .select(`
-          *,
+          id,
+          created_at,
+          generated_content,
+          created_by,
+          custom_prompt_id,
           user:created_by(email),
           custom_prompt:custom_prompt_id(
             base_prompt:base_prompt_id(title)
@@ -57,7 +60,7 @@ const GenerationsPage = () => {
         throw new Error(`Failed to fetch generations: ${error.message}`);
       }
       
-      return data as Generation[];
+      return data as unknown as Generation[];
     },
   });
 
@@ -106,7 +109,7 @@ const GenerationsPage = () => {
             <div className="flex justify-center items-center h-64">
               <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : !filteredGenerations || filteredGenerations.length === 0 ? (
+          ) : !generations || generations.length === 0 ? (
             <div className="flex justify-center items-center h-64 text-muted-foreground">
               No generations found
             </div>
@@ -122,7 +125,7 @@ const GenerationsPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredGenerations.map((generation) => (
+                {generations.map((generation) => (
                   <TableRow key={generation.id}>
                     <TableCell className="whitespace-nowrap">
                       {new Date(generation.created_at).toLocaleString()}
@@ -143,7 +146,7 @@ const GenerationsPage = () => {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => handleViewGeneration(generation)}
+                        onClick={() => setSelectedGeneration(generation)}
                       >
                         <Eye className="h-4 w-4 mr-1.5" />
                         View
