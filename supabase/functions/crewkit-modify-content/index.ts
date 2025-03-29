@@ -1,161 +1,174 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1';
-import 'https://deno.land/x/xhr@0.3.0/mod.ts';
+import { serve } from "https://deno.land/std@0.182.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.1";
 
-// CORS headers for browser requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+interface RequestData {
+  content: string;
+  modification: string;
+}
+
+// Logging function for debugging
+const logEvent = async (message: string, data: any = {}) => {
+  console.log(`[crewkit-modify-content] ${message}`, data);
 };
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+serve(async (req: Request) => {
   try {
-    // Get Supabase credentials from environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const openAiApiKey = Deno.env.get('OPENAI_API_KEY');
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase environment variables');
-    }
-    
-    if (!openAiApiKey) {
-      throw new Error('Missing OpenAI API key');
-    }
-    
-    // Create Supabase client with the service key for admin access
-    const supabaseAdmin = createClient(
-      supabaseUrl,
-      supabaseServiceKey
-    );
-    
-    // Extract data from request
-    const { content, modification } = await req.json();
-    
-    if (!content) {
+    // Get the authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: 'content is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (!modification) {
-      return new Response(
-        JSON.stringify({ error: 'modification is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Missing or invalid authorization header" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Get the user ID from the JWT
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing Authorization header');
+    // Get the JWT token
+    const jwt = authHeader.substring(7);
+
+    // Create Supabase client with the user's JWT
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verify the JWT token and get the user
+    const { data: userData, error: authError } = await supabase.auth.getUser(jwt);
+    if (authError || !userData.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid token" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
     }
-    
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (userError || !user) {
-      throw new Error(`Invalid user token: ${userError?.message || 'No user found'}`);
+
+    const userId = userData.user.id;
+
+    // Get the request data
+    const requestData: RequestData = await req.json();
+
+    // Validate the request
+    if (!requestData.content || !requestData.modification) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: content and/or modification" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
-    
-    const userId = user.id;
-    
-    console.log(`[crewkit-modify-content] Processing content modification request for userId: ${userId}`);
-    
-    // Get AI settings for model and temperature
-    const { data: aiSettings, error: aiSettingsError } = await supabaseAdmin
-      .from('ai_settings')
-      .select('name, value')
-      .in('name', ['content_modifier_temperature', 'content_generator_model']);
-    
-    // Default AI settings if none found in database
-    let temperature = 0.7;
-    let model = 'gpt-4o-mini';
-    
-    // Process AI settings if available
-    if (aiSettings && aiSettings.length > 0) {
-      for (const setting of aiSettings) {
-        if (setting.name === 'content_modifier_temperature' && setting.value) {
-          try {
-            const tempValue = parseFloat(JSON.parse(setting.value));
-            if (!isNaN(tempValue) && tempValue >= 0 && tempValue <= 1) {
-              temperature = tempValue;
-            }
-          } catch (e) {
-            console.error(`[crewkit-modify-content] Error parsing temperature: ${e}`);
+
+    await logEvent("Request received", { userId, requestData: { 
+      contentLength: requestData.content.length,
+      modificationLength: requestData.modification.length
+    }});
+
+    // 1. Get AI settings for content modification
+    const { data: aiSettings, error: aiSettingsError } = await supabase
+      .from("ai_settings")
+      .select("name, value")
+      .in("name", [
+        "content_generator_model",
+        "content_modifier_temperature"
+      ]);
+
+    if (aiSettingsError) {
+      await logEvent("Error fetching AI settings", { error: aiSettingsError });
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch AI settings" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse AI settings with defaults
+    const settings = {
+      temperature: 0.7,
+      model: "gpt-4o-mini",
+    };
+
+    if (aiSettings) {
+      aiSettings.forEach(setting => {
+        try {
+          const value = JSON.parse(setting.value);
+          switch (setting.name) {
+            case "content_modifier_temperature":
+              settings.temperature = parseFloat(value);
+              break;
+            case "content_generator_model":
+              settings.model = value;
+              break;
           }
-        } else if (setting.name === 'content_generator_model' && setting.value) {
-          try {
-            model = JSON.parse(setting.value);
-          } catch (e) {
-            console.error(`[crewkit-modify-content] Error parsing model: ${e}`);
-          }
+        } catch (e) {
+          console.error(`Error parsing setting ${setting.name}:`, e);
         }
-      }
+      });
     }
+
+    // 2. Make a request to the AI model API
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: "OpenAI API key not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const systemPrompt = "You are an editor helping a painting professional modify their content. Make the requested changes to the content while maintaining the core message and professional tone. Return ONLY the modified content, nothing else.";
     
-    // Call OpenAI API to modify the content
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${openAiApiKey}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: model,
+        model: settings.model,
         messages: [
-          { 
-            role: 'system', 
-            content: `You are an editor and content improvement specialist. 
-Your task is to modify the provided content according to the user's instructions. 
-Return only the modified content without explanations, comments or any other text.` 
-          },
-          { 
-            role: 'user', 
-            content: `Original content: \n\n${content}\n\nModification instructions: ${modification}\n\nReturn only the modified content.` 
-          }
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Original Content:\n\n${requestData.content}\n\nModify the content as follows: ${requestData.modification}\n\nReturn only the modified content.` }
         ],
-        temperature: temperature,
-      }),
+        temperature: settings.temperature,
+        max_tokens: 4000,
+      })
     });
-    
-    if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json();
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+
+    const aiData = await aiResponse.json();
+
+    await logEvent("AI response received", { status: aiResponse.status });
+
+    if (!aiResponse.ok) {
+      return new Response(
+        JSON.stringify({ error: "Error from AI service", details: aiData }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
-    
-    const responseData = await openAIResponse.json();
-    const modifiedContent = responseData.choices[0]?.message?.content || '';
-    
-    // Log the activity
-    await supabaseAdmin.functions.invoke('pg-coach-logger', {
-      body: {
+
+    const modifiedContent = aiData.choices[0].message.content;
+
+    // 3. Log the activity
+    const { error: logError } = await supabase
+      .from("activity_logs")
+      .insert({
         user_id: userId,
-        action_type: 'content_modified',
-        action_details: {
-          modification_instruction: modification
+        action_type: "content_modified",
+        details: {
+          originalLength: requestData.content.length,
+          modifiedLength: modifiedContent.length,
+          modification: requestData.modification
         }
-      }
-    });
-    
-    // Return the modified content
+      });
+
+    if (logError) {
+      await logEvent("Error logging activity", { error: logError });
+      // Continue anyway
+    }
+
+    // 4. Return the modified content
     return new Response(
       JSON.stringify({ modifiedContent }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
+
   } catch (error) {
-    console.error('[crewkit-modify-content] Error:', error);
-    
+    console.error("Unhandled error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: "Internal server error", details: error.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 });

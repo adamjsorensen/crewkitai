@@ -5,7 +5,7 @@ import {
   SidebarRail,
   useSidebar
 } from "@/components/ui/sidebar";
-import SidebarContentItems from "./SidebarContentItems";
+import { SidebarContentItems } from "./SidebarContentItems";
 
 const DesktopSidebar = () => {
   const { state } = useSidebar();

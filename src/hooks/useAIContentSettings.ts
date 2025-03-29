@@ -130,17 +130,6 @@ export function useAIContentSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-content-settings'] });
-      toast({
-        title: 'Settings updated',
-        description: 'AI content settings have been updated successfully.',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error updating settings',
-        description: error.message,
-        variant: 'destructive',
-      });
     },
   });
 

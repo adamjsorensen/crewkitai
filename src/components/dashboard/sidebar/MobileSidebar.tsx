@@ -3,7 +3,7 @@ import React from "react";
 import { Menu, PaintBucket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import SidebarContentItems from "./SidebarContentItems";
+import { SidebarContentItems } from "./SidebarContentItems";
 
 const MobileSidebar = () => {
   return (

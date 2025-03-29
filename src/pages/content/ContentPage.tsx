@@ -1,214 +1,328 @@
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { PromptCard } from "@/components/content/PromptCard";
+import { CategoryTile } from "@/components/content/CategoryTile";
+import { CustomPromptWizard } from "@/components/content/CustomPromptWizard";
+import { useCrewkitPrompts } from "@/hooks/useCrewkitPrompts";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, FileText, BookOpen, ChevronRight } from "lucide-react";
-import { useCrewkitPrompts, Prompt } from "@/hooks/useCrewkitPrompts";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import CategoryTile from "@/components/content/CategoryTile";
-import PromptCard from "@/components/content/PromptCard";
-import CustomPromptWizard from "@/components/content/CustomPromptWizard";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search, Filter, XCircle } from "lucide-react";
 
-// Create a map of hub areas and their display names
-const hubAreas = {
-  marketing: "Marketing",
-  sales: "Sales",
-  operations: "Operations",
-  client_communications: "Client Communications",
-  general: "General",
-};
-
-type HubAreaType = keyof typeof hubAreas;
-
-const ContentPage = () => {
-  const navigate = useNavigate();
-  const { prompts, isLoading } = useCrewkitPrompts();
+const PromptLibrary = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [currentTab, setCurrentTab] = useState<HubAreaType | "all">("all");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  // Filter prompts by search term and selected hub area
-  const filteredPrompts = prompts
-    .filter((prompt) => {
+  const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
+  
+  // Load prompts with the updated useCrewkitPrompts hook
+  const { prompts, categories, isLoading, isError } = useCrewkitPrompts();
+  
+  // Filter prompts based on search term and category
+  const filteredPrompts = React.useMemo(() => {
+    if (!prompts) return [];
+    
+    return prompts.filter(prompt => {
       // Filter by search term
-      const matchesSearch =
-        searchTerm === "" ||
+      const matchesSearch = searchTerm === "" ||
         prompt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (prompt.description && prompt.description.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      // Filter by hub area
-      const matchesHubArea =
-        currentTab === "all" ||
-        (prompt.hub_area && prompt.hub_area === currentTab);
-
+      
       // Filter by selected category
-      const matchesCategory =
-        !selectedCategory ||
-        (prompt.parent_id === selectedCategory);
-
-      return matchesSearch && matchesHubArea && (selectedCategory ? matchesCategory : true);
+      const matchesCategory = !selectedCategory || prompt.parent_id === selectedCategory;
+      
+      // Filter by active tab
+      const matchesTab = activeTab === 'all' || 
+        (activeTab === 'marketing' && prompt.hub_area === 'marketing') ||
+        (activeTab === 'sales' && prompt.hub_area === 'sales') ||
+        (activeTab === 'operations' && prompt.hub_area === 'operations');
+      
+      return matchesSearch && matchesCategory && matchesTab && !prompt.is_category;
     });
-
-  const rootCategories = filteredPrompts.filter(
-    (prompt) => prompt.is_category && (!selectedCategory ? !prompt.parent_id : prompt.parent_id === selectedCategory)
-  );
+  }, [prompts, searchTerm, selectedCategory, activeTab]);
   
-  const rootPrompts = filteredPrompts.filter(
-    (prompt) => !prompt.is_category && (!selectedCategory ? !prompt.parent_id : prompt.parent_id === selectedCategory)
-  );
-
-  const handlePromptSelect = (prompt: Prompt) => {
-    setSelectedPrompt(prompt);
-    setWizardOpen(true);
-  };
-
-  const handleCategorySelect = (category: Prompt) => {
-    setSelectedCategory(category.id);
-  };
-
-  const handleBackToRoot = () => {
+  // Filter categories based on active tab
+  const filteredCategories = React.useMemo(() => {
+    if (!categories) return [];
+    
+    return categories.filter(category => {
+      return activeTab === 'all' || 
+        (activeTab === 'marketing' && category.hub_area === 'marketing') ||
+        (activeTab === 'sales' && category.hub_area === 'sales') ||
+        (activeTab === 'operations' && category.hub_area === 'operations');
+    });
+  }, [categories, activeTab]);
+  
+  const handleClearFilters = () => {
+    setSearchTerm("");
     setSelectedCategory(null);
   };
-
-  const handleWizardClose = () => {
-    setWizardOpen(false);
-    setSelectedPrompt(null);
-  };
-
-  // Get the current category's title
-  const currentCategory = selectedCategory
-    ? prompts.find((p) => p.id === selectedCategory)
-    : null;
+  
+  const isFiltering = searchTerm !== "" || selectedCategory !== null;
 
   return (
     <DashboardLayout>
       <div className="container mx-auto py-6 space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
-              <BookOpen className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">Content Creation</h1>
-              <p className="text-muted-foreground">
-                Generate professional content for your painting business
-              </p>
-            </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Content Creation</h1>
+            <p className="text-muted-foreground">
+              Generate professional content for your painting business
+            </p>
           </div>
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <Input
-              placeholder="Search prompts..."
-              className="pl-10 w-full md:w-[250px]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          
+          <div className="flex gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-[260px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Input
+                placeholder="Search prompts..."
+                className="pl-10 pr-4"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            {isFiltering && (
+              <Button variant="outline" onClick={handleClearFilters} size="icon">
+                <XCircle className="h-5 w-5" />
+                <span className="sr-only">Clear filters</span>
+              </Button>
+            )}
           </div>
         </div>
-
-        <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as HubAreaType | "all")}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            {Object.entries(hubAreas).map(([key, label]) => (
-              <TabsTrigger key={key} value={key}>
-                {label}
-              </TabsTrigger>
-            ))}
+        
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="all">All Content</TabsTrigger>
+            <TabsTrigger value="marketing">Marketing</TabsTrigger>
+            <TabsTrigger value="sales">Sales</TabsTrigger>
+            <TabsTrigger value="operations">Operations</TabsTrigger>
           </TabsList>
-
-          <TabsContent value={currentTab} className="space-y-6">
-            {selectedCategory && (
-              <div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBackToRoot}
-                  className="mb-4"
-                >
-                  <ChevronRight className="mr-2 h-4 w-4 rotate-180" />
-                  Back to {currentCategory ? currentCategory.parent_id ? "Category" : "Root" : "Root"}
-                </Button>
-                
-                {currentCategory && (
-                  <h2 className="text-xl font-bold mb-4">{currentCategory.title}</h2>
-                )}
-              </div>
-            )}
-
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-40 w-full rounded-lg" />
-                ))}
-              </div>
-            ) : (
-              <>
-                {rootCategories.length > 0 && (
-                  <div className="mb-8">
-                    <h2 className="text-xl font-semibold mb-4">Categories</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {rootCategories.map((category) => (
-                        <CategoryTile
-                          key={category.id}
-                          category={category}
-                          onSelect={() => handleCategorySelect(category)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <h2 className="text-xl font-semibold mb-4">Available Prompts</h2>
-                {rootPrompts.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {rootPrompts.map((prompt) => (
-                      <PromptCard
-                        key={prompt.id}
-                        prompt={prompt}
-                        onSelect={() => handlePromptSelect(prompt)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                      <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                      <p className="text-center text-muted-foreground mb-4">
-                        No prompts found. Try adjusting your search or category selection.
-                      </p>
-                      {searchTerm && (
-                        <Button
-                          variant="outline"
-                          onClick={() => setSearchTerm("")}
-                        >
-                          Clear Search
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            )}
+          
+          <TabsContent value="all" className="mt-6">
+            <ContentDisplay 
+              categories={filteredCategories}
+              prompts={filteredPrompts}
+              isLoading={isLoading}
+              isError={isError}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedPrompt={selectedPrompt}
+              setSelectedPrompt={setSelectedPrompt}
+              isFiltering={isFiltering}
+            />
+          </TabsContent>
+          
+          <TabsContent value="marketing" className="mt-6">
+            <ContentDisplay 
+              categories={filteredCategories}
+              prompts={filteredPrompts}
+              isLoading={isLoading}
+              isError={isError}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedPrompt={selectedPrompt}
+              setSelectedPrompt={setSelectedPrompt}
+              isFiltering={isFiltering}
+            />
+          </TabsContent>
+          
+          <TabsContent value="sales" className="mt-6">
+            <ContentDisplay 
+              categories={filteredCategories}
+              prompts={filteredPrompts}
+              isLoading={isLoading}
+              isError={isError}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedPrompt={selectedPrompt}
+              setSelectedPrompt={setSelectedPrompt}
+              isFiltering={isFiltering}
+            />
+          </TabsContent>
+          
+          <TabsContent value="operations" className="mt-6">
+            <ContentDisplay 
+              categories={filteredCategories}
+              prompts={filteredPrompts}
+              isLoading={isLoading}
+              isError={isError}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedPrompt={selectedPrompt}
+              setSelectedPrompt={setSelectedPrompt}
+              isFiltering={isFiltering}
+            />
           </TabsContent>
         </Tabs>
+        
+        {/* Custom Prompt Wizard Dialog */}
+        {selectedPrompt && (
+          <CustomPromptWizard
+            promptId={selectedPrompt}
+            isOpen={!!selectedPrompt}
+            onClose={() => setSelectedPrompt(null)}
+          />
+        )}
       </div>
-
-      {selectedPrompt && (
-        <CustomPromptWizard
-          prompt={selectedPrompt}
-          open={wizardOpen}
-          onOpenChange={setWizardOpen}
-        />
-      )}
     </DashboardLayout>
   );
 };
 
-export default ContentPage;
+interface ContentDisplayProps {
+  categories: any[];
+  prompts: any[];
+  isLoading: boolean;
+  isError: boolean;
+  selectedCategory: string | null;
+  setSelectedCategory: (id: string | null) => void;
+  selectedPrompt: string | null;
+  setSelectedPrompt: (id: string | null) => void;
+  isFiltering: boolean;
+}
+
+const ContentDisplay = ({
+  categories,
+  prompts,
+  isLoading,
+  isError,
+  selectedCategory,
+  setSelectedCategory,
+  selectedPrompt,
+  setSelectedPrompt,
+  isFiltering
+}: ContentDisplayProps) => {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Skeleton key={index} className="h-[180px] rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+  
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <p className="text-red-500 mb-2">Error loading content templates</p>
+          <Button variant="outline">Try Again</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (categories.length === 0 && prompts.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <p className="text-muted-foreground mb-2">
+            {isFiltering 
+              ? "No content templates match your filters" 
+              : "No content templates available"}
+          </p>
+          {isFiltering && (
+            <Button variant="outline" onClick={() => setSelectedCategory(null)}>
+              Clear Filters
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // If a category is selected, show prompts from that category
+  if (selectedCategory) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setSelectedCategory(null)}
+              className="text-muted-foreground"
+            >
+              ← Back
+            </Button>
+            <h2 className="text-xl font-semibold">
+              {categories.find(cat => cat.id === selectedCategory)?.title || "Category"}
+            </h2>
+          </div>
+        </div>
+        
+        {prompts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {prompts.map(prompt => (
+              <PromptCard
+                key={prompt.id}
+                id={prompt.id}
+                title={prompt.title}
+                description={prompt.description || ""}
+                iconName={prompt.icon_name}
+                onClick={() => setSelectedPrompt(prompt.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <p className="text-muted-foreground">No prompts in this category</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+  
+  // Display categories and prompts
+  return (
+    <div className="space-y-6">
+      {categories.length > 0 && (
+        <>
+          <h2 className="text-xl font-semibold mt-2">Categories</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {categories.map(category => (
+              <CategoryTile
+                key={category.id}
+                id={category.id}
+                title={category.title}
+                description={category.description || ""}
+                iconName={category.icon_name}
+                onClick={() => setSelectedCategory(category.id)}
+              />
+            ))}
+          </div>
+          
+          {prompts.length > 0 && <Separator className="my-6" />}
+        </>
+      )}
+      
+      {prompts.length > 0 && (
+        <>
+          <h2 className="text-xl font-semibold mt-2">Templates</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {prompts.map(prompt => (
+              <PromptCard
+                key={prompt.id}
+                id={prompt.id}
+                title={prompt.title}
+                description={prompt.description || ""}
+                iconName={prompt.icon_name}
+                onClick={() => setSelectedPrompt(prompt.id)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default PromptLibrary;
