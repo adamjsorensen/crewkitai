@@ -86,11 +86,6 @@ export const SidebarContentItems = () => {
         title="Content Creation" 
       />
       <SidebarItem 
-        href="/dashboard/prompt-library" 
-        icon={BookOpen} 
-        title="Prompt Library" 
-      />
-      <SidebarItem 
         href="/dashboard/saved-content" 
         icon={Save} 
         title="Saved Content" 

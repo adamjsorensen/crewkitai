@@ -27,7 +27,6 @@ import UserListPage from "@/pages/user-management/UserListPage";
 import AddUserPage from "@/pages/user-management/AddUserPage";
 import ActivityLogsPage from "@/pages/user-management/ActivityLogsPage";
 import UserDetailsPage from "@/pages/user-management/UserDetailsPage";
-import PromptLibraryPage from "@/pages/content/PromptLibraryPage";
 import GeneratedContentPage from "@/pages/content/GeneratedContentPage";
 import SavedContentPage from "@/pages/content/SavedContentPage";
 import SavedContentDetailPage from "@/pages/content/SavedContentDetailPage";
@@ -75,7 +74,7 @@ function App() {
               <Route path="/dashboard/settings" element={<SettingsPage />} />
               
               {/* Content generation routes */}
-              <Route path="/dashboard/prompt-library" element={<PromptLibraryPage />} />
+              <Route path="/dashboard/prompt-library" element={<Navigate to="/dashboard/content" replace />} />
               <Route path="/dashboard/generated/:id" element={<GeneratedContentPage />} />
               <Route path="/dashboard/saved-content" element={<SavedContentPage />} />
               <Route path="/dashboard/saved-content/:slug" element={<SavedContentDetailPage />} />
