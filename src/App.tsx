@@ -1,88 +1,100 @@
 
 import React, { useEffect } from "react";
-import { Routes, Route, useNavigate, Navigate, useLocation } from "react-router-dom";
-import { ThemeProvider } from "@/components/theme-provider";
-import AuthPage from "@/pages/auth/AuthPage";
-import DashboardPage from "@/pages/dashboard/DashboardPage";
-import LandingPage from "@/pages/landing/LandingPage";
-import SettingsPage from "@/pages/dashboard/SettingsPage";
-import ProfilePage from "@/pages/dashboard/ProfilePage";
-import CompassPage from "@/pages/dashboard/CompassPage";
-import PGCoachPage from "@/pages/dashboard/PGCoachPage";
-import AISettingsPage from "@/pages/admin/AISettingsPage";
-import PromptsPage from "@/pages/admin/PromptsPage";
-import UserListPage from "@/pages/admin/UserListPage";
-import UserDetailsPage from "@/pages/admin/UserDetailsPage";
-import FinancialPage from "@/pages/dashboard/FinancialPage";
-import ParametersPage from "@/pages/admin/ParametersPage";
-import ContentSettingsPage from "@/pages/admin/ContentSettingsPage";
-import PromptLibraryPage from "@/pages/dashboard/PromptLibraryPage";
-import PromptPage from "@/pages/dashboard/PromptPage";
-import GeneratedContentPage from "@/pages/dashboard/GeneratedContentPage";
-import SavedContentPage from "@/pages/dashboard/SavedContentPage";
-import SavedContentDetailPage from "@/pages/dashboard/SavedContentDetailPage";
-
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import AuthPage from "@/pages/AuthPage";
+import Dashboard from "@/pages/Dashboard";
+import CompassPage from "@/pages/CompassPage";
+import PgCoachPage from "@/pages/PgCoachPage";
+import ContentPage from "@/pages/content/ContentPage";
+import FinancialPage from "@/pages/financial/FinancialDashboard";
+import ProfilePage from "@/pages/profile/ProfilePage";
+import SettingsPage from "@/pages/profile/SettingsPage";
+import AISettingsPage from "@/pages/admin/AiSettingsPage";
+import CompassSettingsPage from "@/pages/admin/CompassSettingsPage";
+import ContentSettingsPage from "@/pages/admin/ContentSettingsPage";
+import FeatureFlagsPage from "@/pages/admin/FeatureFlagsPage";
+import AppSettingsPage from "@/pages/admin/AppSettingsPage";
+import DatabasePage from "@/pages/admin/DatabasePage";
+import PromptsPage from "@/pages/admin/PromptsPage";
+import ParametersPage from "@/pages/admin/ParametersPage";
+import UserManagementPage from "@/pages/user-management/UserManagementPage";
+import UserListPage from "@/pages/user-management/UserListPage";
+import AddUserPage from "@/pages/user-management/AddUserPage";
+import ActivityLogsPage from "@/pages/user-management/ActivityLogsPage";
+import UserDetailsPage from "@/pages/user-management/UserDetailsPage";
+import { setupGraphlitCollections, isGraphlitAvailable } from "@/services/graphlitService";
+
+const queryClient = new QueryClient();
 
 function App() {
+  // Initialize Graphlit RAG collections on app start
+  useEffect(() => {
+    const initializeRag = async () => {
+      try {
+        // Check if Graphlit is available
+        const available = await isGraphlitAvailable();
+        
+        if (available) {
+          console.log('Initializing Graphlit RAG collections...');
+          const result = await setupGraphlitCollections();
+          console.log('Graphlit RAG initialization result:', result);
+        } else {
+          console.log('Graphlit RAG system not available, skipping initialization');
+        }
+      } catch (error) {
+        console.error('Error initializing Graphlit RAG:', error);
+      }
+    };
+    
+    initializeRag();
+  }, []);
+  
   return (
-    <ThemeProvider defaultTheme="light" storageKey="crewkit-ui-theme">
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SidebarProvider>
-          <MainApp />
+          <Router>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/compass" element={<CompassPage />} />
+              <Route path="/dashboard/pg-coach" element={<PgCoachPage />} />
+              <Route path="/dashboard/content" element={<ContentPage />} />
+              <Route path="/dashboard/financial" element={<FinancialPage />} />
+              <Route path="/dashboard/profile" element={<ProfilePage />} />
+              <Route path="/dashboard/settings" element={<SettingsPage />} />
+              
+              {/* Admin routes */}
+              <Route path="/dashboard/admin/ai-settings" element={<AISettingsPage />} />
+              <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
+              <Route path="/dashboard/admin/content-settings" element={<ContentSettingsPage />} />
+              <Route path="/dashboard/admin/prompts" element={<PromptsPage />} />
+              <Route path="/dashboard/admin/parameters" element={<ParametersPage />} />
+              <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
+              <Route path="/dashboard/admin/app-settings" element={<AppSettingsPage />} />
+              <Route path="/dashboard/admin/database" element={<DatabasePage />} />
+              
+              {/* User management routes - consolidated under one path pattern */}
+              <Route path="/dashboard/user-management" element={<UserManagementPage />}>
+                <Route path="user-list" element={<UserListPage />} />
+                <Route path="add-user" element={<AddUserPage />} />
+                <Route path="activity-logs" element={<ActivityLogsPage />} />
+                <Route path="user-details/:userId" element={<UserDetailsPage />} />
+              </Route>
+              
+              {/* Redirect any old /dashboard/ai-coach routes to /dashboard/pg-coach */}
+              <Route path="/dashboard/ai-coach" element={<Navigate to="/dashboard/pg-coach" replace />} />
+            </Routes>
+          </Router>
           <Toaster />
         </SidebarProvider>
       </AuthProvider>
-    </ThemeProvider>
-  );
-}
-
-function MainApp() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated && !location.pathname.startsWith("/auth") && location.pathname !== "/") {
-      navigate("/auth");
-    }
-  }, [isAuthenticated, isLoading, navigate, location.pathname]);
-
-  return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/auth" element={<AuthPage />} />
-      
-      {/* Dashboard Routes */}
-      <Route path="/dashboard" element={<ProtectedRoute element={<DashboardPage />} />} />
-      <Route path="/dashboard/settings" element={<ProtectedRoute element={<SettingsPage />} />} />
-      <Route path="/dashboard/profile" element={<ProtectedRoute element={<ProfilePage />} />} />
-      <Route path="/dashboard/compass" element={<ProtectedRoute element={<CompassPage />} />} />
-      <Route path="/dashboard/pg-coach" element={<ProtectedRoute element={<PGCoachPage />} />} />
-      <Route path="/dashboard/ai-coach" element={<Navigate to="/dashboard/pg-coach" replace />} />
-      <Route path="/dashboard/financial" element={<ProtectedRoute element={<FinancialPage />} />} />
-      
-      {/* Content Generator Routes */}
-      <Route path="/dashboard/prompt-library" element={<ProtectedRoute element={<PromptLibraryPage />} />} />
-      <Route path="/dashboard/prompt/:promptId" element={<ProtectedRoute element={<PromptPage />} />} />
-      <Route path="/dashboard/generated/:generationId" element={<ProtectedRoute element={<GeneratedContentPage />} />} />
-      <Route path="/dashboard/saved-content" element={<ProtectedRoute element={<SavedContentPage />} />} />
-      <Route path="/dashboard/saved-content/:slug" element={<ProtectedRoute element={<SavedContentDetailPage />} />} />
-      
-      {/* Admin Routes */}
-      <Route path="/dashboard/admin/ai-settings" element={<ProtectedRoute element={<AISettingsPage />} adminOnly />} />
-      <Route path="/dashboard/admin/prompts" element={<ProtectedRoute element={<PromptsPage />} adminOnly />} />
-      <Route path="/dashboard/admin/parameters" element={<ProtectedRoute element={<ParametersPage />} adminOnly />} />
-      <Route path="/dashboard/admin/content-settings" element={<ProtectedRoute element={<ContentSettingsPage />} adminOnly />} />
-      <Route path="/dashboard/admin/users" element={<ProtectedRoute element={<UserListPage />} adminOnly />} />
-      <Route path="/dashboard/admin/users/:userId" element={<ProtectedRoute element={<UserDetailsPage />} adminOnly />} />
-      
-      {/* Catch all for unknown routes */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+    </QueryClientProvider>
   );
 }
 

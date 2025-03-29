@@ -15,8 +15,7 @@ import {
   ChevronRight,
   Compass,
   Brush,
-  Users,
-  Sparkles
+  Users
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -49,14 +48,10 @@ const SidebarContentItems = () => {
     { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
     { name: "PainterGrowth AI", icon: Brush, path: "/dashboard/pg-coach" },
     { 
-      name: "Content Generator", 
-      icon: Sparkles, 
-      path: "/dashboard/prompt-library", 
-    },
-    { 
-      name: "Saved Content", 
+      name: "Content", 
       icon: FileText, 
-      path: "/dashboard/saved-content", 
+      path: "/dashboard/content", 
+      badge: { text: "Coming Soon", variant: "secondary" as const } 
     },
     { 
       name: "Financial", 
@@ -90,16 +85,6 @@ const SidebarContentItems = () => {
     if (itemPath === "/dashboard/pg-coach") {
       return location.pathname === "/dashboard/pg-coach" || 
              location.pathname === "/dashboard/ai-coach";
-    }
-    // Special case for content pages
-    if (itemPath === "/dashboard/prompt-library") {
-      return location.pathname.startsWith("/dashboard/prompt") ||
-             location.pathname === "/dashboard/prompt-library" ||
-             location.pathname.startsWith("/dashboard/generated");
-    }
-    // Special case for saved content
-    if (itemPath === "/dashboard/saved-content") {
-      return location.pathname.startsWith("/dashboard/saved-content");
     }
     return location.pathname.startsWith(itemPath);
   };

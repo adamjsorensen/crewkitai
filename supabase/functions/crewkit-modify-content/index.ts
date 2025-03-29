@@ -40,14 +40,14 @@ serve(async (req) => {
     
     if (!content) {
       return new Response(
-        JSON.stringify({ error: 'Content is required' }),
+        JSON.stringify({ error: 'content is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
     if (!modification) {
       return new Response(
-        JSON.stringify({ error: 'Modification instruction is required' }),
+        JSON.stringify({ error: 'modification is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -67,33 +67,22 @@ serve(async (req) => {
     
     const userId = user.id;
     
-    console.log(`[crewkit-modify-content] Processing modification for user: ${userId}`);
-
-    // Get AI settings
+    console.log(`[crewkit-modify-content] Processing content modification request for userId: ${userId}`);
+    
+    // Get AI settings for model and temperature
     const { data: aiSettings, error: aiSettingsError } = await supabaseAdmin
       .from('ai_settings')
       .select('name, value')
-      .in('name', ['content_generator_system_prompt', 'content_generator_temperature', 'content_generator_model']);
-    
-    if (aiSettingsError) {
-      console.error(`[crewkit-modify-content] Error fetching AI settings: ${aiSettingsError.message}`);
-    }
+      .in('name', ['content_modifier_temperature', 'content_generator_model']);
     
     // Default AI settings if none found in database
-    let systemPrompt = 'You are an expert editor. Modify the provided content based on the instructions. Return only the modified content, without any additional notes or explanations.';
-    let temperature = 0.5;
+    let temperature = 0.7;
     let model = 'gpt-4o-mini';
     
     // Process AI settings if available
     if (aiSettings && aiSettings.length > 0) {
       for (const setting of aiSettings) {
-        if (setting.name === 'content_generator_system_prompt' && setting.value) {
-          try {
-            systemPrompt = JSON.parse(setting.value);
-          } catch (e) {
-            console.error(`[crewkit-modify-content] Error parsing system prompt: ${e}`);
-          }
-        } else if (setting.name === 'content_generator_temperature' && setting.value) {
+        if (setting.name === 'content_modifier_temperature' && setting.value) {
           try {
             const tempValue = parseFloat(JSON.parse(setting.value));
             if (!isNaN(tempValue) && tempValue >= 0 && tempValue <= 1) {
@@ -112,10 +101,7 @@ serve(async (req) => {
       }
     }
     
-    // Create the prompt for modifying content
-    const userPrompt = `Original: ${content}\n\nModify: ${modification}\n\nReturn only the modified content.`;
-    
-    // Call OpenAI API
+    // Call OpenAI API to modify the content
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -125,8 +111,16 @@ serve(async (req) => {
       body: JSON.stringify({
         model: model,
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { 
+            role: 'system', 
+            content: `You are an editor and content improvement specialist. 
+Your task is to modify the provided content according to the user's instructions. 
+Return only the modified content without explanations, comments or any other text.` 
+          },
+          { 
+            role: 'user', 
+            content: `Original content: \n\n${content}\n\nModification instructions: ${modification}\n\nReturn only the modified content.` 
+          }
         ],
         temperature: temperature,
       }),
@@ -146,16 +140,14 @@ serve(async (req) => {
         user_id: userId,
         action_type: 'content_modified',
         action_details: {
-          modification
+          modification_instruction: modification
         }
       }
     });
     
-    // Return the response
+    // Return the modified content
     return new Response(
-      JSON.stringify({
-        modifiedContent
-      }),
+      JSON.stringify({ modifiedContent }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

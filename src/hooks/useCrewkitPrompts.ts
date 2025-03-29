@@ -1,131 +1,126 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-export type HubAreaType = "marketing" | "sales" | "operations" | "client_communications" | "general" | null;
-
-export interface Prompt {
+export type Prompt = {
   id: string;
   title: string;
   description: string | null;
-  is_category: boolean;
   prompt: string | null;
+  is_category: boolean;
   parent_id: string | null;
-  hub_area: HubAreaType;
+  hub_area: 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
   icon_name: string | null;
   display_order: number;
   created_by: string | null;
   is_default: boolean;
-}
+  created_at: string;
+  updated_at: string;
+};
 
-export const useCrewkitPrompts = (parentId: string | null = null) => {
-  const queryClient = useQueryClient();
+export type CreatePromptInput = Omit<Prompt, 'id' | 'created_at' | 'updated_at'>;
+export type UpdatePromptInput = Partial<Omit<Prompt, 'id' | 'created_at' | 'updated_at'>>;
+
+export function useCrewkitPrompts(parentId: string | null = null) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch prompts based on parentId
-  const { data: prompts, isLoading, error } = useQuery({
+  // Fetch prompts with optional parent filter
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['prompts', parentId],
     queryFn: async () => {
-      const query = supabase
+      let query = supabase
         .from('prompts')
-        .select('*');
+        .select('*')
+        .order('display_order', { ascending: true });
       
       if (parentId) {
-        query.eq('parent_id', parentId);
+        query = query.eq('parent_id', parentId);
       } else {
-        query.is('parent_id', null);
+        query = query.is('parent_id', null);
       }
       
-      const { data, error } = await query.order('display_order');
+      const { data, error } = await query;
       
       if (error) {
+        console.error('Error fetching prompts:', error);
+        setError(error.message);
         throw new Error(`Failed to fetch prompts: ${error.message}`);
       }
       
       return data as Prompt[];
-    }
+    },
   });
 
-  // Get a specific prompt by ID
-  const getPromptById = async (id: string): Promise<Prompt | null> => {
-    try {
+  // Create new prompt
+  const createPrompt = useMutation({
+    mutationFn: async (input: CreatePromptInput) => {
       const { data, error } = await supabase
         .from('prompts')
-        .select('*')
-        .eq('id', id)
+        .insert(input)
+        .select()
         .single();
       
       if (error) {
-        console.error('Error fetching prompt:', error);
-        return null;
+        console.error('Error creating prompt:', error);
+        throw new Error(`Failed to create prompt: ${error.message}`);
       }
       
       return data as Prompt;
-    } catch (error) {
-      console.error('Error in getPromptById:', error);
-      return null;
-    }
-  };
-
-  // Create a new prompt
-  const createPrompt = useMutation({
-    mutationFn: async (promptData: Omit<Prompt, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase
-        .from('prompts')
-        .insert(promptData)
-        .select()
-        .single();
-      
-      if (error) throw new Error(`Failed to create prompt: ${error.message}`);
-      return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
       toast({
-        title: "Prompt created",
-        description: `${data.is_category ? 'Category' : 'Prompt'} "${data.title}" has been created`,
+        title: 'Prompt created',
+        description: 'The prompt was created successfully',
       });
     },
     onError: (error) => {
       toast({
-        title: "Error creating prompt",
+        title: 'Error creating prompt',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
-    }
+    },
   });
 
-  // Update an existing prompt
+  // Update prompt
   const updatePrompt = useMutation({
-    mutationFn: async ({ id, ...promptData }: Prompt) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & UpdatePromptInput) => {
       const { data, error } = await supabase
         .from('prompts')
-        .update(promptData)
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
       
-      if (error) throw new Error(`Failed to update prompt: ${error.message}`);
-      return data;
+      if (error) {
+        console.error('Error updating prompt:', error);
+        throw new Error(`Failed to update prompt: ${error.message}`);
+      }
+      
+      return data as Prompt;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
       toast({
-        title: "Prompt updated",
-        description: `${data.is_category ? 'Category' : 'Prompt'} "${data.title}" has been updated`,
+        title: 'Prompt updated',
+        description: 'The prompt was updated successfully',
       });
     },
     onError: (error) => {
       toast({
-        title: "Error updating prompt",
+        title: 'Error updating prompt',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
-    }
+    },
   });
 
-  // Delete a prompt
+  // Delete prompt
   const deletePrompt = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -133,32 +128,72 @@ export const useCrewkitPrompts = (parentId: string | null = null) => {
         .delete()
         .eq('id', id);
       
-      if (error) throw new Error(`Failed to delete prompt: ${error.message}`);
+      if (error) {
+        console.error('Error deleting prompt:', error);
+        throw new Error(`Failed to delete prompt: ${error.message}`);
+      }
+      
       return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
       toast({
-        title: "Prompt deleted",
-        description: "The prompt has been deleted successfully",
+        title: 'Prompt deleted',
+        description: 'The prompt was deleted successfully',
       });
     },
     onError: (error) => {
       toast({
-        title: "Error deleting prompt",
+        title: 'Error deleting prompt',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
-    }
+    },
   });
 
+  // Get all prompts in a flat list
+  const getAllPrompts = async () => {
+    const { data, error } = await supabase
+      .from('prompts')
+      .select('*')
+      .eq('is_category', false)
+      .order('title', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching all prompts:', error);
+      setError(error.message);
+      throw new Error(`Failed to fetch all prompts: ${error.message}`);
+    }
+    
+    return data as Prompt[];
+  };
+
+  // Get prompt by ID
+  const getPromptById = async (id: string) => {
+    const { data, error } = await supabase
+      .from('prompts')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error(`Error fetching prompt with ID ${id}:`, error);
+      setError(error.message);
+      throw new Error(`Failed to fetch prompt: ${error.message}`);
+    }
+    
+    return data as Prompt;
+  };
+
   return {
-    prompts: prompts || [],
+    prompts: data || [],
     isLoading,
+    isError,
     error,
-    getPromptById,
     createPrompt,
     updatePrompt,
-    deletePrompt
+    deletePrompt,
+    getAllPrompts,
+    getPromptById,
   };
-};
+}
