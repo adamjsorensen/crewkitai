@@ -1,187 +1,173 @@
 
 import React from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { Link, useLocation } from "react-router-dom";
 import {
-  PaintBucket,
   LayoutDashboard,
-  FileText,
-  BarChart4,
-  Settings,
-  LogOut,
-  User,
-  Shield,
-  ChevronLeft,
-  ChevronRight,
   Compass,
-  Brush,
-  Users
+  MessageSquare,
+  FileText,
+  BarChart3,
+  Settings,
+  Users,
+  Database,
+  Flag,
+  Wrench,
+  Sparkles,
+  SliderHorizontal,
+  BookOpen,
+  Save,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarSeparator,
-  useSidebar
-} from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
-const SidebarContentItems = () => {
+interface SidebarItemProps {
+  href: string;
+  icon: React.ElementType;
+  title: string;
+  exact?: boolean;
+}
+
+const SidebarItem = ({ href, icon: Icon, title, exact = false }: SidebarItemProps) => {
   const location = useLocation();
-  const { signOut, isAdmin } = useAuth();
-  const navigate = useNavigate();
-  const { toggleSidebar, state } = useSidebar();
-  
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/auth");
-  };
-
-  const navItems = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
-    { name: "PainterGrowth AI", icon: Brush, path: "/dashboard/pg-coach" },
-    { 
-      name: "Content", 
-      icon: FileText, 
-      path: "/dashboard/content", 
-      badge: { text: "Coming Soon", variant: "secondary" as const } 
-    },
-    { 
-      name: "Financial", 
-      icon: BarChart4, 
-      path: "/dashboard/financial", 
-      badge: { text: "Coming Soon", variant: "secondary" as const } 
-    },
-    { name: "Profile", icon: User, path: "/dashboard/profile" },
-    { name: "Settings", icon: Settings, path: "/dashboard/settings" },
-  ];
-
-  const adminItems = [
-    { name: "Admin Console", icon: Shield, path: "/dashboard/admin/ai-settings" },
-    { name: "User Management", icon: Users, path: "/dashboard/user-management/user-list" },
-  ];
-
-  const isItemActive = (itemPath: string) => {
-    if (itemPath === "/dashboard") {
-      return location.pathname === "/dashboard";
-    }
-    // Special case for user management
-    if (itemPath.startsWith("/dashboard/user-management")) {
-      return location.pathname.startsWith("/dashboard/user-management");
-    }
-    // Special case for admin console
-    if (itemPath === "/dashboard/admin/ai-settings") {
-      return location.pathname.startsWith("/dashboard/admin/") && 
-             !location.pathname.startsWith("/dashboard/admin/users");
-    }
-    // Handle redirect from ai-coach to pg-coach
-    if (itemPath === "/dashboard/pg-coach") {
-      return location.pathname === "/dashboard/pg-coach" || 
-             location.pathname === "/dashboard/ai-coach";
-    }
-    return location.pathname.startsWith(itemPath);
-  };
+  const isActive = exact
+    ? location.pathname === href
+    : location.pathname.startsWith(href);
 
   return (
-    <>
-      <SidebarHeader className="py-3">
-        <div className="flex items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <PaintBucket className="h-6 w-6 text-primary" />
-            <span className="font-display text-lg font-semibold">CrewkitAI</span>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-6 w-6 ml-2 hover:bg-accent" 
-            onClick={toggleSidebar}
-          >
-            {state === "collapsed" ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </SidebarHeader>
-
-      <SidebarSeparator />
-
-      <SidebarContent className="flex-1">
-        <SidebarGroup>
-          <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.name}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isItemActive(item.path)}
-                  tooltip={item.name}
-                >
-                  <Link to={item.path} className="flex justify-between w-full">
-                    <div className="flex items-center">
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.name}</span>
-                    </div>
-                    {item.badge && (
-                      <Badge 
-                        variant={item.badge.variant} 
-                        className="ml-2 text-xs h-5 px-1.5"
-                      >
-                        {item.badge.text}
-                      </Badge>
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        {isAdmin && (
-          <>
-            <SidebarSeparator className="my-2" />
-            <SidebarGroup>
-              <SidebarMenu>
-                {adminItems.map((item) => (
-                  <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isItemActive(item.path)}
-                      tooltip={item.name}
-                    >
-                      <Link to={item.path}>
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          </>
+    <Link
+      to={href}
+      className={cn(
+        "flex items-center py-2 px-3 text-sm font-medium rounded-md",
+        "hover:bg-muted/80 transition-colors",
+        isActive
+          ? "bg-muted text-foreground"
+          : "text-foreground/60 hover:text-foreground"
+      )}
+    >
+      <Icon
+        size={20}
+        className={cn(
+          "mr-2",
+          isActive ? "text-primary" : "text-muted-foreground"
         )}
-      </SidebarContent>
-
-      <SidebarSeparator className="my-2" />
-
-      <SidebarFooter className="py-3 px-2">
-        <SidebarMenuButton 
-          onClick={handleSignOut}
-          tooltip="Sign Out"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>Sign Out</span>
-        </SidebarMenuButton>
-      </SidebarFooter>
-    </>
+      />
+      {title}
+    </Link>
   );
 };
 
-export default SidebarContentItems;
+export const SidebarContentItems = () => {
+  const { isAdmin } = useAuth();
+
+  return (
+    <div className="space-y-1">
+      <SidebarItem
+        href="/dashboard"
+        icon={LayoutDashboard}
+        title="Dashboard"
+        exact
+      />
+      <SidebarItem
+        href="/dashboard/compass"
+        icon={Compass}
+        title="Business Compass"
+      />
+      <SidebarItem
+        href="/dashboard/pg-coach"
+        icon={MessageSquare}
+        title="Painting Coach"
+      />
+      
+      {/* Content Generation Links */}
+      <SidebarItem 
+        href="/dashboard/prompt-library" 
+        icon={BookOpen} 
+        title="Prompt Library" 
+      />
+      <SidebarItem 
+        href="/dashboard/saved-content" 
+        icon={Save} 
+        title="Saved Content" 
+      />
+      
+      <SidebarItem
+        href="/dashboard/content"
+        icon={FileText}
+        title="Content Resources"
+      />
+      <SidebarItem
+        href="/dashboard/financial"
+        icon={BarChart3}
+        title="Financial Tools"
+      />
+
+      {/* Admin Links */}
+      {isAdmin && (
+        <>
+          <div className="pt-4 pb-2">
+            <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Admin
+            </p>
+          </div>
+          <SidebarItem
+            href="/dashboard/user-management/user-list"
+            icon={Users}
+            title="User Management"
+          />
+          <SidebarItem
+            href="/dashboard/admin/ai-settings"
+            icon={Sparkles}
+            title="AI Settings"
+          />
+          <SidebarItem
+            href="/dashboard/admin/prompts"
+            icon={BookOpen}
+            title="Manage Prompts"
+          />
+          <SidebarItem
+            href="/dashboard/admin/parameters"
+            icon={SliderHorizontal}
+            title="Manage Parameters"
+          />
+          <SidebarItem
+            href="/dashboard/admin/content-settings"
+            icon={FileText}
+            title="Content Settings"
+          />
+          <SidebarItem
+            href="/dashboard/admin/compass-settings"
+            icon={Compass}
+            title="Compass Settings"
+          />
+          <SidebarItem
+            href="/dashboard/admin/feature-flags"
+            icon={Flag}
+            title="Feature Flags"
+          />
+          <SidebarItem
+            href="/dashboard/admin/app-settings"
+            icon={Wrench}
+            title="App Settings"
+          />
+          <SidebarItem
+            href="/dashboard/admin/database"
+            icon={Database}
+            title="Database"
+          />
+        </>
+      )}
+
+      <div className="pt-4 pb-2">
+        <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Profile
+        </p>
+      </div>
+      <SidebarItem href="/dashboard/profile" icon={Users} title="My Profile" />
+      <SidebarItem
+        href="/dashboard/settings"
+        icon={Settings}
+        title="Settings"
+      />
+    </div>
+  );
+};

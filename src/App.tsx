@@ -26,6 +26,10 @@ import UserListPage from "@/pages/user-management/UserListPage";
 import AddUserPage from "@/pages/user-management/AddUserPage";
 import ActivityLogsPage from "@/pages/user-management/ActivityLogsPage";
 import UserDetailsPage from "@/pages/user-management/UserDetailsPage";
+import PromptLibraryPage from "@/pages/content/PromptLibraryPage";
+import GeneratedContentPage from "@/pages/content/GeneratedContentPage";
+import SavedContentPage from "@/pages/content/SavedContentPage";
+import SavedContentDetailPage from "@/pages/content/SavedContentDetailPage";
 import { setupGraphlitCollections, isGraphlitAvailable } from "@/services/graphlitService";
 
 const queryClient = new QueryClient();
@@ -68,6 +72,12 @@ function App() {
               <Route path="/dashboard/financial" element={<FinancialPage />} />
               <Route path="/dashboard/profile" element={<ProfilePage />} />
               <Route path="/dashboard/settings" element={<SettingsPage />} />
+              
+              {/* Content generation routes */}
+              <Route path="/dashboard/prompt-library" element={<PromptLibraryPage />} />
+              <Route path="/dashboard/generated/:id" element={<GeneratedContentPage />} />
+              <Route path="/dashboard/saved-content" element={<SavedContentPage />} />
+              <Route path="/dashboard/saved-content/:slug" element={<SavedContentDetailPage />} />
               
               {/* Admin routes */}
               <Route path="/dashboard/admin/ai-settings" element={<AISettingsPage />} />
