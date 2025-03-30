@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +9,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, AlertTriangle, HelpCircle, RefreshCw, WifiOff } from "lucide-react";
+import { FileText } from "lucide-react";
 import { usePromptWizard } from "@/hooks/usePromptWizard";
-import ParameterCustomization from "./wizard/ParameterCustomization";
-import AdditionalContextStep from "./wizard/AdditionalContextStep";
-import ReviewStep from "./wizard/ReviewStep";
 import WizardNavigation from "./wizard/WizardNavigation";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import LoadingState from "./wizard/LoadingState";
+import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
+import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
+import WizardContent from "./wizard/WizardContent";
+import NetworkStatusMonitor from "./wizard/NetworkStatusMonitor";
 import { useToast } from "@/hooks/use-toast";
 
 interface CustomPromptWizardProps {
@@ -30,37 +30,6 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
   const [retryCount, setRetryCount] = useState(0);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
   
-  // Monitor network status
-  useEffect(() => {
-    const handleOnline = () => {
-      setNetworkStatus('online');
-      toast({
-        title: "You're back online",
-        description: "Reconnected to the server. You can retry loading the prompt.",
-      });
-    };
-    
-    const handleOffline = () => {
-      setNetworkStatus('offline');
-      toast({
-        title: "You're offline",
-        description: "Please check your internet connection.",
-        variant: "destructive"
-      });
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    // Set initial state
-    setNetworkStatus(navigator.onLine ? 'online' : 'offline');
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [toast]);
-  
   const {
     prompt,
     parameters,
@@ -70,7 +39,6 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     selectedTweaks,
     additionalContext,
     currentStepIndex,
-    steps,
     progressValue,
     canProceed,
     isLastStep,
@@ -91,49 +59,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
       description: "Attempting to load the prompt again",
     });
     
-    // Call the new refetch function
     refetchPrompt();
-  };
-  
-  // Render current step content
-  const renderStepContent = () => {
-    if (!prompt) return null;
-    
-    // Parameter customization steps
-    if (currentStepIndex < parameters.length) {
-      const param = parameters[currentStepIndex];
-      return (
-        <ParameterCustomization 
-          parameter={param} 
-          selectedTweakId={selectedTweaks[param.id]} 
-          onTweakChange={handleTweakChange}
-        />
-      );
-    }
-    
-    // Additional context step
-    if (currentStepIndex === parameters.length) {
-      return (
-        <AdditionalContextStep 
-          additionalContext={additionalContext} 
-          setAdditionalContext={setAdditionalContext}
-        />
-      );
-    }
-    
-    // Review step
-    if (currentStepIndex === parameters.length + 1) {
-      return (
-        <ReviewStep 
-          prompt={prompt} 
-          selectedTweaks={selectedTweaks}
-          parameters={parameters}
-          additionalContext={additionalContext}
-        />
-      );
-    }
-    
-    return null;
   };
   
   if (!isOpen) return null;
@@ -153,87 +79,37 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
         
         <Progress value={progressValue} className="h-1" />
         
-        {networkStatus === 'offline' && (
-          <Alert variant="destructive" className="mb-4">
-            <WifiOff className="h-4 w-4" />
-            <AlertTitle>You're offline</AlertTitle>
-            <AlertDescription>
-              Please check your internet connection and try again when you're back online.
-            </AlertDescription>
-          </Alert>
-        )}
+        <NetworkStatusMonitor onStatusChange={setNetworkStatus} />
+        <NetworkStatusAlert networkStatus={networkStatus} />
         
         {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">Loading prompt...</span>
-          </div>
+          <LoadingState />
         ) : error ? (
-          <div className="py-6">
-            <Alert variant="destructive" className="mb-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Error loading prompt</AlertTitle>
-              <AlertDescription>
-                {error}
-              </AlertDescription>
-            </Alert>
-            <div className="text-center mt-4">
-              <p className="text-sm text-muted-foreground mb-4">
-                Could not load the prompt data. You can try again or select a different prompt.
-              </p>
-              <div className="flex justify-center gap-2">
-                <Button variant="outline" onClick={onClose}>
-                  Close
-                </Button>
-                <Button 
-                  onClick={handleRetry} 
-                  className="gap-2"
-                  disabled={networkStatus === 'offline'}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Retry
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ErrorAndRetryState 
+            error={error} 
+            onClose={onClose} 
+            onRetry={handleRetry} 
+            networkStatus={networkStatus}
+          />
         ) : !prompt ? (
-          <div className="flex flex-col justify-center items-center py-12 text-center">
-            <AlertTriangle className="h-8 w-8 text-yellow-500 mb-4" />
-            <p className="text-muted-foreground">
-              Unable to load prompt. Please try again or select a different prompt.
-            </p>
-            <div className="flex justify-center gap-2 mt-4">
-              <Button variant="outline" onClick={onClose}>
-                Close
-              </Button>
-              <Button 
-                onClick={handleRetry} 
-                className="gap-2"
-                disabled={networkStatus === 'offline'}
-              >
-                <RefreshCw className="h-4 w-4" />
-                Retry
-              </Button>
-            </div>
-          </div>
+          <ErrorAndRetryState 
+            error="Unable to load prompt details."
+            onClose={onClose} 
+            onRetry={handleRetry} 
+            networkStatus={networkStatus}
+            errorType="not-found"
+          />
         ) : (
           <div className="min-h-[350px] py-4">
-            {parameters.length === 0 ? (
-              <div className="py-6">
-                <Alert className="mb-4">
-                  <HelpCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    This prompt doesn't have any customization options. You can skip to the additional context.
-                  </AlertDescription>
-                </Alert>
-                <AdditionalContextStep 
-                  additionalContext={additionalContext} 
-                  setAdditionalContext={setAdditionalContext}
-                />
-              </div>
-            ) : (
-              renderStepContent()
-            )}
+            <WizardContent
+              prompt={prompt}
+              parameters={parameters}
+              currentStepIndex={currentStepIndex}
+              selectedTweaks={selectedTweaks}
+              additionalContext={additionalContext}
+              setAdditionalContext={setAdditionalContext}
+              handleTweakChange={handleTweakChange}
+            />
           </div>
         )}
         
