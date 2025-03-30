@@ -80,8 +80,16 @@ export function usePromptParameters(promptId: string | undefined) {
               continue;
             }
             
-            // Since we've checked rule.parameter is not null above, we can safely create a local variable
-            const parameter = rule.parameter;
+            // Type assertion to let TypeScript know this is a valid parameter object
+            // We've already checked above that parameter exists and is a valid object
+            const parameter = rule.parameter as {
+              id: string;
+              name: string;
+              description: string | null;
+              type: string;
+              active: boolean;
+              tweaks: any[] | null;
+            };
             
             // Make sure tweaks is an array before filtering
             let parameterTweaks: any[] = [];
