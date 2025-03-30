@@ -12,9 +12,6 @@ import DialogLoadingState from "./prompts/DialogLoadingState";
 import PromptFormContainer from "./prompts/PromptFormContainer";
 import ParameterRuleManager from "./prompts/ParameterRuleManager";
 
-// Define the hub area type to match the expected type in Prompt
-type HubAreaType = 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
-
 type EditPromptDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
