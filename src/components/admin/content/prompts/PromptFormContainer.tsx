@@ -31,8 +31,15 @@ const PromptFormContainer: React.FC<PromptFormContainerProps> = ({
       console.log("Form submission completed successfully");
     } catch (error) {
       console.error("Error during form submission:", error);
+      // Form error handling is done in the parent component
     }
   }, [onSubmit]);
+
+  const handleCancel = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onCancel();
+  }, [onCancel]);
 
   return (
     <Form {...form}>
@@ -51,7 +58,7 @@ const PromptFormContainer: React.FC<PromptFormContainerProps> = ({
           <Button
             type="button"
             variant="outline"
-            onClick={onCancel}
+            onClick={handleCancel}
           >
             Cancel
           </Button>

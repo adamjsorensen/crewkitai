@@ -26,11 +26,14 @@ const CreatePromptDialog = ({
   isCategory,
   hubArea,
 }: CreatePromptDialogProps) => {
+  console.log("CreatePromptDialog render with open:", open);
+  
   const { toast } = useToast();
   const { createPrompt } = useCrewkitPrompts();
   const [selectedParameters, setSelectedParameters] = useState<SelectedParameter[]>([]);
   const [selectedParameterIds, setSelectedParameterIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(open);
 
   const formSchema = z.object({
     title: z.string().min(3, { message: "Title must be at least 3 characters" }),
@@ -53,9 +56,15 @@ const CreatePromptDialog = ({
     },
   });
 
+  // Sync internal state with props to prevent uncontrolled to controlled warning
+  useEffect(() => {
+    setInternalOpen(open);
+  }, [open]);
+
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
+      console.log("CreatePromptDialog: Dialog opened, resetting form");
       form.reset({
         title: "",
         description: "",
@@ -69,9 +78,17 @@ const CreatePromptDialog = ({
 
   const handleSubmit = useCallback(async (values: PromptFormValues) => {
     try {
+      console.log("CreatePromptDialog handleSubmit called");
       setIsLoading(true);
       
       const hubAreaValue: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
+      console.log("Creating prompt with values:", {
+        title: values.title,
+        description: values.description || null,
+        is_category: isCategory,
+        parent_id: parentId,
+        hub_area: hubAreaValue
+      });
       
       const newPrompt = await createPrompt.mutateAsync({
         title: values.title,
@@ -86,14 +103,14 @@ const CreatePromptDialog = ({
         is_default: false,
       });
       
+      console.log("Prompt created successfully:", newPrompt);
+      
       toast({
         title: "Prompt created",
         description: "The prompt was created successfully."
       });
       
-      onOpenChange(false);
-      form.reset();
-      setSelectedParameters([]);
+      handleDialogClose(false);
     } catch (error) {
       console.error("Error creating prompt:", error);
       toast({
@@ -104,21 +121,29 @@ const CreatePromptDialog = ({
     } finally {
       setIsLoading(false);
     }
-  }, [createPrompt, form, isCategory, onOpenChange, parentId]);
+  }, [createPrompt, isCategory, parentId, toast]);
 
   const handleDialogClose = useCallback((newOpen: boolean) => {
+    console.log("CreatePromptDialog handleDialogClose called with:", newOpen);
     if (!newOpen && !isLoading) {
+      console.log("Resetting state and closing dialog");
       // Reset state and close dialog
       form.reset();
       setSelectedParameters([]);
       setSelectedParameterIds([]);
+      setInternalOpen(false);
       onOpenChange(false);
+    } else {
+      setInternalOpen(newOpen);
+      if (newOpen !== open) {
+        onOpenChange(newOpen);
+      }
     }
-  }, [form, isLoading, onOpenChange]);
+  }, [form, isLoading, onOpenChange, open]);
 
   return (
     <Dialog 
-      open={open} 
+      open={internalOpen} 
       onOpenChange={handleDialogClose}
     >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
@@ -134,7 +159,7 @@ const CreatePromptDialog = ({
           isCategory={isCategory}
           isLoading={isLoading}
           onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
+          onCancel={() => handleDialogClose(false)}
         >
           {!isCategory && (
             <ParameterRuleManager

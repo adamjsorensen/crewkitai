@@ -20,17 +20,26 @@ const ParameterRuleManager: React.FC<ParameterRuleManagerProps> = ({
   selectedParameterIds,
   setSelectedParameterIds
 }) => {
-  const { parameters } = useCrewkitPromptParameters();
+  const { parameters, isLoading } = useCrewkitPromptParameters();
+
+  console.log("ParameterRuleManager render:", { 
+    promptId, 
+    parametersCount: parameters.length,
+    selectedCount: selectedParameters.length,
+    isLoading 
+  });
   
   // Update selectedParameterIds when selectedParameters changes
   useEffect(() => {
     const paramIds = selectedParameters.map(param => param.id);
     if (JSON.stringify(paramIds) !== JSON.stringify(selectedParameterIds)) {
+      console.log("ParameterRuleManager: Updating selectedParameterIds:", paramIds);
       setSelectedParameterIds(paramIds);
     }
   }, [selectedParameters, setSelectedParameterIds, selectedParameterIds]);
 
   const handleParameterSelect = (parameterId: string) => {
+    console.log("ParameterRuleManager: Parameter selected:", parameterId);
     // Skip if already selected
     if (selectedParameterIds.includes(parameterId)) return;
 
@@ -48,6 +57,7 @@ const ParameterRuleManager: React.FC<ParameterRuleManagerProps> = ({
   };
 
   const handleRemoveParameter = (parameterId: string) => {
+    console.log("ParameterRuleManager: Parameter removed:", parameterId);
     const updatedParameters = selectedParameters.filter(p => p.id !== parameterId);
     // Update order after removal
     const reorderedParameters = updatedParameters.map((p, index) => ({
@@ -59,6 +69,7 @@ const ParameterRuleManager: React.FC<ParameterRuleManagerProps> = ({
   };
 
   const handleRequiredChange = (parameterId: string, isRequired: boolean) => {
+    console.log("ParameterRuleManager: Parameter required changed:", parameterId, isRequired);
     const updatedParameters = selectedParameters.map(p => 
       p.id === parameterId ? { ...p, isRequired } : p
     );
