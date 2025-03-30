@@ -37,7 +37,7 @@ export function usePromptParameters(promptId: string | undefined) {
             is_required,
             is_active,
             order,
-            parameter:parameter_id(
+            parameter:parameters(
               id,
               name,
               description,
@@ -71,37 +71,40 @@ export function usePromptParameters(promptId: string | undefined) {
           setParameters([]);
         } else {
           // Transform the data to match our ParameterWithTweaks type
-          const transformedParameters: ParameterWithTweaks[] = data
-            .filter(rule => rule.parameter) // Filter out rules with missing parameters
-            .map(rule => {
-              const parameter = rule.parameter;
-              
-              // Ensure tweaks are only active ones and sorted by order
-              const activeTweaks = parameter.tweaks
-                .filter(tweak => tweak.active)
-                .sort((a, b) => a.order - b.order);
-              
-              return {
-                id: parameter.id,
-                name: parameter.name,
-                description: parameter.description,
-                type: parameter.type,
-                active: parameter.active,
-                created_at: '', // These fields are required by the type but not needed for UI
-                updated_at: '',
-                tweaks: activeTweaks,
-                rule: {
-                  id: rule.id,
-                  prompt_id: rule.prompt_id,
-                  parameter_id: rule.parameter_id,
-                  is_active: rule.is_active,
-                  is_required: rule.is_required,
-                  order: rule.order,
-                  created_at: '',
-                  updated_at: ''
-                }
-              };
+          const transformedParameters: ParameterWithTweaks[] = [];
+          
+          for (const rule of data) {
+            // Skip rules with missing parameters
+            if (!rule.parameter) continue;
+            
+            const parameter = rule.parameter;
+            
+            // Make sure tweaks is an array before filtering
+            const parameterTweaks = Array.isArray(parameter.tweaks) 
+              ? parameter.tweaks.filter(tweak => tweak.active).sort((a, b) => a.order - b.order)
+              : [];
+            
+            transformedParameters.push({
+              id: parameter.id,
+              name: parameter.name,
+              description: parameter.description,
+              type: parameter.type,
+              active: parameter.active,
+              created_at: '', // These fields are required by the type but not needed for UI
+              updated_at: '',
+              tweaks: parameterTweaks,
+              rule: {
+                id: rule.id,
+                prompt_id: rule.prompt_id,
+                parameter_id: rule.parameter_id,
+                is_active: rule.is_active,
+                is_required: rule.is_required,
+                order: rule.order,
+                created_at: '',
+                updated_at: ''
+              }
             });
+          }
 
           console.log(`Loaded ${transformedParameters.length} parameters with their tweaks`);
           setParameters(transformedParameters);
