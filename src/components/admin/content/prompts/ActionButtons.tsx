@@ -13,11 +13,12 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   onCreatePrompt
 }) => {
   return (
-    <div className="space-x-2">
+    <div className="flex flex-wrap gap-2">
       <Button 
         variant="outline" 
         onClick={onCreateCategory}
-        className="gap-1.5"
+        className="gap-1.5 text-sm w-full sm:w-auto"
+        size="sm"
       >
         <PlusCircle className="h-4 w-4" />
         <span>New Category</span>
@@ -25,7 +26,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       
       <Button 
         onClick={onCreatePrompt}
-        className="gap-1.5"
+        className="gap-1.5 text-sm w-full sm:w-auto"
+        size="sm"
       >
         <PlusCircle className="h-4 w-4" />
         <span>New Prompt</span>

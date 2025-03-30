@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EditTweakDialog from "./EditTweakDialog";
+import { Card } from "@/components/ui/card";
 
 type TweaksTableProps = {
   tweaks: ParameterTweak[];
@@ -80,7 +81,8 @@ const TweaksTable = ({ tweaks, parameters, isLoading }: TweaksTableProps) => {
 
   return (
     <>
-      <div className="rounded-md border">
+      {/* Desktop view */}
+      <div className="hidden md:block rounded-md border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -129,6 +131,55 @@ const TweaksTable = ({ tweaks, parameters, isLoading }: TweaksTableProps) => {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile view */}
+      <div className="md:hidden space-y-4">
+        {tweaks.map((tweak) => (
+          <Card key={tweak.id} className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="font-medium">{tweak.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Parameter: {getParameterName(tweak.parameter_id)}
+                </p>
+              </div>
+              <div className="flex">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleEditClick(tweak)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive"
+                  onClick={() => handleDeleteClick(tweak)}
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="text-sm mt-2 border-t pt-2">
+              <div className="line-clamp-2 text-muted-foreground">
+                {tweak.sub_prompt}
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 mt-3 items-center">
+              <div className="text-sm mr-2">
+                Order: {tweak.order}
+              </div>
+              
+              <Badge variant={tweak.active ? "default" : "secondary"}>
+                {tweak.active ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+          </Card>
+        ))}
       </div>
 
       <AlertDialog

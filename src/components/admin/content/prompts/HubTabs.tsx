@@ -1,7 +1,9 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HubAreaType, Prompt } from "@/hooks/useCrewkitPrompts";
 import PromptsManagement from "@/components/admin/content/PromptsManagement";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface HubTabsProps {
   activeHub: HubAreaType;
@@ -23,13 +25,18 @@ const HubTabs: React.FC<HubTabsProps> = ({
       defaultValue={activeHub} 
       onValueChange={(value) => setActiveHub(value as HubAreaType)}
     >
-      <TabsList>
-        <TabsTrigger value="marketing">Marketing</TabsTrigger>
-        <TabsTrigger value="sales">Sales</TabsTrigger>
-        <TabsTrigger value="operations">Operations</TabsTrigger>
-        <TabsTrigger value="client_communications">Client Communications</TabsTrigger>
-        <TabsTrigger value="general">General</TabsTrigger>
-      </TabsList>
+      <ScrollArea className="w-full pb-2">
+        <TabsList className="flex flex-wrap sm:flex-nowrap gap-y-2">
+          <TabsTrigger value="marketing">Marketing</TabsTrigger>
+          <TabsTrigger value="sales">Sales</TabsTrigger>
+          <TabsTrigger value="operations">Operations</TabsTrigger>
+          <TabsTrigger value="client_communications">
+            <span className="hidden md:inline">Client Communications</span>
+            <span className="md:hidden">Comms</span>
+          </TabsTrigger>
+          <TabsTrigger value="general">General</TabsTrigger>
+        </TabsList>
+      </ScrollArea>
       
       <TabsContent value="marketing" className="mt-6">
         <PromptsManagement 

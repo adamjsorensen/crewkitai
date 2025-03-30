@@ -23,14 +23,15 @@ const ModelsConfigField = ({ form }: ModelsConfigFieldProps) => {
       name="ai_coach_models"
       render={({ field }) => (
         <FormItem>
-          <FormLabel>Models Configuration (JSON)</FormLabel>
-          <FormDescription>
+          <FormLabel className="text-base">Models Configuration (JSON)</FormLabel>
+          <FormDescription className="text-sm">
             Configure the AI models as a JSON object
           </FormDescription>
           <FormControl>
             <Textarea 
               {...field} 
-              rows={5}
+              rows={4}
+              className="font-mono text-sm min-h-[100px]"
               placeholder='{"default": "gpt-4o", "think": "o3-mini-2025-01-31"}'
             />
           </FormControl>

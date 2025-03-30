@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EditParameterDialog from "./EditParameterDialog";
+import { Card } from "@/components/ui/card";
 
 type ParametersTableProps = {
   parameters: PromptParameter[];
@@ -82,7 +83,8 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
 
   return (
     <>
-      <div className="rounded-md border">
+      {/* Desktop view */}
+      <div className="hidden md:block rounded-md border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -133,6 +135,51 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile view */}
+      <div className="md:hidden space-y-4">
+        {parameters.map((parameter) => (
+          <Card key={parameter.id} className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="font-medium">{parameter.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{parameter.description || "—"}</p>
+              </div>
+              <div className="flex">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleEditClick(parameter)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive"
+                  onClick={() => handleDeleteClick(parameter)}
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 mt-3">
+              {parameter.type in parameterTypeLabels ? (
+                <Badge variant={parameterTypeLabels[parameter.type].variant}>
+                  {parameterTypeLabels[parameter.type].label}
+                </Badge>
+              ) : (
+                <Badge>{parameter.type}</Badge>
+              )}
+              
+              <Badge variant={parameter.active ? "default" : "secondary"}>
+                {parameter.active ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+          </Card>
+        ))}
       </div>
 
       <AlertDialog

@@ -23,14 +23,15 @@ const SystemPromptField = ({ form }: SystemPromptFieldProps) => {
       name="ai_coach_system_prompt"
       render={({ field }) => (
         <FormItem>
-          <FormLabel>System Prompt</FormLabel>
-          <FormDescription>
+          <FormLabel className="text-base">System Prompt</FormLabel>
+          <FormDescription className="text-sm">
             The system prompt defines how the AI coach behaves and responds
           </FormDescription>
           <FormControl>
             <Textarea 
               {...field} 
-              rows={8}
+              rows={6}
+              className="min-h-[120px] md:min-h-[160px]"
               placeholder="Enter system prompt" 
             />
           </FormControl>
