@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+export type HubAreaType = 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
+
 export type Prompt = {
   id: string;
   title: string;
@@ -11,7 +13,7 @@ export type Prompt = {
   prompt: string | null;
   is_category: boolean;
   parent_id: string | null;
-  hub_area: 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
+  hub_area: HubAreaType;
   icon_name: string | null;
   display_order: number;
   created_by: string | null;

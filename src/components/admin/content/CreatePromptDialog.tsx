@@ -17,6 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import { X, GripVertical } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Define the hub area type to match the expected type in Prompt
+type HubAreaType = 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
+
 const hubAreas = [
   { value: "marketing", label: "Marketing" },
   { value: "sales", label: "Sales" },
@@ -137,6 +140,9 @@ const CreatePromptDialog = ({
 
   const handleSubmit = async (values: FormValues) => {
     try {
+      // Convert hubArea string to the appropriate type (or null if empty)
+      const hubAreaValue: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
+      
       // First create the prompt
       const newPrompt = await createPrompt.mutateAsync({
         title: values.title,
@@ -144,7 +150,7 @@ const CreatePromptDialog = ({
         prompt: isCategory ? null : values.prompt,
         is_category: isCategory,
         parent_id: parentId,
-        hub_area: values.hubArea || null,
+        hub_area: hubAreaValue,
         icon_name: null,
         display_order: 0,
         created_by: null,

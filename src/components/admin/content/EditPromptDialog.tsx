@@ -16,6 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { X, GripVertical, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Define the hub area type to match the expected type in Prompt
+type HubAreaType = 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
+
 const hubAreas = [
   { value: "marketing", label: "Marketing" },
   { value: "sales", label: "Sales" },
@@ -175,13 +178,16 @@ const EditPromptDialog = ({
     try {
       setIsLoading(true);
       
+      // Convert hubArea string to the appropriate type (or null if empty)
+      const hubArea: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
+      
       // Update the prompt
       await updatePrompt.mutateAsync({
         id: promptId,
         title: values.title,
         description: values.description || null,
         prompt: prompt.is_category ? null : values.prompt,
-        hub_area: values.hubArea || null,
+        hub_area: hubArea,
       });
       
       // If this is not a category, update parameter rules
