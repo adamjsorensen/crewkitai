@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,6 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,10 +46,13 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     const fetchPrompt = async () => {
       if (promptId && isOpen) {
         try {
+          setIsLoading(true);
           const promptData = await getPromptById(promptId);
           setPrompt(promptData);
+          setIsLoading(false);
         } catch (error) {
           console.error("Error fetching prompt:", error);
+          setIsLoading(false);
         }
       }
     };
@@ -81,7 +86,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
       setSelectedTweaks({});
       setAdditionalContext("");
     }
-  }, [isOpen, prompt?.id]);
+  }, [isOpen, promptId]);
   
   const handleNext = () => {
     if (currentStepIndex < steps.length - 1) {
@@ -103,7 +108,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
   };
   
   const handleSave = async () => {
-    if (!user) return;
+    if (!user || !prompt) return;
     
     setGenerating(true);
     try {
@@ -167,7 +172,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
   };
   
   // Define wizard steps
-  const steps = [
+  const steps = !prompt ? [] : [
     ...(parameters.length > 0 ? parameters.map(param => ({
       title: `Customize: ${param.name}`,
       component: (
@@ -236,7 +241,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
           <div className="rounded-md border p-4 space-y-3">
             <div>
               <h4 className="font-medium">Base Prompt</h4>
-              <p className="text-sm text-muted-foreground">{prompt.title}</p>
+              <p className="text-sm text-muted-foreground">{prompt?.title}</p>
             </div>
             
             <Separator />
@@ -278,10 +283,12 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
   ];
   
   const currentStep = steps[currentStepIndex];
-  const progress = ((currentStepIndex + 1) / steps.length) * 100;
+  const progress = steps.length ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
   
   const canProceed = currentStep?.isCompleted?.() ?? true;
   const isLastStep = currentStepIndex === steps.length - 1;
+  
+  if (!isOpen) return null;
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -289,8 +296,11 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText size={18} className="text-primary" />
-            Customize Prompt: {prompt?.title}
+            {isLoading ? "Loading..." : prompt ? `Customize Prompt: ${prompt.title}` : "Customize Prompt"}
           </DialogTitle>
+          <DialogDescription>
+            Customize this prompt to generate content tailored to your needs
+          </DialogDescription>
         </DialogHeader>
         
         <Progress value={progress} className="h-1" />
@@ -298,6 +308,12 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : !prompt ? (
+          <div className="flex justify-center items-center py-12 text-center">
+            <p className="text-muted-foreground">
+              Unable to load prompt. Please try again or select a different prompt.
+            </p>
           </div>
         ) : (
           <div className="min-h-[350px] py-4">
@@ -309,7 +325,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
           <Button
             variant="outline"
             onClick={handlePrevious}
-            disabled={currentStepIndex === 0 || generating}
+            disabled={currentStepIndex === 0 || generating || isLoading || !prompt}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
@@ -319,7 +335,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
             {isLastStep ? (
               <Button 
                 onClick={handleSave} 
-                disabled={!canProceed || generating}
+                disabled={!canProceed || generating || isLoading || !prompt}
                 className="min-w-[100px]"
               >
                 {generating ? (
@@ -334,7 +350,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
             ) : (
               <Button 
                 onClick={handleNext} 
-                disabled={!canProceed || generating}
+                disabled={!canProceed || generating || isLoading || !prompt}
               >
                 Next
                 <ArrowRight className="ml-2 h-4 w-4" />
