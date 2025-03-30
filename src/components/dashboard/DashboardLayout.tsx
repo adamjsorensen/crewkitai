@@ -40,11 +40,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     <div className="flex min-h-screen h-screen w-full overflow-hidden">
       <CollapsibleSidebar />
       <div 
-        className={`flex-1 flex flex-col transition-all duration-300 h-full ${
-          sidebarCollapsed ? "ml-[4.5rem]" : "ml-[16rem]"
+        className={`flex-1 flex flex-col transition-all duration-300 h-full w-full max-w-full ${
+          !isMobile ? (sidebarCollapsed ? "ml-[4.5rem]" : "ml-[16rem]") : ""
         }`}
       >
-        <main className="flex-1 p-4 bg-background overflow-y-auto h-full">
+        <main className="flex-1 p-4 bg-background overflow-y-auto overflow-x-hidden h-full w-full max-w-full">
           {children}
         </main>
       </div>

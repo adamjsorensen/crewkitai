@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -225,6 +226,26 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none;             /* Chrome, Safari, Opera */
   }
+  
+  /* Responsive width utilities */
+  .w-screen-safe {
+    width: 100vw;
+    width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
+  }
+  
+  .min-w-touch {
+    min-width: 44px;
+  }
+  
+  .min-h-touch {
+    min-height: 44px;
+  }
+  
+  /* Mobile tap target size */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* Font loading optimization */
@@ -252,4 +273,19 @@
   font-weight: 400 700;
   font-display: swap;
   src: local('SF Pro Display'), local('SFProDisplay'), url(https://applesocial.s3.amazonaws.com/assets/styles/fonts/sanfrancisco/sanfranciscodisplay-regular-webfont.woff) format('woff');
+}
+
+/* Mobile-first media queries */
+@media (max-width: 640px) {
+  .card {
+    @apply rounded-md px-3 py-2;
+  }
+  
+  .form-label {
+    @apply text-sm;
+  }
+  
+  .input, .textarea, .select {
+    @apply text-sm py-1.5;
+  }
 }

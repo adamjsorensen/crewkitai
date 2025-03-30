@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Shield, Settings, Database, BrainCircuit, ToggleLeft, Compass, ListFilter, FileText, Sparkles } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
   const { isAdmin, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Redirect if not admin
   React.useEffect(() => {
@@ -58,38 +60,38 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 max-w-full">
         <div className="flex items-center gap-3">
-          <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
+          <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center shrink-0">
             <Shield className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Admin Console</h1>
-            <p className="text-sm md:text-base text-muted-foreground">Manage application settings and configuration</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight truncate">Admin Console</h1>
+            <p className="text-sm md:text-base text-muted-foreground truncate">Manage application settings and configuration</p>
           </div>
         </div>
         
         <Separator className="my-0" />
         
-        <Card className="p-4 md:p-6">
+        <Card className="p-4 md:p-6 w-full overflow-hidden">
           <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
-            <div className="overflow-x-auto pb-2 hide-scrollbar">
+            <div className="overflow-x-auto pb-2 hide-scrollbar -mx-4 px-4">
               <TabsList className="mb-6 inline-flex w-auto min-w-max">
                 {tabs.map(tab => (
                   <TabsTrigger 
                     key={tab.value} 
                     value={tab.value} 
-                    className="flex items-center gap-1.5 whitespace-nowrap"
+                    className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none"
                     title={tab.label}
                   >
                     {tab.icon}
-                    <span className="max-w-[80px] md:max-w-none truncate">{tab.label}</span>
+                    <span className={isMobile ? "max-w-[60px] truncate" : ""}>{tab.label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
             </div>
             
-            <TabsContent value={activeTab} className="mt-0">
+            <TabsContent value={activeTab} className="mt-0 w-full overflow-x-hidden">
               {children}
             </TabsContent>
           </Tabs>

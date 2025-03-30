@@ -37,10 +37,14 @@ const ContentTabs = ({
   
   return (
     <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-      <div className="overflow-x-auto hide-scrollbar">
+      <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
         <TabsList className="inline-flex w-auto min-w-max">
           {tabValues.map((tabValue) => (
-            <TabsTrigger key={tabValue} value={tabValue} className="whitespace-nowrap">
+            <TabsTrigger 
+              key={tabValue} 
+              value={tabValue} 
+              className="whitespace-nowrap touch-callout-none min-h-[2.5rem]"
+            >
               {tabValue === "all" ? "All Content" : tabValue.charAt(0).toUpperCase() + tabValue.slice(1)}
             </TabsTrigger>
           ))}
@@ -48,7 +52,7 @@ const ContentTabs = ({
       </div>
       
       {tabValues.map((tabValue) => (
-        <TabsContent key={tabValue} value={tabValue}>
+        <TabsContent key={tabValue} value={tabValue} className="w-full overflow-x-hidden">
           <TabContent 
             categories={categories}
             prompts={prompts}

@@ -32,13 +32,13 @@ const HubTabs: React.FC<HubTabsProps> = ({
       defaultValue={activeHub} 
       onValueChange={(value) => setActiveHub(value as HubAreaType)}
     >
-      <div className="overflow-x-auto hide-scrollbar">
+      <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
         <TabsList className="inline-flex w-auto min-w-max">
           {hubs.map(hub => (
             <TabsTrigger 
               key={hub.value} 
               value={hub.value} 
-              className="whitespace-nowrap"
+              className="whitespace-nowrap touch-callout-none min-h-[2.5rem]"
             >
               {hub.label}
             </TabsTrigger>
@@ -47,7 +47,7 @@ const HubTabs: React.FC<HubTabsProps> = ({
       </div>
       
       {hubs.map(hub => (
-        <TabsContent key={hub.value} value={hub.value} className="mt-6">
+        <TabsContent key={hub.value} value={hub.value} className="mt-6 w-full overflow-x-hidden">
           <PromptsManagement 
             hub={hub.value as HubAreaType} 
             prompts={hubPrompts} 

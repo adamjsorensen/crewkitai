@@ -17,7 +17,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       <Button 
         variant="outline" 
         onClick={onCreateCategory}
-        className="gap-1.5 w-full sm:w-auto justify-center"
+        className="gap-1.5 w-full sm:w-auto justify-center min-h-[2.75rem]"
       >
         <PlusCircle className="h-4 w-4" />
         <span className="truncate">New Category</span>
@@ -25,7 +25,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       
       <Button 
         onClick={onCreatePrompt}
-        className="gap-1.5 w-full sm:w-auto justify-center"
+        className="gap-1.5 w-full sm:w-auto justify-center min-h-[2.75rem]"
       >
         <PlusCircle className="h-4 w-4" />
         <span className="truncate">New Prompt</span>

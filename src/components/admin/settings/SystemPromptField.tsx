@@ -30,9 +30,9 @@ const SystemPromptField = ({ form }: SystemPromptFieldProps) => {
           <FormControl>
             <Textarea 
               {...field} 
-              rows={8}
+              rows={6}
               placeholder="Enter system prompt" 
-              className="w-full resize-y min-h-[100px] max-h-[400px]"
+              className="w-full resize-y min-h-[100px] max-h-[300px]"
             />
           </FormControl>
           <FormMessage />
