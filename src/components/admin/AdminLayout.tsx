@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Shield, Settings, Database, BrainCircuit, ToggleLeft, Compass, ListFilter, FileText, Sparkles } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -75,23 +76,25 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
         
         <Card className="p-4 md:p-6 w-full overflow-hidden">
           <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
-            <div className="overflow-x-auto pb-2 hide-scrollbar -mx-4 px-4">
-              <TabsList className="mb-6 inline-flex w-auto min-w-max">
+            <ScrollArea className="w-full mb-6" orientation="horizontal">
+              <TabsList className="inline-flex w-auto min-w-max">
                 {tabs.map(tab => (
                   <TabsTrigger 
                     key={tab.value} 
                     value={tab.value} 
-                    className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none"
+                    className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none min-h-[2.75rem]"
                     title={tab.label}
                   >
                     {tab.icon}
-                    <span className={isMobile ? "max-w-[60px] truncate" : ""}>{tab.label}</span>
+                    <span className={isMobile ? "max-w-[60px] truncate" : ""}>
+                      {tab.label}
+                    </span>
                   </TabsTrigger>
                 ))}
               </TabsList>
-            </div>
+            </ScrollArea>
             
-            <TabsContent value={activeTab} className="mt-0 w-full overflow-x-hidden">
+            <TabsContent value={activeTab} className="mt-0 w-full max-w-full overflow-x-hidden">
               {children}
             </TabsContent>
           </Tabs>

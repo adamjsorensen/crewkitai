@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import CompassAiEnabledField from "./settings/CompassAiEnabledField";
 import CompassSystemPromptField from "./settings/CompassSystemPromptField";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const AiSettingsForm = () => {
   const [activeTab, setActiveTab] = React.useState("model-settings");
@@ -99,13 +100,13 @@ const AiSettingsForm = () => {
     if (!currentSubtabs || currentSubtabs.length === 0) return null;
 
     return (
-      <div className="mb-6 overflow-x-auto hide-scrollbar -mx-4 px-4">
-        <div className="border-b flex">
+      <ScrollArea className="mb-6 w-full">
+        <div className="border-b flex no-wrap min-w-full overflow-x-auto hide-scrollbar pb-0.5">
           {currentSubtabs.map(subtab => (
             <button
               key={subtab.id}
               onClick={() => setActiveSubtab(subtab.id)}
-              className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
+              className={`px-4 py-2 text-sm font-medium whitespace-nowrap min-w-max tap-target ${
                 activeSubtab === subtab.id
                   ? "text-primary border-b-2 border-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -115,7 +116,7 @@ const AiSettingsForm = () => {
             </button>
           ))}
         </div>
-      </div>
+      </ScrollArea>
     );
   };
 
@@ -184,41 +185,41 @@ const AiSettingsForm = () => {
   };
   
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden w-full">
       <CardHeader className="pb-3">
         <h2 className="text-xl md:text-2xl font-semibold">AI Coach Settings</h2>
       </CardHeader>
       
-      <CardContent className="max-w-full overflow-hidden">
+      <CardContent className="w-full">
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
-            <TabsList className="mb-6 inline-flex w-auto min-w-max">
-              <TabsTrigger value="model-settings" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none">
+          <ScrollArea className="w-full mb-6" orientation="horizontal">
+            <TabsList className="inline-flex w-auto min-w-max">
+              <TabsTrigger value="model-settings" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none min-h-[2.75rem]">
                 <Settings className="h-4 w-4" />
-                <span>Model Settings</span>
+                <span className={isMobile ? "max-w-[80px] truncate" : ""}>Model Settings</span>
               </TabsTrigger>
-              <TabsTrigger value="responses" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none">
+              <TabsTrigger value="responses" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none min-h-[2.75rem]">
                 <HelpCircle className="h-4 w-4" />
-                <span>Responses</span>
+                <span className={isMobile ? "max-w-[80px] truncate" : ""}>Responses</span>
               </TabsTrigger>
-              <TabsTrigger value="welcome-content" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none">
+              <TabsTrigger value="welcome-content" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none min-h-[2.75rem]">
                 <MessageSquare className="h-4 w-4" />
-                <span>Welcome Content</span>
+                <span className={isMobile ? "max-w-[80px] truncate" : ""}>Welcome Content</span>
               </TabsTrigger>
-              <TabsTrigger value="content-filters" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none">
+              <TabsTrigger value="content-filters" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none min-h-[2.75rem]">
                 <AlertTriangle className="h-4 w-4" />
-                <span>Content Filters</span>
+                <span className={isMobile ? "max-w-[80px] truncate" : ""}>Content Filters</span>
               </TabsTrigger>
-              <TabsTrigger value="compass-settings" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none">
+              <TabsTrigger value="compass-settings" className="flex items-center gap-1.5 whitespace-nowrap touch-callout-none min-h-[2.75rem]">
                 <Compass className="h-4 w-4" />
-                <span>Compass</span>
+                <span className={isMobile ? "max-w-[80px] truncate" : ""}>Compass</span>
               </TabsTrigger>
             </TabsList>
-          </div>
+          </ScrollArea>
           
           {renderSubtabs()}
           
-          <div className="w-full overflow-x-hidden">
+          <div className="w-full max-w-full overflow-x-hidden">
             {renderTabContent()}
           </div>
         </Tabs>

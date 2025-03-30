@@ -3,6 +3,7 @@ import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HubAreaType, Prompt } from "@/hooks/useCrewkitPrompts";
 import PromptsManagement from "@/components/admin/content/PromptsManagement";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface HubTabsProps {
   activeHub: HubAreaType;
@@ -32,7 +33,7 @@ const HubTabs: React.FC<HubTabsProps> = ({
       defaultValue={activeHub} 
       onValueChange={(value) => setActiveHub(value as HubAreaType)}
     >
-      <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
+      <ScrollArea className="w-full" orientation="horizontal">
         <TabsList className="inline-flex w-auto min-w-max">
           {hubs.map(hub => (
             <TabsTrigger 
@@ -44,10 +45,10 @@ const HubTabs: React.FC<HubTabsProps> = ({
             </TabsTrigger>
           ))}
         </TabsList>
-      </div>
+      </ScrollArea>
       
       {hubs.map(hub => (
-        <TabsContent key={hub.value} value={hub.value} className="mt-6 w-full overflow-x-hidden">
+        <TabsContent key={hub.value} value={hub.value} className="mt-6 w-full max-w-full overflow-x-hidden">
           <PromptsManagement 
             hub={hub.value as HubAreaType} 
             prompts={hubPrompts} 

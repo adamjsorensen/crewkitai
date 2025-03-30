@@ -6,7 +6,9 @@ import AiSettingsForm from "@/components/admin/AiSettingsForm";
 const AiSettingsPage = () => {
   return (
     <AdminLayout activeTab="ai-settings">
-      <AiSettingsForm />
+      <div className="w-full max-w-full overflow-hidden">
+        <AiSettingsForm />
+      </div>
     </AdminLayout>
   );
 };

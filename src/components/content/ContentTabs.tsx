@@ -3,6 +3,7 @@ import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TabContent from "./TabContent";
 import { Prompt } from "@/hooks/useCrewkitPrompts";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ContentTabsProps {
   activeTab: string;
@@ -37,22 +38,22 @@ const ContentTabs = ({
   
   return (
     <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-      <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
+      <ScrollArea className="w-full" orientation="horizontal">
         <TabsList className="inline-flex w-auto min-w-max">
           {tabValues.map((tabValue) => (
             <TabsTrigger 
               key={tabValue} 
               value={tabValue} 
-              className="whitespace-nowrap touch-callout-none min-h-[2.5rem]"
+              className="whitespace-nowrap touch-callout-none min-h-[2.75rem]"
             >
               {tabValue === "all" ? "All Content" : tabValue.charAt(0).toUpperCase() + tabValue.slice(1)}
             </TabsTrigger>
           ))}
         </TabsList>
-      </div>
+      </ScrollArea>
       
       {tabValues.map((tabValue) => (
-        <TabsContent key={tabValue} value={tabValue} className="w-full overflow-x-hidden">
+        <TabsContent key={tabValue} value={tabValue} className="w-full max-w-full overflow-x-hidden">
           <TabContent 
             categories={categories}
             prompts={prompts}

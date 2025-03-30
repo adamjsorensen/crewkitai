@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Users, UserPlus, History } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Outlet, useLocation } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface UserManagementLayoutProps {
   children?: React.ReactNode;
@@ -62,14 +63,14 @@ const UserManagementLayout = ({ children, activeTab = "user-list" }: UserManagem
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 max-w-full">
         <div className="flex items-center gap-3">
           <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
             <Users className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">User Management</h1>
-            <p className="text-sm md:text-base text-muted-foreground">
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight truncate">User Management</h1>
+            <p className="text-sm md:text-base text-muted-foreground truncate">
               Manage users, permissions, and monitor user activity
             </p>
           </div>
@@ -77,30 +78,30 @@ const UserManagementLayout = ({ children, activeTab = "user-list" }: UserManagem
         
         <Separator className="my-0" />
         
-        <Card className="p-4 md:p-6">
+        <Card className="p-4 md:p-6 w-full overflow-hidden">
           {/* Only show tabs when not in detail view */}
           {currentTab && (
             <Tabs value={currentTab} className="w-full">
-              <div className="overflow-x-auto hide-scrollbar">
+              <ScrollArea className="w-full" orientation="horizontal">
                 <TabsList className="grid grid-cols-3 w-full max-w-md">
                   {tabs.map(tab => (
                     <TabsTrigger 
                       key={tab.id}
                       value={tab.id}
                       onClick={() => navigate(tab.path)}
-                      className="flex items-center gap-2 whitespace-nowrap"
+                      className="flex items-center gap-2 whitespace-nowrap min-h-[2.75rem]"
                     >
                       {tab.icon}
                       <span className="truncate">{tab.label}</span>
                     </TabsTrigger>
                   ))}
                 </TabsList>
-              </div>
+              </ScrollArea>
             </Tabs>
           )}
 
           {/* Outlet for nested routes */}
-          <div className={currentTab ? "mt-6" : ""}>
+          <div className={currentTab ? "mt-6 w-full max-w-full overflow-hidden" : "w-full max-w-full overflow-hidden"}>
             {children || <Outlet />}
           </div>
         </Card>
