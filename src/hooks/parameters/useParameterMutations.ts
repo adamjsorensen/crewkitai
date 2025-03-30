@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { PromptParameter } from '@/types/promptParameters';
+import { PromptParameter, CreateParameterInput, UpdateParameterInput } from './types';
 
 export function useParameterMutations() {
   const { toast } = useToast();
@@ -10,7 +10,7 @@ export function useParameterMutations() {
 
   // Create parameter
   const createParameter = useMutation({
-    mutationFn: async (parameter: Omit<PromptParameter, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (parameter: CreateParameterInput) => {
       const { data, error } = await supabase
         .from('prompt_parameters')
         .insert(parameter)
@@ -42,7 +42,7 @@ export function useParameterMutations() {
 
   // Update parameter
   const updateParameter = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string } & Partial<Omit<PromptParameter, 'id' | 'created_at' | 'updated_at'>>) => {
+    mutationFn: async ({ id, ...updates }: UpdateParameterInput) => {
       const { data, error } = await supabase
         .from('prompt_parameters')
         .update(updates)

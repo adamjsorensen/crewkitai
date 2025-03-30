@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { PromptParameterRule } from '@/types/promptParameters';
+import { PromptParameterRule, CreateParameterRuleInput, UpdateParameterRuleInput } from './types';
 
 export function useParameterRuleMutations() {
   const { toast } = useToast();
@@ -10,7 +10,7 @@ export function useParameterRuleMutations() {
 
   // Create parameter rule
   const createParameterRule = useMutation({
-    mutationFn: async (rule: Omit<PromptParameterRule, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (rule: CreateParameterRuleInput) => {
       const { data, error } = await supabase
         .from('prompt_parameter_rules')
         .insert(rule)
@@ -26,6 +26,10 @@ export function useParameterRuleMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompt-parameter-rules'] });
+      toast({
+        title: 'Parameter rule created',
+        description: 'The parameter rule was created successfully',
+      });
     },
     onError: (error) => {
       toast({
@@ -38,7 +42,7 @@ export function useParameterRuleMutations() {
 
   // Update parameter rule
   const updateParameterRule = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string } & Partial<Omit<PromptParameterRule, 'id' | 'created_at' | 'updated_at'>>) => {
+    mutationFn: async ({ id, ...updates }: UpdateParameterRuleInput) => {
       const { data, error } = await supabase
         .from('prompt_parameter_rules')
         .update(updates)
@@ -55,6 +59,10 @@ export function useParameterRuleMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompt-parameter-rules'] });
+      toast({
+        title: 'Parameter rule updated',
+        description: 'The parameter rule was updated successfully',
+      });
     },
     onError: (error) => {
       toast({
@@ -82,6 +90,10 @@ export function useParameterRuleMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompt-parameter-rules'] });
+      toast({
+        title: 'Parameter rule deleted',
+        description: 'The parameter rule was deleted successfully',
+      });
     },
     onError: (error) => {
       toast({

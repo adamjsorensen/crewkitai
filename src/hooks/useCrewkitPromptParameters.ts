@@ -3,10 +3,32 @@ import { useParametersFetching } from './parameters/useParametersFetching';
 import { useParameterMutations } from './parameters/useParameterMutations';
 import { useTweakMutations } from './parameters/useTweakMutations';
 import { useParameterRules } from './parameters/useParameterRules';
-import { PromptParameter, ParameterTweak, PromptParameterRule, ParameterWithTweaks } from '@/types/promptParameters';
+import { 
+  PromptParameter, 
+  ParameterTweak, 
+  PromptParameterRule, 
+  ParameterWithTweaks,
+  CreateParameterInput,
+  UpdateParameterInput,
+  CreateTweakInput,
+  UpdateTweakInput,
+  CreateParameterRuleInput,
+  UpdateParameterRuleInput
+} from './parameters/types';
 
 // Re-export the types for backward compatibility
-export type { PromptParameter, ParameterTweak, PromptParameterRule, ParameterWithTweaks };
+export type { 
+  PromptParameter, 
+  ParameterTweak, 
+  PromptParameterRule, 
+  ParameterWithTweaks,
+  CreateParameterInput,
+  UpdateParameterInput,
+  CreateTweakInput,
+  UpdateTweakInput,
+  CreateParameterRuleInput,
+  UpdateParameterRuleInput
+};
 
 export function useCrewkitPromptParameters() {
   const { parameters, tweaks, isLoading, isError, error: fetchError } = useParametersFetching();

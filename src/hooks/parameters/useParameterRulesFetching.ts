@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ParameterWithTweaks } from '@/types/promptParameters';
+import { ParameterWithTweaks } from './types';
 
 export function useParameterRulesFetching() {
   const [error, setError] = useState<string | null>(null);

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { PromptParameter, ParameterTweak } from '@/types/promptParameters';
+import { PromptParameter, ParameterTweak } from './types';
 
 export function useParametersFetching() {
   const [error, setError] = useState<string | null>(null);

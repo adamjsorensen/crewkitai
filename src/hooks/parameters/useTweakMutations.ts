@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ParameterTweak } from '@/types/promptParameters';
+import { ParameterTweak, CreateTweakInput, UpdateTweakInput } from './types';
 
 export function useTweakMutations() {
   const { toast } = useToast();
@@ -10,7 +10,7 @@ export function useTweakMutations() {
 
   // Create parameter tweak
   const createParameterTweak = useMutation({
-    mutationFn: async (tweak: Omit<ParameterTweak, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (tweak: CreateTweakInput) => {
       const { data, error } = await supabase
         .from('parameter_tweaks')
         .insert(tweak)
@@ -42,7 +42,7 @@ export function useTweakMutations() {
 
   // Update parameter tweak
   const updateParameterTweak = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string } & Partial<Omit<ParameterTweak, 'id' | 'created_at' | 'updated_at'>>) => {
+    mutationFn: async ({ id, ...updates }: UpdateTweakInput) => {
       const { data, error } = await supabase
         .from('parameter_tweaks')
         .update(updates)
