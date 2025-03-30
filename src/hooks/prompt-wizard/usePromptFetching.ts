@@ -23,36 +23,15 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
       attemptCountRef.current += 1;
       console.log(`Fetching prompt with ID: ${promptId} (attempt: ${attemptCountRef.current})`);
       
-      // Test that the Supabase client is available and connected
-      try {
-        const { data: supabaseData, error: supabaseError } = await fetch('/api/check-supabase', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }).then(res => res.json());
-        
-        if (supabaseError) {
-          console.error("Supabase connection test failed:", supabaseError);
-          throw new Error(`Database connection issue: ${supabaseError}`);
-        }
-        
-        console.log("Supabase connection test passed");
-      } catch (connectionError) {
-        console.error("Error testing Supabase connection:", connectionError);
-        // Continue anyway, as this endpoint might not exist
-      }
-      
       // Add a timeout to detect slow network issues
-      const timeoutPromise = new Promise<null>((_, reject) => 
-        setTimeout(() => reject(new Error("Request timed out")), 15000)
-      );
+      const timeoutId = setTimeout(() => {
+        console.log("Fetch operation is taking longer than expected");
+      }, 5000);
       
-      // Race the actual fetch with the timeout
-      const fetchedPrompt = await Promise.race([
-        getPromptById(promptId),
-        timeoutPromise
-      ]) as Prompt | null;
+      const fetchedPrompt = await getPromptById(promptId);
+      
+      // Clear timeout
+      clearTimeout(timeoutId);
       
       // Reset error toast flag on successful fetch
       errorToastShownRef.current = false;
@@ -62,13 +41,13 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
         setPrompt(fetchedPrompt);
       } else {
         console.error("No prompt returned from getPromptById for ID:", promptId);
-        setError("Failed to load prompt details. Prompt may not exist.");
+        setError("Prompt not found. It may have been deleted or you may not have access.");
         
         if (!errorToastShownRef.current) {
           errorToastShownRef.current = true;
           toast({
-            title: "Error",
-            description: "Could not load the prompt data. Please try again or select another prompt.",
+            title: "Prompt Not Found",
+            description: "The requested prompt could not be found. Please try another one.",
             variant: "destructive"
           });
         }
@@ -76,15 +55,26 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
     } catch (error: any) {
       const errorMessage = error?.message || "An unknown error occurred";
       console.error(`Error fetching prompt: ${errorMessage}`, error);
-      setError(`Failed to load prompt details. ${errorMessage}`);
+      
+      // Categorize error for better user messaging
+      let userErrorMessage = "Failed to load prompt. ";
+      if (errorMessage.includes("connection") || errorMessage.includes("network") || errorMessage.includes("ETIMEDOUT")) {
+        userErrorMessage += "Please check your internet connection.";
+      } else if (errorMessage.includes("not found") || errorMessage.includes("does not exist")) {
+        userErrorMessage += "The prompt could not be found.";
+      } else {
+        userErrorMessage += "An unexpected error occurred.";
+      }
+      
+      setError(userErrorMessage);
       setPrompt(null);
       
       // Only show toast if not already shown for this error session
       if (!errorToastShownRef.current) {
         errorToastShownRef.current = true;
         toast({
-          title: "Connection Error",
-          description: "Could not connect to the server. Please check your network connection.",
+          title: "Error Loading Prompt",
+          description: userErrorMessage,
           variant: "destructive"
         });
       }

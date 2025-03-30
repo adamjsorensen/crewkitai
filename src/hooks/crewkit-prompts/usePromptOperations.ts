@@ -13,20 +13,19 @@ export function usePromptOperations() {
     try {
       console.log("Fetching all prompts...");
       
-      // Simple connection test
+      // Simple connection test - use a valid query
       try {
         const { data: testData, error: testError } = await supabase
           .from('prompts')
-          .select('count(*)')
-          .limit(1)
-          .single();
+          .select('id')
+          .limit(1);
           
         if (testError) {
           console.error("Connection test failed:", testError);
           throw new Error(`Database connection issue: ${testError.message}`);
         }
         
-        console.log("Connection test successful, prompt count:", testData);
+        console.log("Connection test successful, got data:", testData);
       } catch (connectionError: any) {
         console.error("Connection test error:", connectionError);
         throw new Error(`Failed to connect to database: ${connectionError.message}`);
@@ -60,40 +59,39 @@ export function usePromptOperations() {
     try {
       console.log(`Fetching prompt with ID ${id}...`);
       
-      // Simple connection test that's valid in PostgREST syntax
-      const { data: testData, error: connectionError } = await supabase
-        .from('prompts')
-        .select('count(*)')
-        .limit(1)
-        .single();
+      // Simple connection test using a valid query
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('prompts')
+          .select('id')
+          .limit(1);
+          
+        if (testError) {
+          console.error("Connection test failed:", testError);
+          throw new Error(`Database connection issue: ${testError.message}`);
+        }
         
-      if (connectionError) {
-        console.error("Connection test failed:", connectionError);
-        throw new Error(`Database connection issue: ${connectionError.message}`);
+        console.log("Connection test successful, database is accessible");
+      } catch (connectionError: any) {
+        console.error("Connection test error:", connectionError);
+        throw new Error(`Failed to connect to database: ${connectionError.message}`);
       }
       
-      console.log("Connection test passed, prompt count:", testData);
-      
-      // Proceed with the actual fetch
+      // Proceed with the actual fetch - use maybeSingle for better handling of missing records
       const { data, error: fetchError } = await supabase
         .from('prompts')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
       
       if (fetchError) {
-        if (fetchError.code === 'PGRST116') {
-          console.log(`No prompt found with ID ${id}`);
-          return null;
-        }
-        
         console.error(`Error fetching prompt with ID ${id}:`, fetchError);
         setError(`Failed to fetch prompt: ${fetchError.message}`);
         throw new Error(`Failed to fetch prompt: ${fetchError.message}`);
       }
       
       if (!data) {
-        console.error(`No prompt found with ID ${id}`);
+        console.log(`No prompt found with ID ${id}`);
         return null;
       }
       
