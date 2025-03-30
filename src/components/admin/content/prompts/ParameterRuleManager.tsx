@@ -20,12 +20,15 @@ const ParameterRuleManager: React.FC<ParameterRuleManagerProps> = ({
   selectedParameterIds,
   setSelectedParameterIds
 }) => {
-  const { parameters, getParametersForPrompt } = useCrewkitPromptParameters();
+  const { parameters } = useCrewkitPromptParameters();
   
   // Update selectedParameterIds when selectedParameters changes
   useEffect(() => {
-    setSelectedParameterIds(selectedParameters.map(param => param.id));
-  }, [selectedParameters, setSelectedParameterIds]);
+    const paramIds = selectedParameters.map(param => param.id);
+    if (JSON.stringify(paramIds) !== JSON.stringify(selectedParameterIds)) {
+      setSelectedParameterIds(paramIds);
+    }
+  }, [selectedParameters, setSelectedParameterIds, selectedParameterIds]);
 
   const handleParameterSelect = (parameterId: string) => {
     // Skip if already selected
@@ -40,7 +43,7 @@ const ParameterRuleManager: React.FC<ParameterRuleManagerProps> = ({
         order: selectedParameters.length, // Add to the end
       };
       
-      setSelectedParameters([...selectedParameters, newParam]);
+      setSelectedParameters(prev => [...prev, newParam]);
     }
   };
 
@@ -86,4 +89,4 @@ const ParameterRuleManager: React.FC<ParameterRuleManagerProps> = ({
   );
 };
 
-export default ParameterRuleManager;
+export default React.memo(ParameterRuleManager);

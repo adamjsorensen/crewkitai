@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { PromptFormValues } from "./shared/PromptFormFields";
 import { SelectedParameter } from "./shared/ParameterSelection";
 import PromptFormContainer from "./prompts/PromptFormContainer";
 import ParameterRuleManager from "./prompts/ParameterRuleManager";
+import { useToast } from "@/hooks/use-toast";
 
 type CreatePromptDialogProps = {
   open: boolean;
@@ -25,12 +26,11 @@ const CreatePromptDialog = ({
   isCategory,
   hubArea,
 }: CreatePromptDialogProps) => {
+  const { toast } = useToast();
   const { createPrompt } = useCrewkitPrompts();
   const [selectedParameters, setSelectedParameters] = useState<SelectedParameter[]>([]);
   const [selectedParameterIds, setSelectedParameterIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  console.log("CreatePromptDialog rendered with props:", { open, parentId, isCategory, hubArea });
 
   const formSchema = z.object({
     title: z.string().min(3, { message: "Title must be at least 3 characters" }),
@@ -53,9 +53,9 @@ const CreatePromptDialog = ({
     },
   });
 
+  // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      console.log("Dialog opened, resetting form");
       form.reset({
         title: "",
         description: "",
@@ -67,21 +67,11 @@ const CreatePromptDialog = ({
     }
   }, [open, form, hubArea]);
 
-  const handleSubmit = async (values: PromptFormValues) => {
-    console.log("CreatePromptDialog handleSubmit called with values:", values);
+  const handleSubmit = useCallback(async (values: PromptFormValues) => {
     try {
       setIsLoading(true);
       
       const hubAreaValue: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
-      
-      console.log("Creating prompt with data:", {
-        title: values.title,
-        description: values.description || null,
-        prompt: isCategory ? null : values.prompt,
-        is_category: isCategory,
-        parent_id: parentId,
-        hub_area: hubAreaValue
-      });
       
       const newPrompt = await createPrompt.mutateAsync({
         title: values.title,
@@ -96,24 +86,40 @@ const CreatePromptDialog = ({
         is_default: false,
       });
       
-      console.log("Prompt created successfully:", newPrompt);
+      toast({
+        title: "Prompt created",
+        description: "The prompt was created successfully."
+      });
+      
       onOpenChange(false);
       form.reset();
       setSelectedParameters([]);
     } catch (error) {
       console.error("Error creating prompt:", error);
+      toast({
+        title: "Error creating prompt",
+        description: "There was a problem creating the prompt.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [createPrompt, form, isCategory, onOpenChange, parentId]);
+
+  const handleDialogClose = useCallback((newOpen: boolean) => {
+    if (!newOpen && !isLoading) {
+      // Reset state and close dialog
+      form.reset();
+      setSelectedParameters([]);
+      setSelectedParameterIds([]);
+      onOpenChange(false);
+    }
+  }, [form, isLoading, onOpenChange]);
 
   return (
     <Dialog 
       open={open} 
-      onOpenChange={(newOpen) => {
-        console.log("Dialog onOpenChange called with:", newOpen);
-        onOpenChange(newOpen);
-      }}
+      onOpenChange={handleDialogClose}
     >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
         <DialogHeader>
@@ -130,18 +136,20 @@ const CreatePromptDialog = ({
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}
         >
-          <ParameterRuleManager
-            promptId={null}
-            isCategory={isCategory}
-            selectedParameters={selectedParameters}
-            setSelectedParameters={setSelectedParameters}
-            selectedParameterIds={selectedParameterIds}
-            setSelectedParameterIds={setSelectedParameterIds}
-          />
+          {!isCategory && (
+            <ParameterRuleManager
+              promptId={null}
+              isCategory={isCategory}
+              selectedParameters={selectedParameters}
+              setSelectedParameters={setSelectedParameters}
+              selectedParameterIds={selectedParameterIds}
+              setSelectedParameterIds={setSelectedParameterIds}
+            />
+          )}
         </PromptFormContainer>
       </DialogContent>
     </Dialog>
   );
 };
 
-export default CreatePromptDialog;
+export default React.memo(CreatePromptDialog);

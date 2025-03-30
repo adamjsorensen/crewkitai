@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { SelectedParameter } from "./shared/ParameterSelection";
 import DialogLoadingState from "./prompts/DialogLoadingState";
 import PromptFormContainer from "./prompts/PromptFormContainer";
 import ParameterRuleManager from "./prompts/ParameterRuleManager";
+import { useToast } from "@/hooks/use-toast";
 
 type EditPromptDialogProps = {
   open: boolean;
@@ -23,6 +24,7 @@ const EditPromptDialog = ({
   onOpenChange,
   promptId,
 }: EditPromptDialogProps) => {
+  const { toast } = useToast();
   const { getPromptById, updatePrompt } = useCrewkitPrompts();
   const { 
     getParametersForPrompt, 
@@ -35,9 +37,8 @@ const EditPromptDialog = ({
   const [selectedParameters, setSelectedParameters] = useState<SelectedParameter[]>([]);
   const [selectedParameterIds, setSelectedParameterIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [promptParameters, setPromptParameters] = useState<ParameterWithTweaks[]>([]);
-
-  console.log("EditPromptDialog rendered with props:", { open, promptId });
 
   // Define validation schema based on whether we're editing a category or prompt
   const formSchema = z.object({
@@ -61,11 +62,9 @@ const EditPromptDialog = ({
   useEffect(() => {
     const loadPromptData = async () => {
       if (open && promptId) {
-        console.log("Loading prompt data for promptId:", promptId);
-        setIsLoading(true);
+        setIsLoadingData(true);
         try {
           const promptData = await getPromptById(promptId);
-          console.log("Prompt data loaded:", promptData);
           setPrompt(promptData);
           
           form.reset({
@@ -77,10 +76,8 @@ const EditPromptDialog = ({
           
           // Load parameters for this prompt
           if (!promptData.is_category) {
-            console.log("Loading parameters for prompt:", promptId);
             try {
               const parametersData = await getParametersForPrompt(promptId);
-              console.log("Parameters data loaded:", parametersData);
               setPromptParameters(parametersData);
               
               // Convert to selected parameters format
@@ -96,6 +93,11 @@ const EditPromptDialog = ({
               setSelectedParameterIds(selectedParams.map(p => p.id));
             } catch (paramError) {
               console.error("Error loading parameters:", paramError);
+              toast({
+                title: "Error loading parameters",
+                description: "There was a problem loading the parameters for this prompt.",
+                variant: "destructive",
+              });
             }
           } else {
             setPromptParameters([]);
@@ -104,17 +106,23 @@ const EditPromptDialog = ({
           }
         } catch (error) {
           console.error("Error loading prompt data:", error);
+          toast({
+            title: "Error loading prompt",
+            description: "There was a problem loading the prompt data.",
+            variant: "destructive",
+          });
         } finally {
-          setIsLoading(false);
+          setIsLoadingData(false);
         }
       }
     };
 
-    loadPromptData();
-  }, [open, promptId, getPromptById, getParametersForPrompt, form]);
+    if (open) {
+      loadPromptData();
+    }
+  }, [open, promptId, getPromptById, getParametersForPrompt, form, toast]);
 
-  const handleSubmit = async (values: PromptFormValues) => {
-    console.log("EditPromptDialog handleSubmit called with values:", values);
+  const handleSubmit = useCallback(async (values: PromptFormValues) => {
     if (!prompt || !promptId) {
       console.error("Cannot submit: prompt or promptId is null");
       return;
@@ -126,14 +134,6 @@ const EditPromptDialog = ({
       // Convert hubArea string to the appropriate type (or null if empty)
       const hubArea: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
       
-      console.log("Updating prompt with data:", {
-        id: promptId,
-        title: values.title,
-        description: values.description || null,
-        prompt: prompt.is_category ? null : values.prompt,
-        hub_area: hubArea,
-      });
-      
       // Update the prompt
       const result = await updatePrompt.mutateAsync({
         id: promptId,
@@ -143,8 +143,6 @@ const EditPromptDialog = ({
         hub_area: hubArea,
       });
       
-      console.log("Prompt updated successfully:", result);
-      
       // If this is not a category, update parameter rules
       if (!prompt.is_category) {
         // Get existing parameter rules from promptParameters
@@ -152,16 +150,13 @@ const EditPromptDialog = ({
           promptParameters
             .filter(p => p.rule)
             .map(p => p.rule?.id)
+            .filter(Boolean) as string[]
         );
-        
-        console.log("Processing parameter rules - existing rule IDs:", existingRuleIds);
-        console.log("Selected parameters:", selectedParameters);
         
         // Update, create, or delete parameter rules
         for (const param of selectedParameters) {
           if (param.ruleId) {
             // Update existing rule
-            console.log("Updating rule:", param.ruleId);
             await updateParameterRule.mutateAsync({
               id: param.ruleId,
               is_required: param.isRequired,
@@ -172,7 +167,6 @@ const EditPromptDialog = ({
             existingRuleIds.delete(param.ruleId);
           } else {
             // Create new rule
-            console.log("Creating new rule for parameter:", param.id);
             await createParameterRule.mutateAsync({
               prompt_id: promptId,
               parameter_id: param.id,
@@ -185,29 +179,43 @@ const EditPromptDialog = ({
         
         // Delete rules that were removed
         for (const ruleId of existingRuleIds) {
-          if (ruleId) {
-            console.log("Deleting rule:", ruleId);
-            await deleteParameterRule.mutateAsync(ruleId);
-          }
+          await deleteParameterRule.mutateAsync(ruleId);
         }
       }
       
-      console.log("All operations completed successfully");
+      toast({
+        title: "Prompt updated",
+        description: "The prompt was updated successfully.",
+      });
       onOpenChange(false);
     } catch (error) {
       console.error("Error updating prompt:", error);
+      toast({
+        title: "Error updating prompt",
+        description: "There was a problem updating the prompt.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [prompt, promptId, updatePrompt, promptParameters, selectedParameters, createParameterRule, updateParameterRule, deleteParameterRule, onOpenChange, toast]);
+
+  const handleDialogClose = useCallback((open: boolean) => {
+    if (!open && !isLoading) {
+      // Reset form and states
+      form.reset();
+      setSelectedParameters([]);
+      setSelectedParameterIds([]);
+      setPrompt(null);
+      setPromptParameters([]);
+      onOpenChange(false);
+    }
+  }, [form, isLoading, onOpenChange]);
 
   return (
     <Dialog 
       open={open} 
-      onOpenChange={(newOpen) => {
-        console.log("Dialog onOpenChange called with:", newOpen);
-        onOpenChange(newOpen);
-      }}
+      onOpenChange={handleDialogClose}
     >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
         <DialogHeader>
@@ -216,17 +224,17 @@ const EditPromptDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        {isLoading && !prompt ? (
+        {isLoadingData || !prompt ? (
           <DialogLoadingState />
         ) : (
           <PromptFormContainer
             form={form}
-            isCategory={prompt?.is_category || false}
+            isCategory={prompt.is_category}
             isLoading={isLoading}
             onSubmit={handleSubmit}
             onCancel={() => onOpenChange(false)}
           >
-            {prompt && (
+            {!prompt.is_category && (
               <ParameterRuleManager
                 promptId={promptId}
                 isCategory={prompt.is_category}
@@ -243,4 +251,4 @@ const EditPromptDialog = ({
   );
 };
 
-export default EditPromptDialog;
+export default React.memo(EditPromptDialog);

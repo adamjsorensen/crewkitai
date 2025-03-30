@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import PromptFormFields, { PromptFormValues } from "../shared/PromptFormFields";
@@ -23,7 +23,8 @@ const PromptFormContainer: React.FC<PromptFormContainerProps> = ({
   onCancel,
   children
 }) => {
-  const handleFormSubmit = async (values: PromptFormValues) => {
+  // Use useCallback to prevent recreating this function on every render
+  const handleFormSubmit = useCallback(async (values: PromptFormValues) => {
     console.log("Form submission started with values:", values);
     try {
       await onSubmit(values);
@@ -31,7 +32,7 @@ const PromptFormContainer: React.FC<PromptFormContainerProps> = ({
     } catch (error) {
       console.error("Error during form submission:", error);
     }
-  };
+  }, [onSubmit]);
 
   return (
     <Form {...form}>
@@ -57,7 +58,6 @@ const PromptFormContainer: React.FC<PromptFormContainerProps> = ({
           <Button 
             type="submit" 
             disabled={isLoading}
-            onClick={() => console.log("Save button clicked, form state:", form.formState)}
           >
             {isLoading ? (
               <>
@@ -74,4 +74,4 @@ const PromptFormContainer: React.FC<PromptFormContainerProps> = ({
   );
 };
 
-export default PromptFormContainer;
+export default React.memo(PromptFormContainer);
