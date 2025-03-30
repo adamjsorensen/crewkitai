@@ -14,7 +14,7 @@ export function useParameterRules() {
     setError(fetchError);
   }
 
-  // Wrap the original functions to add logging
+  // Wrap the original function to add logging
   const wrappedGetParametersForPrompt = async (promptId: string) => {
     console.log("getParametersForPrompt called for promptId:", promptId);
     try {
@@ -30,47 +30,14 @@ export function useParameterRules() {
     }
   };
 
-  const wrappedCreateParameterRule = async (data: any) => {
-    console.log("createParameterRule called with data:", data);
-    try {
-      const result = await createParameterRule.mutateAsync(data);
-      console.log("Parameter rule created successfully:", result);
-      return result;
-    } catch (err) {
-      console.error("Error in createParameterRule:", err);
-      throw err;
-    }
-  };
-
-  const wrappedUpdateParameterRule = async (data: any) => {
-    console.log("updateParameterRule called with data:", data);
-    try {
-      const result = await updateParameterRule.mutateAsync(data);
-      console.log("Parameter rule updated successfully:", result);
-      return result;
-    } catch (err) {
-      console.error("Error in updateParameterRule:", err);
-      throw err;
-    }
-  };
-
-  const wrappedDeleteParameterRule = async (ruleId: string) => {
-    console.log("deleteParameterRule called for ruleId:", ruleId);
-    try {
-      const result = await deleteParameterRule.mutateAsync(ruleId);
-      console.log("Parameter rule deleted successfully:", result);
-      return result;
-    } catch (err) {
-      console.error("Error in deleteParameterRule:", err);
-      throw err;
-    }
-  };
+  // Note: We're not wrapping the mutation objects anymore, just passing them through
+  // This ensures they maintain their original interface, including mutateAsync
 
   return {
     getParametersForPrompt: wrappedGetParametersForPrompt,
-    createParameterRule: wrappedCreateParameterRule,
-    updateParameterRule: wrappedUpdateParameterRule,
-    deleteParameterRule: wrappedDeleteParameterRule,
+    createParameterRule,   // Return the original mutation object
+    updateParameterRule,   // Return the original mutation object
+    deleteParameterRule,   // Return the original mutation object
     error
   };
 }
