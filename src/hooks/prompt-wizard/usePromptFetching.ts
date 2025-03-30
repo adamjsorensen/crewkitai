@@ -12,53 +12,52 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
   
   // Use a ref to track if error toast was already shown
   const errorToastShownRef = useRef<boolean>(false);
+  const attemptCountRef = useRef<number>(0);
   
   const fetchPrompt = useCallback(async () => {
+    if (!promptId || !isOpen) return;
+    
     try {
-      if (promptId && isOpen) {
-        setIsLoading(true);
-        setError(null);
-        console.log(`Fetching prompt with ID: ${promptId} (retry count: ${retryCount})`);
+      setIsLoading(true);
+      setError(null);
+      attemptCountRef.current += 1;
+      console.log(`Fetching prompt with ID: ${promptId} (attempt: ${attemptCountRef.current})`);
+      
+      // Add a timeout to detect slow network issues
+      const timeoutPromise = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error("Request timed out")), 10000)
+      );
+      
+      // Race the actual fetch with the timeout
+      const fetchedPrompt = await Promise.race([
+        getPromptById(promptId),
+        timeoutPromise
+      ]) as Prompt | null;
+      
+      // Reset error toast flag on successful fetch
+      errorToastShownRef.current = false;
+      
+      if (fetchedPrompt) {
+        console.log("Successfully fetched prompt:", fetchedPrompt.title, fetchedPrompt);
+        setPrompt(fetchedPrompt);
+      } else {
+        console.error("No prompt returned from getPromptById for ID:", promptId);
+        setError("Failed to load prompt details. Prompt may not exist.");
         
-        // Add a timeout to detect slow network issues
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Request timed out")), 10000)
-        );
-        
-        // Race the actual fetch with the timeout
-        const fetchedPrompt = await Promise.race([
-          getPromptById(promptId),
-          timeoutPromise
-        ]) as Prompt | null;
-        
-        // Reset error toast flag on successful fetch
-        errorToastShownRef.current = false;
-        
-        if (fetchedPrompt) {
-          console.log("Successfully fetched prompt:", fetchedPrompt.title);
-          setPrompt(fetchedPrompt);
-        } else {
-          console.error("No prompt returned from getPromptById");
-          setError("Failed to load prompt details.");
-          
-          if (!errorToastShownRef.current) {
-            errorToastShownRef.current = true;
-            toast({
-              title: "Error",
-              description: "Could not load the prompt data. Please try again.",
-              variant: "destructive"
-            });
-          }
+        if (!errorToastShownRef.current) {
+          errorToastShownRef.current = true;
+          toast({
+            title: "Error",
+            description: "Could not load the prompt data. Please try again or select another prompt.",
+            variant: "destructive"
+          });
         }
-        
-        setIsLoading(false);
       }
     } catch (error: any) {
       const errorMessage = error?.message || "An unknown error occurred";
       console.error(`Error fetching prompt: ${errorMessage}`, error);
       setError(`Failed to load prompt details. ${errorMessage}`);
       setPrompt(null);
-      setIsLoading(false);
       
       // Only show toast if not already shown for this error session
       if (!errorToastShownRef.current) {
@@ -69,8 +68,10 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
           variant: "destructive"
         });
       }
+    } finally {
+      setIsLoading(false);
     }
-  }, [promptId, isOpen, getPromptById, retryCount, toast]);
+  }, [promptId, isOpen, getPromptById, toast]);
   
   useEffect(() => {
     let isMounted = true;
@@ -82,17 +83,16 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
     return () => {
       // Cleanup function
       isMounted = false;
-      setPrompt(null);
-      setIsLoading(false);
-      setError(null);
       // Reset error toast flag on unmount
       errorToastShownRef.current = false;
+      attemptCountRef.current = 0;
     };
-  }, [promptId, isOpen, fetchPrompt]);
+  }, [promptId, isOpen, fetchPrompt, retryCount]);
   
   // Add a method to reset error toast flag
   const resetErrorFlag = useCallback(() => {
     errorToastShownRef.current = false;
+    attemptCountRef.current = 0;
   }, []);
   
   return { 
@@ -100,6 +100,6 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
     isLoading, 
     error, 
     refetch: fetchPrompt,
-    resetErrorFlag 
+    resetErrorFlag
   };
 }

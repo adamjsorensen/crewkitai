@@ -39,8 +39,7 @@ export function usePromptOperations() {
     try {
       console.log(`Fetching prompt with ID ${id}...`);
       
-      // Fix the invalid SQL query syntax for connection validation
-      // Instead of count(*), use a simpler query that's valid in PostgREST syntax
+      // Simple connection test that's valid in PostgREST syntax
       const { error: connectionError } = await supabase
         .from('prompts')
         .select('id')
@@ -59,15 +58,12 @@ export function usePromptOperations() {
         .single();
       
       if (fetchError) {
-        console.error(`Error fetching prompt with ID ${id}:`, fetchError);
-        const errorDetails = {
-          message: fetchError.message,
-          details: fetchError.details,
-          hint: fetchError.hint,
-          code: fetchError.code
-        };
-        console.error("Error details:", errorDetails);
+        if (fetchError.code === 'PGRST116') {
+          console.log(`No prompt found with ID ${id}`);
+          return null;
+        }
         
+        console.error(`Error fetching prompt with ID ${id}:`, fetchError);
         setError(`Failed to fetch prompt: ${fetchError.message}`);
         throw new Error(`Failed to fetch prompt: ${fetchError.message}`);
       }

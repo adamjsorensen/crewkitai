@@ -1,8 +1,9 @@
 
 import React from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Info } from "lucide-react";
 import AdditionalContextStep from "./AdditionalContextStep";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface NoParametersAlertProps {
   additionalContext: string;
@@ -14,13 +15,20 @@ const NoParametersAlert: React.FC<NoParametersAlertProps> = ({
   setAdditionalContext
 }) => {
   return (
-    <div className="py-6">
-      <Alert className="mb-4">
-        <HelpCircle className="h-4 w-4" />
-        <AlertDescription>
-          This prompt doesn't have any customization options. You can skip to the additional context.
-        </AlertDescription>
-      </Alert>
+    <div className="py-4">
+      <Card className="mb-4 bg-blue-50 border-blue-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2 text-blue-700">
+            <Info className="h-5 w-5" />
+            Direct to Additional Context
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-blue-700 text-sm">
+            This prompt doesn't have any customization options, so you can proceed directly to adding your own context.
+          </p>
+        </CardContent>
+      </Card>
       <AdditionalContextStep 
         additionalContext={additionalContext} 
         setAdditionalContext={setAdditionalContext}

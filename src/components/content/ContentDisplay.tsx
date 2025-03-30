@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import CategoryTile from "@/components/content/CategoryTile";
 import PromptCard from "@/components/content/PromptCard";
 import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 
 interface ContentDisplayProps {
   categories: Prompt[];
@@ -35,20 +36,32 @@ const ContentDisplay = ({
 }: ContentDisplayProps) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Skeleton key={index} className="h-[180px] rounded-lg" />
-        ))}
+      <div>
+        <div className="space-y-2 mb-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-full max-w-md" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-[180px] rounded-lg" />
+          ))}
+        </div>
       </div>
     );
   }
   
   if (isError) {
     return (
-      <Card>
+      <Card className="border-red-200 bg-red-50">
         <CardContent className="p-6 text-center">
-          <p className="text-red-500 mb-2">Error loading content templates</p>
-          <Button variant="outline">Try Again</Button>
+          <div className="flex items-center justify-center mb-4">
+            <AlertCircle className="h-10 w-10 text-red-500" />
+          </div>
+          <h3 className="text-xl font-medium mb-2 text-red-700">Error Loading Content</h3>
+          <p className="text-red-600 mb-4">There was a problem loading content templates. Please try again later.</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
         </CardContent>
       </Card>
     );
@@ -74,6 +87,8 @@ const ContentDisplay = ({
   }
   
   if (selectedCategory) {
+    const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
+    
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -82,15 +97,20 @@ const ContentDisplay = ({
               variant="ghost" 
               size="sm" 
               onClick={() => setSelectedCategory(null)}
-              className="text-muted-foreground"
+              className="flex items-center gap-1 text-muted-foreground"
             >
-              ← Back
+              <ArrowLeft className="h-4 w-4" />
+              Back
             </Button>
             <h2 className="text-xl font-semibold">
-              {categories.find(cat => cat.id === selectedCategory)?.title || "Category"}
+              {selectedCategoryData?.title || "Category"}
             </h2>
           </div>
         </div>
+        
+        {selectedCategoryData?.description && (
+          <p className="text-muted-foreground">{selectedCategoryData.description}</p>
+        )}
         
         {prompts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,54 +1,71 @@
 
 import React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AlertCircle, ServerCrash, FileQuestion, RefreshCw } from "lucide-react";
 
 interface ErrorAndRetryStateProps {
-  error: string | null;
+  error: string;
   onClose: () => void;
   onRetry: () => void;
-  networkStatus: 'online' | 'offline';
-  errorType?: 'general' | 'not-found';
+  networkStatus?: 'online' | 'offline';
+  errorType?: 'connection' | 'not-found' | 'unknown';
 }
 
-const ErrorAndRetryState: React.FC<ErrorAndRetryStateProps> = ({
-  error,
-  onClose,
+const ErrorAndRetryState: React.FC<ErrorAndRetryStateProps> = ({ 
+  error, 
+  onClose, 
   onRetry,
-  networkStatus,
-  errorType = 'general'
+  networkStatus = 'online',
+  errorType = 'unknown'
 }) => {
+  const isOffline = networkStatus === 'offline';
+  
+  // Select icon based on error type
+  let Icon = AlertCircle;
+  let title = "Error Loading Prompt";
+  let description = error;
+  
+  if (isOffline) {
+    Icon = ServerCrash;
+    title = "You're Offline";
+    description = "Please check your internet connection and try again.";
+  } else if (errorType === 'not-found') {
+    Icon = FileQuestion;
+    title = "Prompt Not Found";
+    description = "The prompt you're looking for doesn't exist or has been removed.";
+  } else if (errorType === 'connection') {
+    Icon = ServerCrash;
+    title = "Connection Error";
+    description = "Couldn't connect to the server. Please try again later.";
+  }
+  
   return (
-    <div className="py-6">
-      <Alert variant="destructive" className="mb-4">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>
-          {errorType === 'not-found' ? "Unable to load prompt" : "Error loading prompt"}
-        </AlertTitle>
-        <AlertDescription>
-          {error}
+    <div className="py-8 space-y-6">
+      <Alert variant="destructive" className="mb-6">
+        <Icon className="h-5 w-5" />
+        <AlertTitle>{title}</AlertTitle>
+        <AlertDescription className="mt-2">
+          {description}
         </AlertDescription>
       </Alert>
-      <div className="text-center mt-4">
-        <p className="text-sm text-muted-foreground mb-4">
-          {errorType === 'not-found'
-            ? "Unable to load prompt. Please try again or select a different prompt."
-            : "Could not load the prompt data. You can try again or select a different prompt."}
-        </p>
-        <div className="flex justify-center gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-          <Button 
-            onClick={onRetry} 
-            className="gap-2"
-            disabled={networkStatus === 'offline'}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Retry
-          </Button>
-        </div>
+      
+      <div className="flex justify-center gap-4">
+        <Button
+          variant="outline"
+          onClick={onClose}
+        >
+          Cancel
+        </Button>
+        
+        <Button
+          onClick={onRetry}
+          disabled={isOffline}
+          className="gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Retry
+        </Button>
       </div>
     </div>
   );

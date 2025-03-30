@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
   const { toast } = useToast();
   const [retryCount, setRetryCount] = useState(0);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
+  const [errorType, setErrorType] = useState<'connection' | 'not-found' | 'unknown'>('unknown');
   
   const {
     prompt,
@@ -48,7 +49,20 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     handleSave,
     setAdditionalContext,
     refetchPrompt
-  } = usePromptWizard(promptId, isOpen, onClose, retryCount);
+  } = usePromptWizard(promptId, isOpen, retryCount);
+  
+  // Set error type when error changes
+  useEffect(() => {
+    if (error) {
+      if (error.includes("not found") || error.includes("doesn't exist")) {
+        setErrorType('not-found');
+      } else if (error.includes("connection") || error.includes("timed out") || error.includes("network")) {
+        setErrorType('connection');
+      } else {
+        setErrorType('unknown');
+      }
+    }
+  }, [error]);
   
   // Handle retry with exponential backoff
   const handleRetry = () => {
@@ -59,10 +73,39 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
       description: "Attempting to load the prompt again",
     });
     
+    // If there have been multiple retries, suggest refreshing the page
+    if (retryCount > 2) {
+      toast({
+        title: "Multiple Retry Attempts",
+        description: "If this continues, try refreshing the page",
+        variant: "destructive"
+      });
+    }
+    
     refetchPrompt();
   };
   
+  // Log component mounting and unmounting for debugging
+  useEffect(() => {
+    console.log("CustomPromptWizard mounted with promptId:", promptId);
+    
+    return () => {
+      console.log("CustomPromptWizard unmounted");
+    };
+  }, [promptId]);
+  
+  // Log when the prompt data changes
+  useEffect(() => {
+    console.log("Prompt data changed:", prompt);
+  }, [prompt]);
+  
   if (!isOpen) return null;
+  
+  const dialogTitle = isLoading 
+    ? "Loading..." 
+    : prompt 
+      ? `Customize Prompt: ${prompt.title}` 
+      : "Customize Prompt";
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -70,7 +113,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText size={18} className="text-primary" />
-            {isLoading ? "Loading..." : prompt ? `Customize Prompt: ${prompt.title}` : "Customize Prompt"}
+            {dialogTitle}
           </DialogTitle>
           <DialogDescription>
             Customize this prompt to generate content tailored to your needs
@@ -90,6 +133,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
             onClose={onClose} 
             onRetry={handleRetry} 
             networkStatus={networkStatus}
+            errorType={errorType}
           />
         ) : !prompt ? (
           <ErrorAndRetryState 
@@ -121,10 +165,10 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
             generating={generating}
             isLoading={isLoading}
             promptLoaded={!!prompt}
+            networkStatus={networkStatus}
             onPrevious={handlePrevious}
             onNext={handleNext}
             onSave={handleSave}
-            networkStatus={networkStatus}
           />
         </DialogFooter>
       </DialogContent>

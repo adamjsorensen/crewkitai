@@ -5,6 +5,8 @@ import AdditionalContextStep from "./AdditionalContextStep";
 import ReviewStep from "./ReviewStep";
 import NoParametersAlert from "./NoParametersAlert";
 import { Prompt } from "@/hooks/useCrewkitPrompts";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 interface WizardContentProps {
   prompt: Prompt | null;
@@ -25,9 +27,18 @@ const WizardContent: React.FC<WizardContentProps> = ({
   setAdditionalContext,
   handleTweakChange
 }) => {
-  if (!prompt) return null;
+  if (!prompt) {
+    return (
+      <Alert className="mb-4 border-amber-500">
+        <AlertTriangle className="h-4 w-4 text-amber-500" />
+        <AlertDescription>
+          No prompt data available. Please try selecting a different prompt.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
-  // No parameters case
+  // No parameters case - skip to the additional context step
   if (parameters.length === 0) {
     return (
       <NoParametersAlert 

@@ -11,7 +11,28 @@ export function useParameterRulesFetching() {
    */
   const getParametersForPrompt = async (promptId: string): Promise<ParameterWithTweaks[]> => {
     try {
-      // First get all parameter rules for this prompt
+      console.log(`Fetching parameter rules for prompt: ${promptId}`);
+      
+      // First check if the prompt exists
+      const { data: promptData, error: promptError } = await supabase
+        .from('prompts')
+        .select('id, title')
+        .eq('id', promptId)
+        .single();
+      
+      if (promptError) {
+        console.error('Error verifying prompt exists:', promptError);
+        throw new Error(`Failed to verify prompt exists: ${promptError.message}`);
+      }
+      
+      if (!promptData) {
+        console.error(`No prompt found with ID ${promptId}`);
+        throw new Error('Prompt not found');
+      }
+      
+      console.log(`Verified prompt exists: ${promptData.title}`);
+      
+      // Get all parameter rules for this prompt
       const { data: rules, error: rulesError } = await supabase
         .from('prompt_parameter_rules')
         .select('*')
@@ -29,6 +50,8 @@ export function useParameterRulesFetching() {
         console.log(`No parameter rules found for prompt ${promptId}`);
         return [];
       }
+      
+      console.log(`Found ${rules.length} parameter rules for prompt ${promptId}`);
       
       // Get the parameter IDs from rules
       const parameterIds = rules.map(rule => rule.parameter_id);
@@ -51,6 +74,8 @@ export function useParameterRulesFetching() {
         return [];
       }
       
+      console.log(`Found ${parameters.length} parameters for prompt ${promptId}`);
+      
       // Get the tweaks for these parameters
       const { data: tweaks, error: tweaksError } = await supabase
         .from('parameter_tweaks')
@@ -64,6 +89,8 @@ export function useParameterRulesFetching() {
         setError(tweaksError.message);
         throw new Error(`Failed to fetch parameter tweaks: ${tweaksError.message}`);
       }
+      
+      console.log(`Found ${tweaks?.length || 0} tweaks for parameters`);
       
       // Combine parameters with their tweaks and rules
       const parametersWithTweaks = parameters.map(parameter => {
@@ -84,6 +111,8 @@ export function useParameterRulesFetching() {
         
         return (aRule?.order || 0) - (bRule?.order || 0);
       });
+      
+      console.log('Returning parameters with tweaks:', parametersWithTweaks);
       
       return parametersWithTweaks;
     } catch (error: any) {
