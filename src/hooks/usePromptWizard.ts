@@ -90,7 +90,7 @@ export function usePromptWizard(
     selectedTweaks,
     additionalContext,
     currentStepIndex,
-    steps,
+    steps, // Make sure we're returning the steps
     progressValue,
     canProceed: canProceed(currentStepIndex),
     isLastStep: isLastStep(currentStepIndex),

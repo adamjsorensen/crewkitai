@@ -40,6 +40,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     selectedTweaks,
     additionalContext,
     currentStepIndex,
+    steps, // <- Make sure we're extracting steps from the hook
     progressValue,
     canProceed,
     isLastStep,
