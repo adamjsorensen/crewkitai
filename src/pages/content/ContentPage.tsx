@@ -1,19 +1,20 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import PromptCard from "@/components/content/PromptCard";
 import CategoryTile from "@/components/content/CategoryTile";
 import CustomPromptWizard from "@/components/content/CustomPromptWizard";
-import { useCrewkitPrompts } from "@/hooks/useCrewkitPrompts";
+import { useCrewkitPrompts, Prompt } from "@/hooks/useCrewkitPrompts";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Filter, XCircle } from "lucide-react";
+import { Search, XCircle } from "lucide-react";
 
-const PromptLibrary = () => {
+const ContentPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
@@ -59,6 +60,10 @@ const PromptLibrary = () => {
   const handleClearFilters = () => {
     setSearchTerm("");
     setSelectedCategory(null);
+  };
+
+  const handleCategorySelect = (category: Prompt) => {
+    setSelectedCategory(category.id);
   };
   
   const isFiltering = searchTerm !== "" || selectedCategory !== null;
@@ -113,6 +118,7 @@ const PromptLibrary = () => {
               selectedPrompt={selectedPrompt}
               setSelectedPrompt={setSelectedPrompt}
               isFiltering={isFiltering}
+              onCategoryClick={handleCategorySelect}
             />
           </TabsContent>
           
@@ -127,6 +133,7 @@ const PromptLibrary = () => {
               selectedPrompt={selectedPrompt}
               setSelectedPrompt={setSelectedPrompt}
               isFiltering={isFiltering}
+              onCategoryClick={handleCategorySelect}
             />
           </TabsContent>
           
@@ -141,6 +148,7 @@ const PromptLibrary = () => {
               selectedPrompt={selectedPrompt}
               setSelectedPrompt={setSelectedPrompt}
               isFiltering={isFiltering}
+              onCategoryClick={handleCategorySelect}
             />
           </TabsContent>
           
@@ -155,6 +163,7 @@ const PromptLibrary = () => {
               selectedPrompt={selectedPrompt}
               setSelectedPrompt={setSelectedPrompt}
               isFiltering={isFiltering}
+              onCategoryClick={handleCategorySelect}
             />
           </TabsContent>
         </Tabs>
@@ -172,8 +181,8 @@ const PromptLibrary = () => {
 };
 
 interface ContentDisplayProps {
-  categories: any[];
-  prompts: any[];
+  categories: Prompt[];
+  prompts: Prompt[];
   isLoading: boolean;
   isError: boolean;
   selectedCategory: string | null;
@@ -181,6 +190,7 @@ interface ContentDisplayProps {
   selectedPrompt: string | null;
   setSelectedPrompt: (id: string | null) => void;
   isFiltering: boolean;
+  onCategoryClick: (category: Prompt) => void;
 }
 
 const ContentDisplay = ({
@@ -192,7 +202,8 @@ const ContentDisplay = ({
   setSelectedCategory,
   selectedPrompt,
   setSelectedPrompt,
-  isFiltering
+  isFiltering,
+  onCategoryClick
 }: ContentDisplayProps) => {
   if (isLoading) {
     return (
@@ -284,7 +295,7 @@ const ContentDisplay = ({
               <CategoryTile
                 key={category.id}
                 category={category}
-                onClick={() => setSelectedCategory(category.id)}
+                onClick={onCategoryClick}
               />
             ))}
           </div>
@@ -311,4 +322,4 @@ const ContentDisplay = ({
   );
 };
 
-export default PromptLibrary;
+export default ContentPage;

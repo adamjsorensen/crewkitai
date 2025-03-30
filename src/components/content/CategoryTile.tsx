@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 
 interface CategoryTileProps {
   category: Prompt;
-  onSelect: (category: Prompt) => void;
+  onClick: (category: Prompt) => void;
 }
 
-const CategoryTile = ({ category, onSelect }: CategoryTileProps) => {
+const CategoryTile = ({ category, onClick }: CategoryTileProps) => {
   // Dynamic icon based on the icon_name from the category
   const IconComponent = category.icon_name ? 
     require("lucide-react")[category.icon_name] : 
@@ -19,7 +19,7 @@ const CategoryTile = ({ category, onSelect }: CategoryTileProps) => {
   return (
     <Card 
       className="cursor-pointer transition-all hover:shadow-md"
-      onClick={() => onSelect(category)}
+      onClick={() => onClick(category)}
     >
       <CardContent className="p-4 flex items-center gap-3">
         <div className={cn(

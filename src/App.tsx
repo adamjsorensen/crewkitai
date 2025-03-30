@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -35,11 +34,9 @@ import { setupGraphlitCollections, isGraphlitAvailable } from "@/services/graphl
 const queryClient = new QueryClient();
 
 function App() {
-  // Initialize Graphlit RAG collections on app start
   useEffect(() => {
     const initializeRag = async () => {
       try {
-        // Check if Graphlit is available
         const available = await isGraphlitAvailable();
         
         if (available) {
@@ -73,13 +70,11 @@ function App() {
               <Route path="/dashboard/profile" element={<ProfilePage />} />
               <Route path="/dashboard/settings" element={<SettingsPage />} />
               
-              {/* Content generation routes */}
               <Route path="/dashboard/prompt-library" element={<Navigate to="/dashboard/content" replace />} />
               <Route path="/dashboard/generated/:id" element={<GeneratedContentPage />} />
               <Route path="/dashboard/saved-content" element={<SavedContentPage />} />
               <Route path="/dashboard/saved-content/:slug" element={<SavedContentDetailPage />} />
               
-              {/* Admin routes */}
               <Route path="/dashboard/admin/ai-settings" element={<AISettingsPage />} />
               <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
               <Route path="/dashboard/admin/content-settings" element={<ContentSettingsPage />} />
@@ -90,7 +85,6 @@ function App() {
               <Route path="/dashboard/admin/app-settings" element={<AppSettingsPage />} />
               <Route path="/dashboard/admin/database" element={<DatabasePage />} />
               
-              {/* User management routes */}
               <Route path="/dashboard/user-management" element={<UserManagementPage />}>
                 <Route path="user-list" element={<UserListPage />} />
                 <Route path="add-user" element={<AddUserPage />} />
@@ -98,7 +92,6 @@ function App() {
                 <Route path="user-details/:userId" element={<UserDetailsPage />} />
               </Route>
               
-              {/* Redirect any old /dashboard/ai-coach routes to /dashboard/pg-coach */}
               <Route path="/dashboard/ai-coach" element={<Navigate to="/dashboard/pg-coach" replace />} />
             </Routes>
           </Router>
