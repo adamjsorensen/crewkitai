@@ -1,163 +1,150 @@
+
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useSaveContent } from "@/hooks/useSaveContent";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Save, ArrowLeft, Copy } from "lucide-react";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const SavedContentDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
   const { toast } = useToast();
-  const { getSavedContentBySlug, updateSavedContent } = useSaveContent();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [content, setContent] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
 
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
-  const [contentId, setContentId] = useState<string | null>(null);
-
-  const { isLoading, isError } = useQuery({
-    queryKey: ['saved-content', slug],
-    queryFn: () => getSavedContentBySlug(slug || ""),
-    enabled: !!slug,
-    onSuccess: (data) => {
-      if (data) {
-        setTitle(data.title);
-        setContent(data.content);
-        setContentId(data.id);
-      }
+  // Fixed the useQuery to use onSettled instead of onSuccess
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["saved-content", slug],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("saved_generations")
+        .select("*")
+        .eq("slug", slug)
+        .single();
+      
+      if (error) throw error;
+      return data;
     }
   });
 
-  const handleUpdateContent = async () => {
-    if (!contentId) return;
-    
-    try {
-      await updateSavedContent.mutateAsync({
-        id: contentId,
-        title,
-        content
-      });
-      
-      setIsEditing(false);
-    } catch (error) {
-      console.error("Error updating content:", error);
+  // Use React's useEffect for side effects
+  React.useEffect(() => {
+    if (data) {
+      setContent(data.content);
+      setTitle(data.title);
     }
+  }, [data]);
+
+  const updateContentMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("saved_generations")
+        .update({ content, title, updated_at: new Date().toISOString() })
+        .eq("slug", slug);
+      
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["saved-content"] });
+      toast({
+        title: "Content updated",
+        description: "Your content has been saved successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to save content: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSave = () => {
+    updateContentMutation.mutate();
   };
 
-  const toggleEditing = () => {
-    setIsEditing(!isEditing);
-  };
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="container mx-auto py-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(content);
-    toast({
-      title: "Copied to clipboard",
-      description: "Content copied successfully"
-    });
-  };
+  if (error || !data) {
+    return (
+      <DashboardLayout>
+        <div className="container mx-auto py-6">
+          <h1 className="text-2xl font-bold mb-4">Content Not Found</h1>
+          <p className="text-red-500">The requested content could not be loaded.</p>
+          <button
+            onClick={() => navigate("/dashboard/saved-content")}
+            className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
+          >
+            Back to Saved Content
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
       <div className="container mx-auto py-6 space-y-6">
-        {isLoading ? (
-          <>
-            <Skeleton className="h-10 w-3/4 mb-4" />
-            <Card>
-              <CardContent className="p-6">
-                <Skeleton className="h-40 w-full" />
-              </CardContent>
-            </Card>
-          </>
-        ) : isError ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-red-500">Error loading content</p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => navigate('/dashboard/saved-content')}
-              >
-                Back to Saved Content
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/dashboard/saved-content')}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <h1 className="text-3xl font-bold">
-                {isEditing ? "Edit Content" : "View Content"}
-              </h1>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              {isEditing ? (
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="text-xl font-semibold w-full md:w-1/2"
-                />
-              ) : (
-                <h2 className="text-xl font-semibold">{title}</h2>
-              )}
-              
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleCopyToClipboard}
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </Button>
-                
-                {isEditing ? (
-                  <Button
-                    onClick={handleUpdateContent}
-                    disabled={updateSavedContent.isPending}
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </Button>
-                ) : (
-                  <Button onClick={toggleEditing}>
-                    Edit Content
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            <Card>
-              <CardContent className="p-6">
-                {isEditing ? (
-                  <Textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="min-h-[400px] font-mono"
-                  />
-                ) : (
-                  <div className="whitespace-pre-wrap">
-                    {content}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </>
-        )}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Edit Content</h1>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate("/dashboard/saved-content")}
+              className="px-4 py-2 border border-gray-300 rounded-md"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-primary text-white rounded-md"
+              disabled={updateContentMutation.isPending}
+            >
+              {updateContentMutation.isPending ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium mb-1">
+              Title
+            </label>
+            <input
+              id="title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="content" className="block text-sm font-medium mb-1">
+              Content
+            </label>
+            <textarea
+              id="content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md h-64"
+            />
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );
