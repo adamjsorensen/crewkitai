@@ -1,16 +1,16 @@
 
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCrewkitPrompts, Prompt } from "@/hooks/useCrewkitPrompts";
 import { useCrewkitPromptParameters, ParameterWithTweaks } from "@/hooks/useCrewkitPromptParameters";
-import { Loader2 } from "lucide-react";
-import PromptFormFields, { PromptFormValues } from "./shared/PromptFormFields";
-import ParameterSelection, { SelectedParameter } from "./shared/ParameterSelection";
+import { PromptFormValues } from "./shared/PromptFormFields";
+import { SelectedParameter } from "./shared/ParameterSelection";
+import DialogLoadingState from "./prompts/DialogLoadingState";
+import PromptFormContainer from "./prompts/PromptFormContainer";
+import ParameterRuleManager from "./prompts/ParameterRuleManager";
 
 // Define the hub area type to match the expected type in Prompt
 type HubAreaType = 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
@@ -28,12 +28,10 @@ const EditPromptDialog = ({
 }: EditPromptDialogProps) => {
   const { getPromptById, updatePrompt } = useCrewkitPrompts();
   const { 
-    parameters, 
     getParametersForPrompt, 
     createParameterRule, 
     updateParameterRule,
     deleteParameterRule,
-    isLoading: isLoadingParameters 
   } = useCrewkitPromptParameters();
   
   const [prompt, setPrompt] = useState<Prompt | null>(null);
@@ -108,47 +106,6 @@ const EditPromptDialog = ({
     loadPromptData();
   }, [open, promptId, getPromptById, getParametersForPrompt, form]);
 
-  // Update selectedParameterIds when selectedParameters changes
-  useEffect(() => {
-    setSelectedParameterIds(selectedParameters.map(param => param.id));
-  }, [selectedParameters]);
-
-  const handleParameterSelect = (parameterId: string) => {
-    // Skip if already selected
-    if (selectedParameterIds.includes(parameterId)) return;
-
-    const parameterToAdd = parameters.find(p => p.id === parameterId);
-    if (parameterToAdd) {
-      const newParam: SelectedParameter = {
-        id: parameterToAdd.id,
-        name: parameterToAdd.name,
-        isRequired: false,
-        order: selectedParameters.length, // Add to the end
-      };
-      
-      setSelectedParameters([...selectedParameters, newParam]);
-    }
-  };
-
-  const handleRemoveParameter = (parameterId: string) => {
-    const updatedParameters = selectedParameters.filter(p => p.id !== parameterId);
-    // Update order after removal
-    const reorderedParameters = updatedParameters.map((p, index) => ({
-      ...p,
-      order: index,
-    }));
-    
-    setSelectedParameters(reorderedParameters);
-  };
-
-  const handleRequiredChange = (parameterId: string, isRequired: boolean) => {
-    const updatedParameters = selectedParameters.map(p => 
-      p.id === parameterId ? { ...p, isRequired } : p
-    );
-    
-    setSelectedParameters(updatedParameters);
-  };
-
   const handleSubmit = async (values: PromptFormValues) => {
     if (!prompt || !promptId) return;
     
@@ -216,12 +173,6 @@ const EditPromptDialog = ({
     }
   };
 
-  // Convert parameters to ParameterWithTweaks[] type to satisfy the component prop
-  const parametersWithTweaks: ParameterWithTweaks[] = parameters.map(param => ({
-    ...param,
-    tweaks: [] // Add empty tweaks array
-  }));
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
@@ -231,50 +182,27 @@ const EditPromptDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+        {isLoading && !prompt ? (
+          <DialogLoadingState />
         ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              <PromptFormFields 
-                form={form} 
-                isCategory={prompt?.is_category || false} 
+          <PromptFormContainer
+            form={form}
+            isCategory={prompt?.is_category || false}
+            isLoading={isLoading}
+            onSubmit={handleSubmit}
+            onCancel={() => onOpenChange(false)}
+          >
+            {prompt && (
+              <ParameterRuleManager
+                promptId={promptId}
+                isCategory={prompt.is_category}
+                selectedParameters={selectedParameters}
+                setSelectedParameters={setSelectedParameters}
+                selectedParameterIds={selectedParameterIds}
+                setSelectedParameterIds={setSelectedParameterIds}
               />
-
-              {prompt && !prompt.is_category && (
-                <ParameterSelection
-                  parameters={parametersWithTweaks}
-                  selectedParameters={selectedParameters}
-                  selectedParameterIds={selectedParameterIds}
-                  onParameterSelect={handleParameterSelect}
-                  onRemoveParameter={handleRemoveParameter}
-                  onRequiredChange={handleRequiredChange}
-                />
-              )}
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </Form>
+            )}
+          </PromptFormContainer>
         )}
       </DialogContent>
     </Dialog>
