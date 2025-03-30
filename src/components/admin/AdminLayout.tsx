@@ -47,7 +47,7 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 max-w-6xl mx-auto">
         <div className="flex items-center gap-3">
           <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
             <Shield className="h-5 w-5 text-primary" />
@@ -60,9 +60,9 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
         
         <Separator className="my-0" />
         
-        <Card className="p-6">
+        <Card className="p-6 overflow-x-auto">
           <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 overflow-x-auto flex-nowrap justify-start">
               <TabsTrigger value="ai-settings" className="flex items-center gap-1.5">
                 <BrainCircuit className="h-4 w-4" />
                 <span>AI Settings</span>
