@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, AlertTriangle, HelpCircle } from "lucide-react";
+import { Loader2, FileText, AlertTriangle, HelpCircle, RefreshCw } from "lucide-react";
 import { usePromptWizard } from "@/hooks/usePromptWizard";
 import ParameterCustomization from "./wizard/ParameterCustomization";
 import AdditionalContextStep from "./wizard/AdditionalContextStep";
@@ -17,6 +17,7 @@ import ReviewStep from "./wizard/ReviewStep";
 import WizardNavigation from "./wizard/WizardNavigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 interface CustomPromptWizardProps {
   promptId?: string;
@@ -25,6 +26,9 @@ interface CustomPromptWizardProps {
 }
 
 const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardProps) => {
+  const { toast } = useToast();
+  const [retryCount, setRetryCount] = React.useState(0);
+  
   const {
     prompt,
     parameters,
@@ -43,7 +47,17 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     handleTweakChange,
     handleSave,
     setAdditionalContext
-  } = usePromptWizard(promptId, isOpen, onClose);
+  } = usePromptWizard(promptId, isOpen, onClose, retryCount);
+  
+  // Handle retry
+  const handleRetry = () => {
+    console.log("Retrying prompt fetch...");
+    setRetryCount(prev => prev + 1);
+    toast({
+      title: "Retrying",
+      description: "Attempting to load the prompt again",
+    });
+  };
   
   // Render current step content
   const renderStepContent = () => {
@@ -117,18 +131,34 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
             </Alert>
             <div className="text-center mt-4">
               <p className="text-sm text-muted-foreground mb-4">
-                You can still proceed with content generation with basic settings.
+                Could not load the prompt data. You can try again or select a different prompt.
               </p>
-              <Button variant="outline" onClick={onClose}>
-                Close
-              </Button>
+              <div className="flex justify-center gap-2">
+                <Button variant="outline" onClick={onClose}>
+                  Close
+                </Button>
+                <Button onClick={handleRetry} className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Retry
+                </Button>
+              </div>
             </div>
           </div>
         ) : !prompt ? (
-          <div className="flex justify-center items-center py-12 text-center">
+          <div className="flex flex-col justify-center items-center py-12 text-center">
+            <AlertTriangle className="h-8 w-8 text-yellow-500 mb-4" />
             <p className="text-muted-foreground">
               Unable to load prompt. Please try again or select a different prompt.
             </p>
+            <div className="flex justify-center gap-2 mt-4">
+              <Button variant="outline" onClick={onClose}>
+                Close
+              </Button>
+              <Button onClick={handleRetry} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="min-h-[350px] py-4">

@@ -6,11 +6,11 @@ import { useWizardState } from "./prompt-wizard/useWizardState";
 import { usePromptGeneration } from "./prompt-wizard/usePromptGeneration";
 import { useWizardSteps } from "./prompt-wizard/useWizardSteps";
 
-export function usePromptWizard(promptId: string | undefined, isOpen: boolean, onClose: () => void) {
+export function usePromptWizard(promptId: string | undefined, isOpen: boolean, onClose: () => void, retryCount: number = 0) {
   const { user } = useAuth();
   
   // Fetch prompt and parameters
-  const { prompt, isLoading: isPromptLoading, error: promptError } = usePromptFetching(promptId, isOpen);
+  const { prompt, isLoading: isPromptLoading, error: promptError } = usePromptFetching(promptId, isOpen, retryCount);
   const { parameters, isLoading: isParametersLoading, error: parameterError } = useParameterFetching(prompt?.id, isOpen);
   
   // Manage wizard state
