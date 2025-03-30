@@ -80,6 +80,7 @@ export function usePromptParameters(promptId: string | undefined) {
               continue;
             }
             
+            // Since we've checked rule.parameter is not null above, we can safely create a local variable
             const parameter = rule.parameter;
             
             // Make sure tweaks is an array before filtering
