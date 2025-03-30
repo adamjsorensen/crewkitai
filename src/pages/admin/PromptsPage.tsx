@@ -6,6 +6,7 @@ import CreatePromptDialog from "@/components/admin/content/CreatePromptDialog";
 import PageHeader from "@/components/admin/content/prompts/PageHeader";
 import ActionButtons from "@/components/admin/content/prompts/ActionButtons";
 import HubTabs from "@/components/admin/content/prompts/HubTabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const INITIAL_HUB = 'marketing';
 
@@ -14,6 +15,7 @@ const PromptsPage = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [parentId, setParentId] = useState<string | null>(null);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const isMobile = useIsMobile();
   
   // Root-level prompts and categories for the current hub
   const { prompts: rootPrompts, isLoading } = useCrewkitPrompts(null);
@@ -31,13 +33,13 @@ const PromptsPage = () => {
 
   return (
     <AdminLayout activeTab="prompts">
-      <div className="w-full space-y-6">
+      <div className="w-full space-y-4 md:space-y-6">
         <PageHeader 
           title="Prompts Management" 
           description="Manage prompt categories, base prompts, and their parameters"
         />
         
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className={`flex flex-wrap items-center ${isMobile ? 'justify-center' : 'justify-between'} gap-3 mb-2 md:mb-4`}>
           <ActionButtons 
             onCreateCategory={() => handleCreatePrompt(null, true)}
             onCreatePrompt={() => handleCreatePrompt(null, false)}
