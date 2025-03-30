@@ -12,6 +12,27 @@ export function usePromptOperations() {
   const getAllPrompts = async (): Promise<Prompt[]> => {
     try {
       console.log("Fetching all prompts...");
+      
+      // Simple connection test
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('prompts')
+          .select('count(*)')
+          .limit(1)
+          .single();
+          
+        if (testError) {
+          console.error("Connection test failed:", testError);
+          throw new Error(`Database connection issue: ${testError.message}`);
+        }
+        
+        console.log("Connection test successful, prompt count:", testData);
+      } catch (connectionError: any) {
+        console.error("Connection test error:", connectionError);
+        throw new Error(`Failed to connect to database: ${connectionError.message}`);
+      }
+      
+      // Proceed with the actual fetch
       const { data, error: fetchError } = await supabase
         .from('prompts')
         .select('*')
@@ -40,15 +61,18 @@ export function usePromptOperations() {
       console.log(`Fetching prompt with ID ${id}...`);
       
       // Simple connection test that's valid in PostgREST syntax
-      const { error: connectionError } = await supabase
+      const { data: testData, error: connectionError } = await supabase
         .from('prompts')
-        .select('id')
-        .limit(1);
+        .select('count(*)')
+        .limit(1)
+        .single();
         
       if (connectionError) {
         console.error("Connection test failed:", connectionError);
         throw new Error(`Database connection issue: ${connectionError.message}`);
       }
+      
+      console.log("Connection test passed, prompt count:", testData);
       
       // Proceed with the actual fetch
       const { data, error: fetchError } = await supabase

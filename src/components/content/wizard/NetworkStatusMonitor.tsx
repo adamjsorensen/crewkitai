@@ -13,6 +13,7 @@ const NetworkStatusMonitor: React.FC<NetworkStatusMonitorProps> = ({ onStatusCha
   
   useEffect(() => {
     const handleOnline = () => {
+      console.log("Browser reported network is online");
       onStatusChange('online');
       if (hasShownOfflineToast && !hasShownOnlineToast) {
         toast({
@@ -24,6 +25,7 @@ const NetworkStatusMonitor: React.FC<NetworkStatusMonitorProps> = ({ onStatusCha
     };
     
     const handleOffline = () => {
+      console.log("Browser reported network is offline");
       onStatusChange('offline');
       if (!hasShownOfflineToast) {
         toast({
@@ -39,6 +41,7 @@ const NetworkStatusMonitor: React.FC<NetworkStatusMonitorProps> = ({ onStatusCha
     // Regularly check the connection status
     const checkOnlineStatus = () => {
       const isOnline = navigator.onLine;
+      console.log("Checking online status:", isOnline);
       if (isOnline) {
         handleOnline();
       } else {

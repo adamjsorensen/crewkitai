@@ -49,11 +49,12 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     handleSave,
     setAdditionalContext,
     refetchPrompt
-  } = usePromptWizard(promptId, isOpen, retryCount);
+  } = usePromptWizard(promptId, isOpen, onClose, retryCount);
   
   // Set error type when error changes
   useEffect(() => {
     if (error) {
+      console.log("Error detected:", error);
       if (error.includes("not found") || error.includes("doesn't exist")) {
         setErrorType('not-found');
       } else if (error.includes("connection") || error.includes("timed out") || error.includes("network")) {

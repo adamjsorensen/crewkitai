@@ -1,7 +1,6 @@
 
 import React from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { HelpCircle, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import AdditionalContextStep from "./AdditionalContextStep";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 

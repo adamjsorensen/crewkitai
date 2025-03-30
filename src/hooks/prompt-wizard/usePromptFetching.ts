@@ -23,9 +23,29 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
       attemptCountRef.current += 1;
       console.log(`Fetching prompt with ID: ${promptId} (attempt: ${attemptCountRef.current})`);
       
+      // Test that the Supabase client is available and connected
+      try {
+        const { data: supabaseData, error: supabaseError } = await fetch('/api/check-supabase', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }).then(res => res.json());
+        
+        if (supabaseError) {
+          console.error("Supabase connection test failed:", supabaseError);
+          throw new Error(`Database connection issue: ${supabaseError}`);
+        }
+        
+        console.log("Supabase connection test passed");
+      } catch (connectionError) {
+        console.error("Error testing Supabase connection:", connectionError);
+        // Continue anyway, as this endpoint might not exist
+      }
+      
       // Add a timeout to detect slow network issues
       const timeoutPromise = new Promise<null>((_, reject) => 
-        setTimeout(() => reject(new Error("Request timed out")), 10000)
+        setTimeout(() => reject(new Error("Request timed out")), 15000)
       );
       
       // Race the actual fetch with the timeout
