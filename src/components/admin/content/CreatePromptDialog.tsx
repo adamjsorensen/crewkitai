@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
@@ -29,6 +30,8 @@ const CreatePromptDialog = ({
   const [selectedParameterIds, setSelectedParameterIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  console.log("CreatePromptDialog rendered with props:", { open, parentId, isCategory, hubArea });
+
   const formSchema = z.object({
     title: z.string().min(3, { message: "Title must be at least 3 characters" }),
     description: z.string().optional(),
@@ -52,6 +55,7 @@ const CreatePromptDialog = ({
 
   useEffect(() => {
     if (open) {
+      console.log("Dialog opened, resetting form");
       form.reset({
         title: "",
         description: "",
@@ -64,10 +68,20 @@ const CreatePromptDialog = ({
   }, [open, form, hubArea]);
 
   const handleSubmit = async (values: PromptFormValues) => {
+    console.log("CreatePromptDialog handleSubmit called with values:", values);
     try {
       setIsLoading(true);
       
       const hubAreaValue: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
+      
+      console.log("Creating prompt with data:", {
+        title: values.title,
+        description: values.description || null,
+        prompt: isCategory ? null : values.prompt,
+        is_category: isCategory,
+        parent_id: parentId,
+        hub_area: hubAreaValue
+      });
       
       const newPrompt = await createPrompt.mutateAsync({
         title: values.title,
@@ -82,6 +96,7 @@ const CreatePromptDialog = ({
         is_default: false,
       });
       
+      console.log("Prompt created successfully:", newPrompt);
       onOpenChange(false);
       form.reset();
       setSelectedParameters([]);
@@ -93,7 +108,13 @@ const CreatePromptDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        console.log("Dialog onOpenChange called with:", newOpen);
+        onOpenChange(newOpen);
+      }}
+    >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
         <DialogHeader>
           <DialogTitle>

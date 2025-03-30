@@ -23,9 +23,22 @@ const PromptFormContainer: React.FC<PromptFormContainerProps> = ({
   onCancel,
   children
 }) => {
+  const handleFormSubmit = async (values: PromptFormValues) => {
+    console.log("Form submission started with values:", values);
+    try {
+      await onSubmit(values);
+      console.log("Form submission completed successfully");
+    } catch (error) {
+      console.error("Error during form submission:", error);
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form 
+        onSubmit={form.handleSubmit(handleFormSubmit)} 
+        className="space-y-4"
+      >
         <PromptFormFields 
           form={form} 
           isCategory={isCategory} 
@@ -41,7 +54,11 @@ const PromptFormContainer: React.FC<PromptFormContainerProps> = ({
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button 
+            type="submit" 
+            disabled={isLoading}
+            onClick={() => console.log("Save button clicked, form state:", form.formState)}
+          >
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

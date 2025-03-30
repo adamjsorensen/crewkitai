@@ -37,6 +37,8 @@ const EditPromptDialog = ({
   const [isLoading, setIsLoading] = useState(false);
   const [promptParameters, setPromptParameters] = useState<ParameterWithTweaks[]>([]);
 
+  console.log("EditPromptDialog rendered with props:", { open, promptId });
+
   // Define validation schema based on whether we're editing a category or prompt
   const formSchema = z.object({
     title: z.string().min(3, { message: "Title must be at least 3 characters" }),
@@ -59,9 +61,11 @@ const EditPromptDialog = ({
   useEffect(() => {
     const loadPromptData = async () => {
       if (open && promptId) {
+        console.log("Loading prompt data for promptId:", promptId);
         setIsLoading(true);
         try {
           const promptData = await getPromptById(promptId);
+          console.log("Prompt data loaded:", promptData);
           setPrompt(promptData);
           
           form.reset({
@@ -73,20 +77,26 @@ const EditPromptDialog = ({
           
           // Load parameters for this prompt
           if (!promptData.is_category) {
-            const parametersData = await getParametersForPrompt(promptId);
-            setPromptParameters(parametersData);
-            
-            // Convert to selected parameters format
-            const selectedParams = parametersData.map((param, index) => ({
-              id: param.id,
-              name: param.name,
-              isRequired: param.rule?.is_required || false,
-              order: param.rule?.order || index,
-              ruleId: param.rule?.id,
-            }));
-            
-            setSelectedParameters(selectedParams);
-            setSelectedParameterIds(selectedParams.map(p => p.id));
+            console.log("Loading parameters for prompt:", promptId);
+            try {
+              const parametersData = await getParametersForPrompt(promptId);
+              console.log("Parameters data loaded:", parametersData);
+              setPromptParameters(parametersData);
+              
+              // Convert to selected parameters format
+              const selectedParams = parametersData.map((param, index) => ({
+                id: param.id,
+                name: param.name,
+                isRequired: param.rule?.is_required || false,
+                order: param.rule?.order || index,
+                ruleId: param.rule?.id,
+              }));
+              
+              setSelectedParameters(selectedParams);
+              setSelectedParameterIds(selectedParams.map(p => p.id));
+            } catch (paramError) {
+              console.error("Error loading parameters:", paramError);
+            }
           } else {
             setPromptParameters([]);
             setSelectedParameters([]);
@@ -104,7 +114,11 @@ const EditPromptDialog = ({
   }, [open, promptId, getPromptById, getParametersForPrompt, form]);
 
   const handleSubmit = async (values: PromptFormValues) => {
-    if (!prompt || !promptId) return;
+    console.log("EditPromptDialog handleSubmit called with values:", values);
+    if (!prompt || !promptId) {
+      console.error("Cannot submit: prompt or promptId is null");
+      return;
+    }
     
     try {
       setIsLoading(true);
@@ -112,14 +126,24 @@ const EditPromptDialog = ({
       // Convert hubArea string to the appropriate type (or null if empty)
       const hubArea: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
       
-      // Update the prompt
-      await updatePrompt.mutateAsync({
+      console.log("Updating prompt with data:", {
         id: promptId,
         title: values.title,
         description: values.description || null,
         prompt: prompt.is_category ? null : values.prompt,
         hub_area: hubArea,
       });
+      
+      // Update the prompt
+      const result = await updatePrompt.mutateAsync({
+        id: promptId,
+        title: values.title,
+        description: values.description || null,
+        prompt: prompt.is_category ? null : values.prompt,
+        hub_area: hubArea,
+      });
+      
+      console.log("Prompt updated successfully:", result);
       
       // If this is not a category, update parameter rules
       if (!prompt.is_category) {
@@ -130,10 +154,14 @@ const EditPromptDialog = ({
             .map(p => p.rule?.id)
         );
         
+        console.log("Processing parameter rules - existing rule IDs:", existingRuleIds);
+        console.log("Selected parameters:", selectedParameters);
+        
         // Update, create, or delete parameter rules
         for (const param of selectedParameters) {
           if (param.ruleId) {
             // Update existing rule
+            console.log("Updating rule:", param.ruleId);
             await updateParameterRule.mutateAsync({
               id: param.ruleId,
               is_required: param.isRequired,
@@ -144,6 +172,7 @@ const EditPromptDialog = ({
             existingRuleIds.delete(param.ruleId);
           } else {
             // Create new rule
+            console.log("Creating new rule for parameter:", param.id);
             await createParameterRule.mutateAsync({
               prompt_id: promptId,
               parameter_id: param.id,
@@ -157,11 +186,13 @@ const EditPromptDialog = ({
         // Delete rules that were removed
         for (const ruleId of existingRuleIds) {
           if (ruleId) {
+            console.log("Deleting rule:", ruleId);
             await deleteParameterRule.mutateAsync(ruleId);
           }
         }
       }
       
+      console.log("All operations completed successfully");
       onOpenChange(false);
     } catch (error) {
       console.error("Error updating prompt:", error);
@@ -171,7 +202,13 @@ const EditPromptDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        console.log("Dialog onOpenChange called with:", newOpen);
+        onOpenChange(newOpen);
+      }}
+    >
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
         <DialogHeader>
           <DialogTitle>
