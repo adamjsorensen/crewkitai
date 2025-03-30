@@ -39,10 +39,11 @@ export function usePromptOperations() {
     try {
       console.log(`Fetching prompt with ID ${id}...`);
       
-      // Add connection validation before the actual fetch
-      const { data: connectionTest, error: connectionError } = await supabase
+      // Fix the invalid SQL query syntax for connection validation
+      // Instead of count(*), use a simpler query that's valid in PostgREST syntax
+      const { error: connectionError } = await supabase
         .from('prompts')
-        .select('count(*)')
+        .select('id')
         .limit(1);
         
       if (connectionError) {

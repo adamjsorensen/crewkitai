@@ -29,6 +29,9 @@ const WizardNavigation: React.FC<WizardNavigationProps> = ({
   onSave
 }) => {
   const isNetworkDisabled = networkStatus === 'offline';
+  const isGenerateDisabled = !canProceed || generating || !promptLoaded || isNetworkDisabled;
+  const isNextDisabled = !canProceed || isLoading || !promptLoaded || isNetworkDisabled;
+  const isPreviousDisabled = currentStepIndex === 0 || isLoading || generating || !promptLoaded;
   
   return (
     <div className="flex justify-between w-full">
@@ -36,7 +39,7 @@ const WizardNavigation: React.FC<WizardNavigationProps> = ({
         type="button"
         variant="outline"
         onClick={onPrevious}
-        disabled={currentStepIndex === 0 || isLoading || generating || !promptLoaded}
+        disabled={isPreviousDisabled}
         className="gap-1"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -48,7 +51,7 @@ const WizardNavigation: React.FC<WizardNavigationProps> = ({
           <Button
             type="button"
             onClick={onSave}
-            disabled={!canProceed || generating || !promptLoaded || isNetworkDisabled}
+            disabled={isGenerateDisabled}
             className="gap-1"
           >
             {generating ? (
@@ -67,7 +70,7 @@ const WizardNavigation: React.FC<WizardNavigationProps> = ({
           <Button
             type="button"
             onClick={onNext}
-            disabled={!canProceed || isLoading || !promptLoaded || isNetworkDisabled}
+            disabled={isNextDisabled}
             className="gap-1"
           >
             Next

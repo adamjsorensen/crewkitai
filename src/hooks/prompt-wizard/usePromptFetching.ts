@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useCrewkitPrompts, Prompt } from "@/hooks/useCrewkitPrompts";
 import { useToast } from "@/hooks/use-toast";
 
@@ -9,6 +9,9 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
   const [error, setError] = useState<string | null>(null);
   const { getPromptById } = useCrewkitPrompts();
   const { toast } = useToast();
+  
+  // Use a ref to track if error toast was already shown
+  const errorToastShownRef = useRef<boolean>(false);
   
   const fetchPrompt = useCallback(async () => {
     try {
@@ -28,17 +31,24 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
           timeoutPromise
         ]) as Prompt | null;
         
+        // Reset error toast flag on successful fetch
+        errorToastShownRef.current = false;
+        
         if (fetchedPrompt) {
           console.log("Successfully fetched prompt:", fetchedPrompt.title);
           setPrompt(fetchedPrompt);
         } else {
           console.error("No prompt returned from getPromptById");
           setError("Failed to load prompt details.");
-          toast({
-            title: "Error",
-            description: "Could not load the prompt data. Please try again.",
-            variant: "destructive"
-          });
+          
+          if (!errorToastShownRef.current) {
+            errorToastShownRef.current = true;
+            toast({
+              title: "Error",
+              description: "Could not load the prompt data. Please try again.",
+              variant: "destructive"
+            });
+          }
         }
         
         setIsLoading(false);
@@ -50,26 +60,46 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
       setPrompt(null);
       setIsLoading(false);
       
-      toast({
-        title: "Connection Error",
-        description: "Could not connect to the server. Please check your network connection.",
-        variant: "destructive"
-      });
+      // Only show toast if not already shown for this error session
+      if (!errorToastShownRef.current) {
+        errorToastShownRef.current = true;
+        toast({
+          title: "Connection Error",
+          description: "Could not connect to the server. Please check your network connection.",
+          variant: "destructive"
+        });
+      }
     }
   }, [promptId, isOpen, getPromptById, retryCount, toast]);
   
   useEffect(() => {
+    let isMounted = true;
+    
     if (promptId && isOpen) {
       fetchPrompt();
     }
     
     return () => {
       // Cleanup function
+      isMounted = false;
       setPrompt(null);
       setIsLoading(false);
       setError(null);
+      // Reset error toast flag on unmount
+      errorToastShownRef.current = false;
     };
   }, [promptId, isOpen, fetchPrompt]);
   
-  return { prompt, isLoading, error, refetch: fetchPrompt };
+  // Add a method to reset error toast flag
+  const resetErrorFlag = useCallback(() => {
+    errorToastShownRef.current = false;
+  }, []);
+  
+  return { 
+    prompt, 
+    isLoading, 
+    error, 
+    refetch: fetchPrompt,
+    resetErrorFlag 
+  };
 }
