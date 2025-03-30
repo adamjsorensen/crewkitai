@@ -11,7 +11,7 @@ const SaveButton = ({ isSaving }: SaveButtonProps) => {
   return (
     <Button 
       type="submit" 
-      className="w-full sm:w-auto" 
+      className="w-full md:w-auto" 
       disabled={isSaving}
     >
       {isSaving ? (

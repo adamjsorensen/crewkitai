@@ -14,7 +14,6 @@ import ContentManagement from "./settings/ContentManagement";
 import SaveButton from "./settings/SaveButton";
 import LoadingSpinner from "./settings/LoadingSpinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Settings, MessageSquare, AlertTriangle, HelpCircle, Compass } from "lucide-react";
 import WelcomeContentManagement from "./settings/WelcomeContentManagement";
 import ContentFilters from "./settings/ContentFilters";
@@ -76,35 +75,33 @@ const AiSettingsForm = () => {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <h2 className="text-xl md:text-2xl font-semibold">AI Coach Settings</h2>
+        <h2 className="text-2xl font-semibold">AI Coach Settings</h2>
       </CardHeader>
       
       <CardContent>
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-          <ScrollArea className="w-full pb-4">
-            <TabsList className="mb-6 flex flex-wrap gap-y-2">
-              <TabsTrigger value="model-settings" className="flex items-center gap-1.5">
-                <Settings className="h-4 w-4" />
-                <span>Model Settings</span>
-              </TabsTrigger>
-              <TabsTrigger value="responses" className="flex items-center gap-1.5">
-                <HelpCircle className="h-4 w-4" />
-                <span>Responses</span>
-              </TabsTrigger>
-              <TabsTrigger value="welcome-content" className="flex items-center gap-1.5">
-                <MessageSquare className="h-4 w-4" />
-                <span>Welcome Content</span>
-              </TabsTrigger>
-              <TabsTrigger value="content-filters" className="flex items-center gap-1.5">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Content Filters</span>
-              </TabsTrigger>
-              <TabsTrigger value="compass-settings" className="flex items-center gap-1.5">
-                <Compass className="h-4 w-4" />
-                <span>Compass</span>
-              </TabsTrigger>
-            </TabsList>
-          </ScrollArea>
+          <TabsList className="mb-6">
+            <TabsTrigger value="model-settings" className="flex items-center gap-1.5">
+              <Settings className="h-4 w-4" />
+              <span>Model Settings</span>
+            </TabsTrigger>
+            <TabsTrigger value="responses" className="flex items-center gap-1.5">
+              <HelpCircle className="h-4 w-4" />
+              <span>Responses</span>
+            </TabsTrigger>
+            <TabsTrigger value="welcome-content" className="flex items-center gap-1.5">
+              <MessageSquare className="h-4 w-4" />
+              <span>Welcome Content</span>
+            </TabsTrigger>
+            <TabsTrigger value="content-filters" className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Content Filters</span>
+            </TabsTrigger>
+            <TabsTrigger value="compass-settings" className="flex items-center gap-1.5">
+              <Compass className="h-4 w-4" />
+              <span>Compass</span>
+            </TabsTrigger>
+          </TabsList>
           
           <TabsContent value="model-settings">
             <Form {...form}>
@@ -118,9 +115,7 @@ const AiSettingsForm = () => {
                 
                 <ModelsConfigField form={form} />
                 
-                <div className="flex justify-end mt-6">
-                  <SaveButton isSaving={isSaving} />
-                </div>
+                <SaveButton isSaving={isSaving} />
               </form>
             </Form>
           </TabsContent>
@@ -132,9 +127,7 @@ const AiSettingsForm = () => {
                 
                 <FollowUpPromptField form={form} />
                 
-                <div className="flex justify-end mt-6">
-                  <SaveButton isSaving={isSaving} />
-                </div>
+                <SaveButton isSaving={isSaving} />
               </form>
             </Form>
           </TabsContent>
@@ -154,9 +147,7 @@ const AiSettingsForm = () => {
                 
                 <CompassSystemPromptField form={form} />
                 
-                <div className="flex justify-end mt-6">
-                  <SaveButton isSaving={isSaving} />
-                </div>
+                <SaveButton isSaving={isSaving} />
               </form>
             </Form>
           </TabsContent>

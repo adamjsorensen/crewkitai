@@ -33,20 +33,15 @@ const PromptFormContainer: React.FC<PromptFormContainerProps> = ({
 
         {children}
 
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+        <div className="flex justify-end space-x-2 pt-4">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
-            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            disabled={isLoading}
-            className="w-full sm:w-auto"
-          >
+          <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
