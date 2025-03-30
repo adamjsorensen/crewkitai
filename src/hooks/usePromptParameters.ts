@@ -74,14 +74,13 @@ export function usePromptParameters(promptId: string | undefined) {
           const transformedParameters: ParameterWithTweaks[] = [];
           
           for (const rule of data) {
-            // Ensure parameter exists and is not an error object
+            // First check if parameter exists
             if (!rule.parameter || typeof rule.parameter !== 'object' || 'code' in rule.parameter) {
               console.warn("Skipping rule with invalid parameter data:", rule.id);
               continue;
             }
             
-            // Type assertion to let TypeScript know this is a valid parameter object
-            // We've already checked above that parameter exists and is a valid object
+            // Safely assert the type after validation
             const parameter = rule.parameter as {
               id: string;
               name: string;
@@ -99,11 +98,14 @@ export function usePromptParameters(promptId: string | undefined) {
                 .sort((a, b) => a.order - b.order);
             }
             
+            // Convert the type string to a valid parameter type
+            const paramType = parameter.type as 'tone_and_style' | 'audience' | 'length' | 'focus' | 'format' | 'custom';
+            
             transformedParameters.push({
               id: parameter.id,
               name: parameter.name,
               description: parameter.description,
-              type: parameter.type,
+              type: paramType,
               active: parameter.active,
               created_at: '', // These fields are required by the type but not needed for UI
               updated_at: '',
