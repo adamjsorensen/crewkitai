@@ -1,17 +1,19 @@
 
 import React from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { SidebarProvider, Sidebar as UISidebar } from "@/components/ui/sidebar";
-import { SidebarContentItems } from "./sidebar/SidebarContentItems";
+import MobileSidebar from "./sidebar/MobileSidebar";
+import DesktopSidebar from "./sidebar/DesktopSidebar";
 
-const Sidebar = () => {
-  return (
-    <SidebarProvider defaultOpen={true}>
-      <UISidebar className="fixed inset-y-0 left-0 z-10 w-[16rem] border-r">
-        <SidebarContentItems />
-      </UISidebar>
-    </SidebarProvider>
-  );
+const DashboardSidebar = () => {
+  const isMobile = useIsMobile();
+  
+  // On mobile, we use a Sheet component for the sidebar
+  if (isMobile) {
+    return <MobileSidebar />;
+  }
+
+  // On desktop, we use the sidebar component
+  return <DesktopSidebar />;
 };
 
-export default Sidebar;
+export default DashboardSidebar;

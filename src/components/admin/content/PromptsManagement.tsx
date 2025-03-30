@@ -61,21 +61,19 @@ const PromptsManagement = ({
     }
 
     return (
-      <div className="w-full overflow-hidden">
-        <PromptsList
-          prompts={prompts}
-          expandedCategories={expandedCategories}
-          onToggleCategory={toggleCategory}
-          onEditPrompt={handleEdit}
-          onDeletePrompt={handleDelete}
-          onCreatePrompt={onCreatePrompt}
-        />
-      </div>
+      <PromptsList
+        prompts={prompts}
+        expandedCategories={expandedCategories}
+        onToggleCategory={toggleCategory}
+        onEditPrompt={handleEdit}
+        onDeletePrompt={handleDelete}
+        onCreatePrompt={onCreatePrompt}
+      />
     );
   };
 
   return (
-    <div className="w-full overflow-hidden">
+    <div>
       {renderContent()}
 
       {/* Delete Dialog */}

@@ -9,18 +9,20 @@ interface SaveButtonProps {
 
 const SaveButton = ({ isSaving }: SaveButtonProps) => {
   return (
-    <div className="flex justify-end mt-8">
-      <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
-        {isSaving ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            <span>Saving...</span>
-          </>
-        ) : (
-          <span>Save Settings</span>
-        )}
-      </Button>
-    </div>
+    <Button 
+      type="submit" 
+      className="w-full md:w-auto" 
+      disabled={isSaving}
+    >
+      {isSaving ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Saving...
+        </>
+      ) : (
+        "Save Settings"
+      )}
+    </Button>
   );
 };
 

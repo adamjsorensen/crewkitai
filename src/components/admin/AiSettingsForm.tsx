@@ -22,14 +22,12 @@ import FollowUpPromptField from "./settings/FollowUpPromptField";
 import { useToast } from "@/hooks/use-toast";
 import CompassAiEnabledField from "./settings/CompassAiEnabledField";
 import CompassSystemPromptField from "./settings/CompassSystemPromptField";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const AiSettingsForm = () => {
   const [activeTab, setActiveTab] = React.useState("model-settings");
   const { settings, isLoading, refetchSettings } = useAiSettings();
   const { saveSettings, isSaving } = useSaveAiSettings();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   
   // Initialize form with default values
   const form = useForm<AiSettingsFormValues>({
@@ -75,35 +73,32 @@ const AiSettingsForm = () => {
   }
   
   return (
-    <Card className="w-full">
+    <Card>
       <CardHeader className="pb-3">
         <h2 className="text-2xl font-semibold">AI Coach Settings</h2>
       </CardHeader>
       
       <CardContent>
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-6 w-full overflow-x-auto flex flex-nowrap whitespace-nowrap">
-            <TabsTrigger value="model-settings" className="flex items-center gap-1.5 text-xs sm:text-sm">
-              <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className={isMobile ? "hidden sm:inline" : ""}>Model Settings</span>
-              <span className={isMobile ? "" : "hidden"}>Model</span>
+          <TabsList className="mb-6">
+            <TabsTrigger value="model-settings" className="flex items-center gap-1.5">
+              <Settings className="h-4 w-4" />
+              <span>Model Settings</span>
             </TabsTrigger>
-            <TabsTrigger value="responses" className="flex items-center gap-1.5 text-xs sm:text-sm">
-              <HelpCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <TabsTrigger value="responses" className="flex items-center gap-1.5">
+              <HelpCircle className="h-4 w-4" />
               <span>Responses</span>
             </TabsTrigger>
-            <TabsTrigger value="welcome-content" className="flex items-center gap-1.5 text-xs sm:text-sm">
-              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className={isMobile ? "hidden sm:inline" : ""}>Welcome Content</span>
-              <span className={isMobile ? "" : "hidden"}>Welcome</span>
+            <TabsTrigger value="welcome-content" className="flex items-center gap-1.5">
+              <MessageSquare className="h-4 w-4" />
+              <span>Welcome Content</span>
             </TabsTrigger>
-            <TabsTrigger value="content-filters" className="flex items-center gap-1.5 text-xs sm:text-sm">
-              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className={isMobile ? "hidden sm:inline" : ""}>Content Filters</span>
-              <span className={isMobile ? "" : "hidden"}>Filters</span>
+            <TabsTrigger value="content-filters" className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Content Filters</span>
             </TabsTrigger>
-            <TabsTrigger value="compass-settings" className="flex items-center gap-1.5 text-xs sm:text-sm">
-              <Compass className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <TabsTrigger value="compass-settings" className="flex items-center gap-1.5">
+              <Compass className="h-4 w-4" />
               <span>Compass</span>
             </TabsTrigger>
           </TabsList>

@@ -1,32 +1,109 @@
 
 import React from "react";
-import { Outlet } from "react-router-dom";
-import AdminHeader from "./AdminHeader";
-import AdminNav from "./AdminNav";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Shield, Settings, Database, BrainCircuit, ToggleLeft, Compass, ListFilter, FileText, Sparkles } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface AdminLayoutProps {
-  children?: React.ReactNode;
+  children: React.ReactNode;
   activeTab?: string;
 }
 
-const AdminLayout = ({ children, activeTab }: AdminLayoutProps) => {
-  const isMobile = useIsMobile();
-  
-  return (
-    <div className="flex flex-col min-h-screen">
-      <AdminHeader />
-      
-      <div className="flex flex-col sm:flex-row flex-1">
-        <AdminNav activeTab={activeTab} className={isMobile ? "px-2 py-2" : "px-4 py-4"} />
-        
-        <div className="flex-1 p-2 sm:p-4 overflow-hidden">
-          <main className="w-full max-w-full overflow-x-hidden">
-            {children || <Outlet />}
-          </main>
+const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) => {
+  const { isAdmin, isLoading } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Redirect if not admin
+  React.useEffect(() => {
+    if (!isLoading && !isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access the admin area",
+        variant: "destructive",
+      });
+      navigate("/dashboard");
+    }
+  }, [isAdmin, isLoading, navigate, toast]);
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center h-[50vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
+      </DashboardLayout>
+    );
+  }
+
+  const handleTabChange = (value: string) => {
+    navigate(`/dashboard/admin/${value}`);
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 w-10 h-10 rounded-full flex items-center justify-center">
+            <Shield className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight">Admin Console</h1>
+            <p className="text-muted-foreground">Manage application settings and configuration</p>
+          </div>
+        </div>
+        
+        <Separator className="my-0" />
+        
+        <Card className="p-6">
+          <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="ai-settings" className="flex items-center gap-1.5">
+                <BrainCircuit className="h-4 w-4" />
+                <span>AI Settings</span>
+              </TabsTrigger>
+              <TabsTrigger value="compass-settings" className="flex items-center gap-1.5">
+                <Compass className="h-4 w-4" />
+                <span>Compass Settings</span>
+              </TabsTrigger>
+              <TabsTrigger value="content-settings" className="flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4" />
+                <span>Content Settings</span>
+              </TabsTrigger>
+              <TabsTrigger value="prompts" className="flex items-center gap-1.5">
+                <FileText className="h-4 w-4" />
+                <span>Prompts</span>
+              </TabsTrigger>
+              <TabsTrigger value="parameters" className="flex items-center gap-1.5">
+                <ListFilter className="h-4 w-4" />
+                <span>Parameters</span>
+              </TabsTrigger>
+              <TabsTrigger value="feature-flags" className="flex items-center gap-1.5">
+                <ToggleLeft className="h-4 w-4" />
+                <span>Feature Flags</span>
+              </TabsTrigger>
+              <TabsTrigger value="app-settings" className="flex items-center gap-1.5">
+                <Settings className="h-4 w-4" />
+                <span>App Settings</span>
+              </TabsTrigger>
+              <TabsTrigger value="database" className="flex items-center gap-1.5">
+                <Database className="h-4 w-4" />
+                <span>Database</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value={activeTab} className="mt-0">
+              {children}
+            </TabsContent>
+          </Tabs>
+        </Card>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 
