@@ -23,7 +23,7 @@ const PromptsList: React.FC<PromptsListProps> = ({
   parentId = null
 }) => {
   return (
-    <>
+    <div className="w-full overflow-x-hidden">
       {prompts
         .filter((p) => p.parent_id === parentId)
         .map((prompt) => {
@@ -44,7 +44,7 @@ const PromptsList: React.FC<PromptsListProps> = ({
               />
 
               {isCategory && isExpanded && (
-                <div className="pl-6 border-l border-dashed border-gray-300 mb-4">
+                <div className="pl-4 md:pl-6 border-l border-dashed border-gray-300 mb-4 overflow-x-hidden">
                   <PromptsList
                     prompts={prompts}
                     expandedCategories={expandedCategories}
@@ -59,7 +59,7 @@ const PromptsList: React.FC<PromptsListProps> = ({
             </React.Fragment>
           );
         })}
-    </>
+    </div>
   );
 };
 

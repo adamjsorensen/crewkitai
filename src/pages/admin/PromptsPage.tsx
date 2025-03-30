@@ -31,33 +31,37 @@ const PromptsPage = () => {
 
   return (
     <AdminLayout activeTab="prompts">
-      <PageHeader 
-        title="Prompts Management" 
-        description="Manage prompt categories, base prompts, and their parameters"
-      />
-      
-      <div className="flex items-center justify-between mb-6">
-        <ActionButtons 
-          onCreateCategory={() => handleCreatePrompt(null, true)}
-          onCreatePrompt={() => handleCreatePrompt(null, false)}
+      <div className="w-full space-y-6">
+        <PageHeader 
+          title="Prompts Management" 
+          description="Manage prompt categories, base prompts, and their parameters"
+        />
+        
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <ActionButtons 
+            onCreateCategory={() => handleCreatePrompt(null, true)}
+            onCreatePrompt={() => handleCreatePrompt(null, false)}
+          />
+        </div>
+        
+        <div className="w-full overflow-hidden">
+          <HubTabs 
+            activeHub={activeHub}
+            setActiveHub={setActiveHub}
+            hubPrompts={hubPrompts}
+            isLoading={isLoading}
+            onCreatePrompt={handleCreatePrompt}
+          />
+        </div>
+        
+        <CreatePromptDialog 
+          open={isCreateDialogOpen} 
+          onOpenChange={setIsCreateDialogOpen}
+          parentId={parentId}
+          isCategory={isCreatingCategory}
+          hubArea={parentId ? undefined : activeHub}
         />
       </div>
-      
-      <HubTabs 
-        activeHub={activeHub}
-        setActiveHub={setActiveHub}
-        hubPrompts={hubPrompts}
-        isLoading={isLoading}
-        onCreatePrompt={handleCreatePrompt}
-      />
-      
-      <CreatePromptDialog 
-        open={isCreateDialogOpen} 
-        onOpenChange={setIsCreateDialogOpen}
-        parentId={parentId}
-        isCategory={isCreatingCategory}
-        hubArea={parentId ? undefined : activeHub}
-      />
     </AdminLayout>
   );
 };
