@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useParameterRulesFetching } from './useParameterRulesFetching';
 import { useParameterRuleMutations } from './useParameterRuleMutations';
 
@@ -15,23 +15,33 @@ export function useParameterRules() {
   }
 
   // Wrap the original function to add logging
-  const wrappedGetParametersForPrompt = async (promptId: string) => {
+  const wrappedGetParametersForPrompt = useCallback(async (promptId: string) => {
     console.log("getParametersForPrompt called for promptId:", promptId);
     try {
+      if (!promptId) {
+        console.error("Cannot fetch parameters: promptId is undefined or null");
+        throw new Error("Invalid prompt ID provided");
+      }
+      
       const result = await getParametersForPrompt(promptId);
+      
+      if (!Array.isArray(result)) {
+        console.error("getParametersForPrompt returned invalid data:", result);
+        throw new Error("Unexpected data format returned when fetching parameters");
+      }
+      
       console.log("Parameters fetched successfully:", result);
       if (result.length === 0) {
         console.info("No parameter rules found for prompt", promptId);
       }
+      
       return result;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error in getParametersForPrompt:", err);
+      // Ensure we're always returning an array even on error
       throw err;
     }
-  };
-
-  // Note: We're not wrapping the mutation objects anymore, just passing them through
-  // This ensures they maintain their original interface, including mutateAsync
+  }, [getParametersForPrompt]);
 
   return {
     getParametersForPrompt: wrappedGetParametersForPrompt,

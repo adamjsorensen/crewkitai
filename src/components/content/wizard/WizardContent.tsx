@@ -27,6 +27,14 @@ const WizardContent: React.FC<WizardContentProps> = ({
   setAdditionalContext,
   handleTweakChange
 }) => {
+  // Add more detailed logging to debug parameter rendering
+  console.log("WizardContent rendering with:", { 
+    promptId: prompt?.id,
+    parametersCount: parameters?.length || 0,
+    currentStepIndex,
+    hasSelectedTweaks: Object.keys(selectedTweaks || {}).length > 0
+  });
+  
   if (!prompt) {
     return (
       <Alert className="mb-4 border-amber-500">
@@ -38,8 +46,9 @@ const WizardContent: React.FC<WizardContentProps> = ({
     );
   }
 
-  // No parameters case - skip to the additional context step
-  if (parameters.length === 0) {
+  // Debug parameters availability
+  if (!parameters || parameters.length === 0) {
+    console.log("No parameters available for prompt:", prompt.id);
     return (
       <NoParametersAlert 
         additionalContext={additionalContext} 
@@ -51,6 +60,20 @@ const WizardContent: React.FC<WizardContentProps> = ({
   // Parameter customization steps
   if (currentStepIndex < parameters.length) {
     const param = parameters[currentStepIndex];
+    console.log("Rendering parameter customization for:", param?.name || "unknown");
+    
+    if (!param) {
+      console.error("Parameter at index", currentStepIndex, "is undefined");
+      return (
+        <Alert className="mb-4 border-red-500">
+          <AlertTriangle className="h-4 w-4 text-red-500" />
+          <AlertDescription>
+            Error loading parameter options. Please try again.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    
     return (
       <ParameterCustomization 
         parameter={param} 

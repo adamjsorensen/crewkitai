@@ -65,6 +65,27 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     }
   }, [error]);
   
+  // Debug logging for prompt and parameters
+  useEffect(() => {
+    if (isOpen) {
+      console.log("CustomPromptWizard state:", {
+        promptId,
+        hasPrompt: !!prompt,
+        promptTitle: prompt?.title,
+        parametersCount: parameters?.length || 0,
+        isLoading,
+        hasError: !!error,
+        currentStepIndex,
+        retryCount
+      });
+      
+      // Check if parameters should be present but aren't
+      if (prompt && !isLoading && (!parameters || parameters.length === 0)) {
+        console.warn("Warning: No parameters found for prompt but loading is complete");
+      }
+    }
+  }, [prompt, parameters, isLoading, error, isOpen, promptId, currentStepIndex, retryCount]);
+  
   // Handle retry with exponential backoff
   const handleRetry = () => {
     console.log("Retrying prompt fetch...");
@@ -94,11 +115,6 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
       console.log("CustomPromptWizard unmounted");
     };
   }, [promptId]);
-  
-  // Log when the prompt data changes
-  useEffect(() => {
-    console.log("Prompt data changed:", prompt);
-  }, [prompt]);
   
   if (!isOpen) return null;
   
@@ -145,10 +161,25 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
             errorType="not-found"
           />
         ) : (
-          <div className="min-h-[350px] py-4">
+          <div className="min-h-[350px] py-4" data-testid="wizard-content-container">
+            {/* Add debug information in development mode */}
+            {process.env.NODE_ENV !== 'production' && (
+              <div className="mb-4 p-2 bg-gray-100 text-xs rounded-md">
+                <details>
+                  <summary className="cursor-pointer font-medium">Debug Info</summary>
+                  <div className="mt-2 space-y-1">
+                    <p>Prompt ID: {prompt.id}</p>
+                    <p>Parameters: {parameters?.length || 0}</p>
+                    <p>Current Step: {currentStepIndex + 1} of {steps.length}</p>
+                    <p>Selected Tweaks: {Object.keys(selectedTweaks || {}).length}</p>
+                  </div>
+                </details>
+              </div>
+            )}
+            
             <WizardContent
               prompt={prompt}
-              parameters={parameters}
+              parameters={parameters || []}
               currentStepIndex={currentStepIndex}
               selectedTweaks={selectedTweaks}
               additionalContext={additionalContext}

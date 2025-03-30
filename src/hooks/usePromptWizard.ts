@@ -5,6 +5,7 @@ import { useParameterFetching } from "./prompt-wizard/useParameterFetching";
 import { useWizardState } from "./prompt-wizard/useWizardState";
 import { usePromptGeneration } from "./prompt-wizard/usePromptGeneration";
 import { useWizardSteps } from "./prompt-wizard/useWizardSteps";
+import { useEffect } from "react";
 
 export function usePromptWizard(
   promptId: string | undefined, 
@@ -27,6 +28,25 @@ export function usePromptWizard(
     isLoading: isParametersLoading, 
     error: parameterError 
   } = useParameterFetching(prompt?.id, isOpen);
+  
+  // Log important state changes for debugging
+  useEffect(() => {
+    if (prompt) {
+      console.log(`Prompt loaded: ${prompt.title} (ID: ${prompt.id})`);
+    } else if (promptId && !isPromptLoading && !promptError) {
+      console.error("Prompt is undefined after loading completed without errors");
+    }
+  }, [prompt, promptId, isPromptLoading, promptError]);
+  
+  useEffect(() => {
+    console.log(`Parameters loading state: ${isParametersLoading ? "loading" : "completed"}`);
+    if (!isParametersLoading) {
+      console.log(`Parameters count: ${parameters?.length || 0}`);
+      if (parameters?.length === 0 && prompt?.id) {
+        console.log("No parameters found for prompt:", prompt.id);
+      }
+    }
+  }, [parameters, isParametersLoading, prompt?.id]);
   
   // Manage wizard state
   const { 

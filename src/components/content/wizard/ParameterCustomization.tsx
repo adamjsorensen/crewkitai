@@ -2,9 +2,12 @@
 import React from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { ParameterWithTweaks } from "@/types/promptParameters";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 interface ParameterCustomizationProps {
-  parameter: any;
+  parameter: ParameterWithTweaks;
   selectedTweakId: string | undefined;
   onTweakChange: (parameterId: string, tweakId: string) => void;
 }
@@ -14,6 +17,26 @@ const ParameterCustomization = ({
   selectedTweakId, 
   onTweakChange 
 }: ParameterCustomizationProps) => {
+  // Debug logging for parameter rendering
+  console.log("Rendering parameter:", parameter.name, {
+    parameterId: parameter.id,
+    tweaksCount: parameter.tweaks?.length || 0,
+    selectedTweakId,
+    isRequired: parameter.rule?.is_required
+  });
+  
+  if (!parameter || !parameter.id) {
+    console.error("Invalid parameter data received:", parameter);
+    return (
+      <Alert className="mb-4 border-red-500">
+        <AlertTriangle className="h-4 w-4 text-red-500" />
+        <AlertDescription>
+          Error loading parameter data. Please try refreshing the wizard.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">{parameter.name}</h3>
@@ -27,7 +50,7 @@ const ParameterCustomization = ({
       >
         <div className="space-y-2">
           {parameter.tweaks && parameter.tweaks.length > 0 ? (
-            parameter.tweaks.map((tweak: any) => (
+            parameter.tweaks.map((tweak) => (
               <div key={tweak.id} className="flex items-start space-x-2 p-3 border rounded-md">
                 <RadioGroupItem id={tweak.id} value={tweak.id} />
                 <div className="flex-1">
