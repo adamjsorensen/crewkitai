@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import CustomPromptWizard from "@/components/content/CustomPromptWizard";
+import SimplePromptWizard from "@/components/content/SimplePromptWizard";
 import { useCrewkitPrompts, Prompt } from "@/hooks/useCrewkitPrompts";
 import ContentPageHeader from "@/components/content/ContentPageHeader";
 import ContentTabs from "@/components/content/ContentTabs";
@@ -86,7 +85,7 @@ const ContentPage = () => {
         />
         
         {selectedPrompt && (
-          <CustomPromptWizard
+          <SimplePromptWizard
             promptId={selectedPrompt}
             isOpen={!!selectedPrompt}
             onClose={() => setSelectedPrompt(null)}
