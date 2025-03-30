@@ -37,13 +37,13 @@ export function usePromptParameters(promptId: string | undefined) {
             is_required,
             is_active,
             order,
-            parameter:parameters(
+            parameter:parameters!parameter_id(
               id,
               name,
               description,
               type,
               active,
-              tweaks:parameter_tweaks(
+              tweaks:parameter_tweaks!parameter_id(
                 id,
                 name,
                 sub_prompt,
@@ -74,15 +74,21 @@ export function usePromptParameters(promptId: string | undefined) {
           const transformedParameters: ParameterWithTweaks[] = [];
           
           for (const rule of data) {
-            // Skip rules with missing parameters
-            if (!rule.parameter) continue;
+            // Ensure parameter exists and is not an error object
+            if (!rule.parameter || typeof rule.parameter !== 'object' || 'code' in rule.parameter) {
+              console.warn("Skipping rule with invalid parameter data:", rule.id);
+              continue;
+            }
             
             const parameter = rule.parameter;
             
             // Make sure tweaks is an array before filtering
-            const parameterTweaks = Array.isArray(parameter.tweaks) 
-              ? parameter.tweaks.filter(tweak => tweak.active).sort((a, b) => a.order - b.order)
-              : [];
+            let parameterTweaks: any[] = [];
+            if (Array.isArray(parameter.tweaks)) {
+              parameterTweaks = parameter.tweaks
+                .filter(tweak => tweak && typeof tweak === 'object' && tweak.active)
+                .sort((a, b) => a.order - b.order);
+            }
             
             transformedParameters.push({
               id: parameter.id,
