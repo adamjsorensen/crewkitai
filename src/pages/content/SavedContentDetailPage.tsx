@@ -27,7 +27,7 @@ const SavedContentDetailPage = () => {
     queryKey: ['saved-content', slug],
     queryFn: () => getSavedContentBySlug(slug || ""),
     enabled: !!slug,
-    onSettled: (data) => {
+    onSuccess: (data) => {
       if (data) {
         setTitle(data.title);
         setContent(data.content);

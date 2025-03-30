@@ -122,7 +122,7 @@ export const SidebarContentItems = () => {
           />
           <SidebarItem
             href="/dashboard/admin/parameters"
-            icon={SliderHorizontal}
+            icon={SlidersHorizontal}
             title="Manage Parameters"
           />
           <SidebarItem

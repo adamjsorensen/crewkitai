@@ -73,7 +73,7 @@ const PromptLibraryPage = () => {
                 <h2 className="text-xl font-semibold mb-4">Categories</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {categories.map((category) => (
-                    <CategoryTile key={category.id} category={category} onSelect={() => {}} />
+                    <CategoryTile key={category.id} category={category} onClick={() => {}} />
                   ))}
                 </div>
               </div>
@@ -105,9 +105,9 @@ const PromptLibraryPage = () => {
 
       {selectedPrompt && (
         <CustomPromptWizard
-          prompt={selectedPrompt}
-          open={wizardOpen}
-          onOpenChange={setWizardOpen}
+          promptId={selectedPrompt.id}
+          isOpen={wizardOpen}
+          onClose={handleWizardClose}
         />
       )}
     </DashboardLayout>

@@ -258,11 +258,8 @@ const ContentDisplay = ({
             {prompts.map(prompt => (
               <PromptCard
                 key={prompt.id}
-                id={prompt.id}
-                title={prompt.title}
-                description={prompt.description || ""}
-                iconName={prompt.icon_name}
-                onClick={() => setSelectedPrompt(prompt.id)}
+                prompt={prompt}
+                onSelect={() => setSelectedPrompt(prompt.id)}
               />
             ))}
           </div>
@@ -286,10 +283,7 @@ const ContentDisplay = ({
             {categories.map(category => (
               <CategoryTile
                 key={category.id}
-                id={category.id}
-                title={category.title}
-                description={category.description || ""}
-                iconName={category.icon_name}
+                category={category}
                 onClick={() => setSelectedCategory(category.id)}
               />
             ))}
@@ -306,11 +300,8 @@ const ContentDisplay = ({
             {prompts.map(prompt => (
               <PromptCard
                 key={prompt.id}
-                id={prompt.id}
-                title={prompt.title}
-                description={prompt.description || ""}
-                iconName={prompt.icon_name}
-                onClick={() => setSelectedPrompt(prompt.id)}
+                prompt={prompt}
+                onSelect={() => setSelectedPrompt(prompt.id)}
               />
             ))}
           </div>
