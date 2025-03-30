@@ -8,7 +8,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCrewkitPrompts } from "@/hooks/useCrewkitPrompts";
 import { Prompt } from "@/hooks/useCrewkitPrompts";
-import { useCrewkitPromptParameters } from "@/hooks/useCrewkitPromptParameters";
+import { useCrewkitPromptParameters, ParameterWithTweaks } from "@/hooks/useCrewkitPromptParameters";
 import PromptFormFields, { PromptFormValues } from "./shared/PromptFormFields";
 import ParameterSelection, { SelectedParameter } from "./shared/ParameterSelection";
 
@@ -153,6 +153,12 @@ const CreatePromptDialog = ({
     }
   };
 
+  // Convert parameters to ParameterWithTweaks[] type to satisfy the component prop
+  const parametersWithTweaks: ParameterWithTweaks[] = parameters.map(param => ({
+    ...param,
+    tweaks: [] // Add empty tweaks array
+  }));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
@@ -172,7 +178,7 @@ const CreatePromptDialog = ({
 
             {!isCategory && (
               <ParameterSelection
-                parameters={parameters}
+                parameters={parametersWithTweaks}
                 selectedParameters={selectedParameters}
                 selectedParameterIds={selectedParameterIds}
                 onParameterSelect={handleParameterSelect}

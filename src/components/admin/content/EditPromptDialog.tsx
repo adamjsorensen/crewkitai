@@ -216,6 +216,12 @@ const EditPromptDialog = ({
     }
   };
 
+  // Convert parameters to ParameterWithTweaks[] type to satisfy the component prop
+  const parametersWithTweaks: ParameterWithTweaks[] = parameters.map(param => ({
+    ...param,
+    tweaks: [] // Add empty tweaks array
+  }));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
@@ -239,7 +245,7 @@ const EditPromptDialog = ({
 
               {prompt && !prompt.is_category && (
                 <ParameterSelection
-                  parameters={parameters}
+                  parameters={parametersWithTweaks}
                   selectedParameters={selectedParameters}
                   selectedParameterIds={selectedParameterIds}
                   onParameterSelect={handleParameterSelect}
