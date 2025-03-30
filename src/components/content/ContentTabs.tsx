@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ContentDisplay from "./ContentDisplay";
+import TabContent from "./TabContent";
 import { Prompt } from "@/hooks/useCrewkitPrompts";
 
 interface ContentTabsProps {
@@ -33,6 +33,8 @@ const ContentTabs = ({
   isFiltering,
   onCategoryClick
 }: ContentTabsProps) => {
+  const tabValues = ["all", "marketing", "sales", "operations"];
+  
   return (
     <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
       <TabsList>
@@ -42,9 +44,9 @@ const ContentTabs = ({
         <TabsTrigger value="operations">Operations</TabsTrigger>
       </TabsList>
       
-      {["all", "marketing", "sales", "operations"].map((tabValue) => (
-        <TabsContent key={tabValue} value={tabValue} className="mt-6">
-          <ContentDisplay 
+      {tabValues.map((tabValue) => (
+        <TabsContent key={tabValue} value={tabValue}>
+          <TabContent 
             categories={categories}
             prompts={prompts}
             isLoading={isLoading}
