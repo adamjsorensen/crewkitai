@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { ParameterWithTweaks } from "@/types/promptParameters";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -19,6 +19,24 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
   selectedTweaks,
   onTweakChange
 }) => {
+  // Add logging to check what parameters are received
+  useEffect(() => {
+    console.log("AllParametersView received parameters:", parameters);
+    console.log("AllParametersView received selectedTweaks:", selectedTweaks);
+    
+    if (!parameters || parameters.length === 0) {
+      console.warn("AllParametersView: No parameters provided or empty array");
+    } else {
+      // Check if parameters have tweaks
+      parameters.forEach(param => {
+        console.log(`Parameter ${param.name} (${param.id}) has ${param.tweaks?.length || 0} tweaks`);
+        if (!param.tweaks || param.tweaks.length === 0) {
+          console.warn(`Parameter ${param.name} has no tweaks`);
+        }
+      });
+    }
+  }, [parameters, selectedTweaks]);
+
   if (!parameters || parameters.length === 0) {
     return (
       <Alert className="mb-4">
@@ -46,7 +64,10 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
             
             <RadioGroup 
               value={selectedTweaks[param.id] || ''} 
-              onValueChange={(value) => onTweakChange(param.id, value)}
+              onValueChange={(value) => {
+                console.log(`Tweak selected for parameter ${param.id}: ${value}`);
+                onTweakChange(param.id, value);
+              }}
             >
               <div className="space-y-2">
                 {param.tweaks && param.tweaks.length > 0 ? (

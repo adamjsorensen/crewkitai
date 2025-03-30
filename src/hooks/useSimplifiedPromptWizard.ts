@@ -34,9 +34,36 @@ export function useSimplifiedPromptWizard(
     error: parametersError 
   } = usePromptParameters(promptId);
   
+  // Add detailed logging
+  useEffect(() => {
+    console.log("useSimplifiedPromptWizard - promptId changed:", promptId);
+    console.log("useSimplifiedPromptWizard - isOpen:", isOpen);
+  }, [promptId, isOpen]);
+  
+  useEffect(() => {
+    if (prompt) {
+      console.log("useSimplifiedPromptWizard - prompt loaded:", prompt.title, prompt.id);
+    } else {
+      console.log("useSimplifiedPromptWizard - prompt is null or undefined");
+    }
+  }, [prompt]);
+  
+  useEffect(() => {
+    console.log("useSimplifiedPromptWizard - parameters state:", {
+      count: parameters.length,
+      isLoading: isParametersLoading,
+      error: parametersError
+    });
+    
+    if (parameters.length > 0) {
+      console.log("useSimplifiedPromptWizard - parameters:", parameters);
+    }
+  }, [parameters, isParametersLoading, parametersError]);
+  
   // Reset form state when wizard opens with a new prompt
   useEffect(() => {
     if (isOpen) {
+      console.log("useSimplifiedPromptWizard - resetting form state");
       setSelectedTweaks({});
       setAdditionalContext("");
     }
@@ -44,6 +71,7 @@ export function useSimplifiedPromptWizard(
   
   // Handle tweak selection
   const handleTweakChange = (parameterId: string, tweakId: string) => {
+    console.log(`useSimplifiedPromptWizard - tweak selected: ${tweakId} for parameter: ${parameterId}`);
     setSelectedTweaks(prev => ({
       ...prev,
       [parameterId]: tweakId,
@@ -54,12 +82,22 @@ export function useSimplifiedPromptWizard(
   const isFormValid = () => {
     // Check if all required parameters have a selection
     const requiredParameters = parameters.filter(param => param.rule?.is_required);
-    return requiredParameters.every(param => selectedTweaks[param.id]);
+    const isValid = requiredParameters.every(param => selectedTweaks[param.id]);
+    console.log("useSimplifiedPromptWizard - form validity check:", { 
+      isValid, 
+      requiredParameters: requiredParameters.length,
+      selectedTweaks: Object.keys(selectedTweaks).length 
+    });
+    return isValid;
   };
   
   // Generate content
   const handleSave = async () => {
     if (!prompt || !user?.id) {
+      console.error("useSimplifiedPromptWizard - Missing prompt or user data:", { 
+        promptExists: !!prompt, 
+        userIdExists: !!user?.id 
+      });
       toast({
         title: "Error",
         description: "Missing prompt data or user information",
@@ -69,6 +107,7 @@ export function useSimplifiedPromptWizard(
     }
     
     if (!isFormValid()) {
+      console.warn("useSimplifiedPromptWizard - Form validation failed");
       toast({
         title: "Required Selections Missing",
         description: "Please complete all required customization options",
@@ -82,11 +121,14 @@ export function useSimplifiedPromptWizard(
       
       // Collect all selected tweaks
       const tweakIds = Object.values(selectedTweaks);
+      console.log("useSimplifiedPromptWizard - selected tweak IDs:", tweakIds);
       
       // Find the actual tweaks from the parameters
       const selectedTweakDetails = parameters
         .flatMap(param => param.tweaks)
         .filter(tweak => tweakIds.includes(tweak.id));
+      
+      console.log("useSimplifiedPromptWizard - selected tweak details:", selectedTweakDetails);
       
       const tweakPrompts = selectedTweakDetails.map(tweak => tweak.sub_prompt).join("\n");
       
@@ -116,6 +158,7 @@ export function useSimplifiedPromptWizard(
       }
       
       const result = await response.json();
+      console.log("useSimplifiedPromptWizard - generation result:", result);
       
       toast({
         title: "Content Generated",

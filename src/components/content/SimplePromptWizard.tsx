@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,13 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
   const [activeTab, setActiveTab] = useState("customize");
   const [retryCount, setRetryCount] = useState(0);
   
+  // Add component-level logging
+  useEffect(() => {
+    if (isOpen) {
+      console.log("SimplePromptWizard opened with promptId:", promptId);
+    }
+  }, [isOpen, promptId]);
+  
   const {
     prompt,
     parameters,
@@ -48,6 +55,27 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     isFormValid,
     refetchPrompt
   } = useSimplifiedPromptWizard(promptId, isOpen, onClose);
+  
+  // Log when wizard state changes
+  useEffect(() => {
+    if (isOpen) {
+      console.log("SimplePromptWizard state update:", {
+        promptLoaded: !!prompt,
+        promptTitle: prompt?.title,
+        parametersCount: parameters?.length || 0,
+        parametersLoaded: !isLoading && parameters && parameters.length > 0,
+        isLoading,
+        hasError: !!error,
+        errorMessage: error,
+        networkStatus
+      });
+      
+      if (parameters && parameters.length > 0) {
+        console.log("Parameters received in SimplePromptWizard:", parameters);
+        console.log("Selected tweaks:", selectedTweaks);
+      }
+    }
+  }, [prompt, parameters, isLoading, error, isOpen, networkStatus, selectedTweaks]);
   
   // Handle retry
   const handleRetry = () => {
@@ -107,6 +135,22 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
           />
         ) : (
           <div className="min-h-[350px]">
+            {/* Debug information */}
+            {process.env.NODE_ENV !== 'production' && (
+              <div className="mb-4 p-2 bg-gray-100 text-xs rounded-md">
+                <details>
+                  <summary className="cursor-pointer font-medium">Debug Info</summary>
+                  <div className="mt-2 space-y-1">
+                    <p>Prompt ID: {prompt.id}</p>
+                    <p>Parameters count: {parameters?.length || 0}</p>
+                    <p>Has parameters: {parameters && parameters.length > 0 ? 'Yes' : 'No'}</p>
+                    <p>Parameters: {JSON.stringify(parameters.map(p => p.name))}</p>
+                    <p>Selected tweaks: {Object.keys(selectedTweaks).length}</p>
+                  </div>
+                </details>
+              </div>
+            )}
+            
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full">
                 <TabsTrigger value="customize" className="flex-1">Customize</TabsTrigger>

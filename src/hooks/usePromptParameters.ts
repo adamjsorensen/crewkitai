@@ -16,6 +16,7 @@ export function usePromptParameters(promptId: string | undefined) {
   useEffect(() => {
     const fetchParameters = async () => {
       if (!promptId) {
+        console.log("usePromptParameters: No promptId provided, skipping fetch");
         setParameters([]);
         setIsLoading(false);
         return;
@@ -56,6 +57,9 @@ export function usePromptParameters(promptId: string | undefined) {
           .eq('is_active', true)
           .order('order', { ascending: true });
 
+        console.log("Raw DB response:", JSON.stringify(data, null, 2));
+        console.log("Fetch error:", fetchError);
+
         if (fetchError) {
           console.error("Error fetching parameters:", fetchError);
           setError(`Failed to load parameters: ${fetchError.message}`);
@@ -73,7 +77,11 @@ export function usePromptParameters(promptId: string | undefined) {
           // Transform the data to match our ParameterWithTweaks type
           const transformedParameters: ParameterWithTweaks[] = [];
           
+          console.log(`Processing ${data.length} parameter rules`);
+          
           for (const rule of data) {
+            console.log(`Processing rule ${rule.id} for parameter_id ${rule.parameter_id}:`, rule);
+            
             // First check if parameter exists and is valid
             if (!rule.parameter || typeof rule.parameter !== 'object' || 'code' in rule.parameter) {
               console.warn("Skipping rule with invalid parameter data:", rule.id);
@@ -83,19 +91,31 @@ export function usePromptParameters(promptId: string | undefined) {
             // Using non-null assertion after validation to inform TypeScript
             // We've already checked above that parameter exists and is valid
             const parameter = rule.parameter!;
+            console.log(`Found parameter: ${parameter.name} (${parameter.id})`);
             
             // Make sure tweaks is an array before filtering
             let parameterTweaks: any[] = [];
             if (Array.isArray(parameter.tweaks)) {
+              console.log(`Found ${parameter.tweaks.length} tweaks for parameter ${parameter.id}`);
               parameterTweaks = parameter.tweaks
-                .filter(tweak => tweak && typeof tweak === 'object' && tweak.active)
+                .filter(tweak => {
+                  const isValid = tweak && typeof tweak === 'object' && tweak.active;
+                  if (!isValid) {
+                    console.log(`Skipping inactive or invalid tweak:`, tweak);
+                  }
+                  return isValid;
+                })
                 .sort((a, b) => a.order - b.order);
+              
+              console.log(`After filtering and sorting: ${parameterTweaks.length} active tweaks`);
+            } else {
+              console.warn(`Parameter ${parameter.id} has no tweaks array:`, parameter.tweaks);
             }
             
             // Convert the type string to a valid parameter type
             const paramType = parameter.type as 'tone_and_style' | 'audience' | 'length' | 'focus' | 'format' | 'custom';
             
-            transformedParameters.push({
+            const transformedParam: ParameterWithTweaks = {
               id: parameter.id,
               name: parameter.name,
               description: parameter.description,
@@ -114,10 +134,13 @@ export function usePromptParameters(promptId: string | undefined) {
                 created_at: '',
                 updated_at: ''
               }
-            });
+            };
+
+            transformedParameters.push(transformedParam);
+            console.log(`Added transformed parameter: ${transformedParam.name} with ${transformedParam.tweaks.length} tweaks`);
           }
 
-          console.log(`Loaded ${transformedParameters.length} parameters with their tweaks`);
+          console.log(`Final transformed parameters (${transformedParameters.length}):`, transformedParameters);
           setParameters(transformedParameters);
         }
       } catch (err: any) {
