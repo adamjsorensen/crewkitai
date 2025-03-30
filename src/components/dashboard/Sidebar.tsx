@@ -12,7 +12,7 @@ const DashboardSidebar = () => {
     return <MobileSidebar />;
   }
 
-  // On desktop, we use the CollapsibleSidebar component
+  // On desktop, we use the sidebar component
   return <DesktopSidebar />;
 };
 

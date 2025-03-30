@@ -1,9 +1,9 @@
-
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import CompassPage from "@/pages/CompassPage";
@@ -57,44 +57,46 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard/compass" element={<CompassPage />} />
-            <Route path="/dashboard/pg-coach" element={<PgCoachPage />} />
-            <Route path="/dashboard/content" element={<ContentPage />} />
-            <Route path="/dashboard/financial" element={<FinancialPage />} />
-            <Route path="/dashboard/profile" element={<ProfilePage />} />
-            <Route path="/dashboard/settings" element={<SettingsPage />} />
-            
-            <Route path="/dashboard/prompt-library" element={<Navigate to="/dashboard/content" replace />} />
-            <Route path="/dashboard/generated/:id" element={<GeneratedContentPage />} />
-            <Route path="/dashboard/saved-content" element={<SavedContentPage />} />
-            <Route path="/dashboard/saved-content/:slug" element={<SavedContentDetailPage />} />
-            
-            <Route path="/dashboard/admin/ai-settings" element={<AISettingsPage />} />
-            <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
-            <Route path="/dashboard/admin/content-settings" element={<ContentSettingsPage />} />
-            <Route path="/dashboard/admin/prompts" element={<PromptsPage />} />
-            <Route path="/dashboard/admin/parameters" element={<ParametersPage />} />
-            <Route path="/dashboard/admin/generations" element={<GenerationsLogPage />} />
-            <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
-            <Route path="/dashboard/admin/app-settings" element={<AppSettingsPage />} />
-            <Route path="/dashboard/admin/database" element={<DatabasePage />} />
-            
-            <Route path="/dashboard/user-management" element={<UserManagementPage />}>
-              <Route path="user-list" element={<UserListPage />} />
-              <Route path="add-user" element={<AddUserPage />} />
-              <Route path="activity-logs" element={<ActivityLogsPage />} />
-              <Route path="user-details/:userId" element={<UserDetailsPage />} />
-            </Route>
-            
-            <Route path="/dashboard/ai-coach" element={<Navigate to="/dashboard/pg-coach" replace />} />
-          </Routes>
+        <SidebarProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/compass" element={<CompassPage />} />
+              <Route path="/dashboard/pg-coach" element={<PgCoachPage />} />
+              <Route path="/dashboard/content" element={<ContentPage />} />
+              <Route path="/dashboard/financial" element={<FinancialPage />} />
+              <Route path="/dashboard/profile" element={<ProfilePage />} />
+              <Route path="/dashboard/settings" element={<SettingsPage />} />
+              
+              <Route path="/dashboard/prompt-library" element={<Navigate to="/dashboard/content" replace />} />
+              <Route path="/dashboard/generated/:id" element={<GeneratedContentPage />} />
+              <Route path="/dashboard/saved-content" element={<SavedContentPage />} />
+              <Route path="/dashboard/saved-content/:slug" element={<SavedContentDetailPage />} />
+              
+              <Route path="/dashboard/admin/ai-settings" element={<AISettingsPage />} />
+              <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
+              <Route path="/dashboard/admin/content-settings" element={<ContentSettingsPage />} />
+              <Route path="/dashboard/admin/prompts" element={<PromptsPage />} />
+              <Route path="/dashboard/admin/parameters" element={<ParametersPage />} />
+              <Route path="/dashboard/admin/generations" element={<GenerationsLogPage />} />
+              <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
+              <Route path="/dashboard/admin/app-settings" element={<AppSettingsPage />} />
+              <Route path="/dashboard/admin/database" element={<DatabasePage />} />
+              
+              <Route path="/dashboard/user-management" element={<UserManagementPage />}>
+                <Route path="user-list" element={<UserListPage />} />
+                <Route path="add-user" element={<AddUserPage />} />
+                <Route path="activity-logs" element={<ActivityLogsPage />} />
+                <Route path="user-details/:userId" element={<UserDetailsPage />} />
+              </Route>
+              
+              <Route path="/dashboard/ai-coach" element={<Navigate to="/dashboard/pg-coach" replace />} />
+            </Routes>
+          </Router>
           <Toaster />
-        </Router>
+        </SidebarProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
