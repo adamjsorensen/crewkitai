@@ -74,21 +74,15 @@ export function usePromptParameters(promptId: string | undefined) {
           const transformedParameters: ParameterWithTweaks[] = [];
           
           for (const rule of data) {
-            // First check if parameter exists
+            // First check if parameter exists and is valid
             if (!rule.parameter || typeof rule.parameter !== 'object' || 'code' in rule.parameter) {
               console.warn("Skipping rule with invalid parameter data:", rule.id);
               continue;
             }
             
-            // Safely assert the type after validation
-            const parameter = rule.parameter as {
-              id: string;
-              name: string;
-              description: string | null;
-              type: string;
-              active: boolean;
-              tweaks: any[] | null;
-            };
+            // Using non-null assertion after validation to inform TypeScript
+            // We've already checked above that parameter exists and is valid
+            const parameter = rule.parameter!;
             
             // Make sure tweaks is an array before filtering
             let parameterTweaks: any[] = [];
