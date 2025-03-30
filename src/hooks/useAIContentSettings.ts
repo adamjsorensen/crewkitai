@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,7 +53,7 @@ export function useAIContentSettings() {
       if (data) {
         data.forEach(setting => {
           try {
-            const value = JSON.parse(setting.value);
+            const value = JSON.parse(setting.value as string);
             
             switch (setting.name) {
               case 'content_generator_system_prompt':

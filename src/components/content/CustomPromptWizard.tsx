@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -21,16 +20,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CustomPromptWizardProps {
-  prompt: Prompt;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  promptId?: string;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-const CustomPromptWizard = ({ prompt, open, onOpenChange }: CustomPromptWizardProps) => {
+const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { getPromptById } = useCrewkitPrompts();
   const { getParametersForPrompt } = useCrewkitPromptParameters();
   
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [parameters, setParameters] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,11 +39,27 @@ const CustomPromptWizard = ({ prompt, open, onOpenChange }: CustomPromptWizardPr
   const [selectedTweaks, setSelectedTweaks] = useState<Record<string, string>>({});
   const [additionalContext, setAdditionalContext] = useState("");
   
+  // Fetch prompt when promptId changes
+  useEffect(() => {
+    const fetchPrompt = async () => {
+      if (promptId && isOpen) {
+        try {
+          const promptData = await getPromptById(promptId);
+          setPrompt(promptData);
+        } catch (error) {
+          console.error("Error fetching prompt:", error);
+        }
+      }
+    };
+    
+    fetchPrompt();
+  }, [promptId, isOpen, getPromptById]);
+  
   // Fetch parameters for this prompt
   useEffect(() => {
     const fetchParameters = async () => {
       try {
-        if (prompt?.id && open) {
+        if (prompt?.id && isOpen) {
           setIsLoading(true);
           const params = await getParametersForPrompt(prompt.id);
           setParameters(params);
@@ -55,16 +72,16 @@ const CustomPromptWizard = ({ prompt, open, onOpenChange }: CustomPromptWizardPr
     };
     
     fetchParameters();
-  }, [prompt?.id, open, getParametersForPrompt]);
+  }, [prompt?.id, isOpen, getParametersForPrompt]);
   
   // Reset state when wizard is opened with a new prompt
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
       setCurrentStepIndex(0);
       setSelectedTweaks({});
       setAdditionalContext("");
     }
-  }, [open, prompt?.id]);
+  }, [isOpen, prompt?.id]);
   
   const handleNext = () => {
     if (currentStepIndex < steps.length - 1) {
@@ -139,7 +156,7 @@ const CustomPromptWizard = ({ prompt, open, onOpenChange }: CustomPromptWizardPr
       if (generationError) throw generationError;
       
       // If successful, navigate to the generated content page
-      onOpenChange(false);
+      onClose();
       navigate(`/dashboard/generated/${generationResult.generationId}`);
       
     } catch (error) {
@@ -267,12 +284,12 @@ const CustomPromptWizard = ({ prompt, open, onOpenChange }: CustomPromptWizardPr
   const isLastStep = currentStepIndex === steps.length - 1;
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText size={18} className="text-primary" />
-            Customize Prompt: {prompt.title}
+            Customize Prompt: {prompt?.title}
           </DialogTitle>
         </DialogHeader>
         
