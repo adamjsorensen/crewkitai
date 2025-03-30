@@ -114,7 +114,7 @@ const PromptFormFields: React.FC<PromptFormFieldsProps> = ({
               <FormControl>
                 <Textarea
                   placeholder="Enter the base prompt content"
-                  className="min-h-[200px] font-mono text-sm"
+                  className="min-h-[200px] font-mono text-sm overflow-x-auto max-w-full"
                   {...field}
                 />
               </FormControl>

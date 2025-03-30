@@ -32,7 +32,7 @@ const SystemPromptField = ({ form }: SystemPromptFieldProps) => {
               {...field} 
               rows={6}
               placeholder="Enter system prompt" 
-              className="w-full resize-y min-h-[100px] max-h-[300px] font-mono text-sm"
+              className="w-full resize-y min-h-[100px] max-h-[300px] font-mono text-sm overflow-x-auto"
             />
           </FormControl>
           <FormMessage />

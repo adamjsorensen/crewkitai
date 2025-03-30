@@ -219,7 +219,7 @@ const AiSettingsForm = () => {
           
           {renderSubtabs()}
           
-          <div className="w-full max-w-full overflow-x-hidden">
+          <div className="w-full max-w-full overflow-x-hidden overflow-y-visible">
             {renderTabContent()}
           </div>
         </Tabs>

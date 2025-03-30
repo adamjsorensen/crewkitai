@@ -49,7 +49,7 @@ const FollowUpQuestionsField: React.FC<FollowUpQuestionsFieldProps> = ({ form })
             <FormControl>
               <Textarea
                 placeholder='["How do I price a job properly?", "What marketing strategies work best for painters?"]'
-                className="font-mono text-sm h-32"
+                className="font-mono text-sm h-32 overflow-x-auto max-w-full"
                 {...field}
                 disabled={!enabled}
               />

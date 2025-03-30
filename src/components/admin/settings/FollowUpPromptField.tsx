@@ -22,7 +22,7 @@ const FollowUpPromptField: React.FC<FollowUpPromptFieldProps> = ({ form }) => {
           <FormControl>
             <Textarea
               placeholder="After your response, suggest 2-3 follow-up questions that would be helpful for the user to continue the conversation."
-              className="h-24"
+              className="h-24 overflow-x-auto max-w-full"
               {...field}
               disabled={!enabled}
             />

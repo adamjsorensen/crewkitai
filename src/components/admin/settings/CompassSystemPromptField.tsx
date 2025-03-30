@@ -40,6 +40,7 @@ const CompassSystemPromptField = ({ form }: CompassSystemPromptFieldProps) => {
               rows={8}
               placeholder="Enter system prompt for task analysis" 
               value={field.value || `You are a strategic planning assistant for a painting business. Your job is to extract tasks from the user's input, prioritize them, and suggest due dates.`}
+              className="font-mono text-sm overflow-x-auto max-w-full"
             />
           </FormControl>
           <FormMessage />
