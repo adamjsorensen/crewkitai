@@ -12,7 +12,13 @@ export function useCrewkitPromptParameters() {
   const { parameters, tweaks, isLoading, isError, error: fetchError } = useParametersFetching();
   const { createParameter, updateParameter, deleteParameter } = useParameterMutations();
   const { createParameterTweak, updateParameterTweak, deleteParameterTweak } = useTweakMutations();
-  const { getParametersForPrompt, createParameterRule, error: rulesError } = useParameterRules();
+  const { 
+    getParametersForPrompt, 
+    createParameterRule, 
+    updateParameterRule, 
+    deleteParameterRule, 
+    error: rulesError 
+  } = useParameterRules();
   
   // Combine errors from different hooks
   const error = fetchError || rulesError;
@@ -30,6 +36,8 @@ export function useCrewkitPromptParameters() {
     updateParameterTweak,
     deleteParameterTweak,
     getParametersForPrompt,
-    createParameterRule
+    createParameterRule,
+    updateParameterRule,
+    deleteParameterRule
   };
 }
