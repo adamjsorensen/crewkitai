@@ -9,12 +9,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText } from "lucide-react";
+import { Loader2, FileText, AlertTriangle } from "lucide-react";
 import { usePromptWizard } from "@/hooks/usePromptWizard";
 import ParameterCustomization from "./wizard/ParameterCustomization";
 import AdditionalContextStep from "./wizard/AdditionalContextStep";
 import ReviewStep from "./wizard/ReviewStep";
 import WizardNavigation from "./wizard/WizardNavigation";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CustomPromptWizardProps {
   promptId?: string;
@@ -27,6 +29,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     prompt,
     parameters,
     isLoading,
+    error,
     generating,
     selectedTweaks,
     additionalContext,
@@ -103,6 +106,23 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
           <div className="flex justify-center items-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
+        ) : error ? (
+          <div className="py-6">
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                {error}
+              </AlertDescription>
+            </Alert>
+            <div className="text-center mt-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                You can still proceed with content generation with basic settings.
+              </p>
+              <Button variant="outline" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          </div>
         ) : !prompt ? (
           <div className="flex justify-center items-center py-12 text-center">
             <p className="text-muted-foreground">
@@ -111,7 +131,22 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
           </div>
         ) : (
           <div className="min-h-[350px] py-4">
-            {renderStepContent()}
+            {parameters.length === 0 ? (
+              <div className="py-6">
+                <Alert className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    This prompt doesn't have any customization options. You can skip to the additional context.
+                  </AlertDescription>
+                </Alert>
+                <AdditionalContextStep 
+                  additionalContext={additionalContext} 
+                  setAdditionalContext={setAdditionalContext}
+                />
+              </div>
+            ) : (
+              renderStepContent()
+            )}
           </div>
         )}
         

@@ -23,7 +23,7 @@ export function useWizardSteps(prompt: Prompt | null, parameters: any[], selecte
   }, [prompt, parameters, selectedTweaks]);
 
   const currentStep = (index: number) => steps[index];
-  const progress = (index: number) => steps.length ? ((index + 1) / steps.length) * 100 : 0;
+  const progress = (index: number): number => steps.length ? ((index + 1) / steps.length) * 100 : 0;
   const canProceed = (index: number) => currentStep(index)?.isCompleted?.() ?? true;
   const isLastStep = (index: number) => index === steps.length - 1;
 

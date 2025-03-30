@@ -6,6 +6,7 @@ export function useParameterFetching(promptId: string | undefined, isOpen: boole
   const { getParametersForPrompt } = useCrewkitPromptParameters();
   const [parameters, setParameters] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch parameters for this prompt
   useEffect(() => {
@@ -13,12 +14,15 @@ export function useParameterFetching(promptId: string | undefined, isOpen: boole
       try {
         if (promptId && isOpen) {
           setIsLoading(true);
+          setError(null);
           const params = await getParametersForPrompt(promptId);
           setParameters(params);
           setIsLoading(false);
         }
       } catch (error) {
         console.error("Error fetching parameters for prompt:", error);
+        setError("Failed to load parameters. The prompt may not have any parameter rules configured.");
+        setParameters([]);
         setIsLoading(false);
       }
     };
@@ -26,5 +30,5 @@ export function useParameterFetching(promptId: string | undefined, isOpen: boole
     fetchParameters();
   }, [promptId, isOpen, getParametersForPrompt]);
 
-  return { parameters, isLoading };
+  return { parameters, isLoading, error };
 }

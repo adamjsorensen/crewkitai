@@ -12,74 +12,80 @@ export function useParameterRules() {
 
   // Fetch parameters with their tweaks for a specific prompt
   const getParametersForPrompt = async (promptId: string) => {
-    // First get all parameter rules for this prompt
-    const { data: rules, error: rulesError } = await supabase
-      .from('prompt_parameter_rules')
-      .select('*')
-      .eq('prompt_id', promptId)
-      .order('order', { ascending: true });
-    
-    if (rulesError) {
-      console.error('Error fetching parameter rules:', rulesError);
-      setError(rulesError.message);
-      throw new Error(`Failed to fetch parameter rules: ${rulesError.message}`);
-    }
-    
-    if (!rules || rules.length === 0) {
-      return [];
-    }
-    
-    // Get the parameter IDs from rules
-    const parameterIds = rules.map(rule => rule.parameter_id);
-    
-    // Get the parameters
-    const { data: parameters, error: parametersError } = await supabase
-      .from('prompt_parameters')
-      .select('*')
-      .in('id', parameterIds)
-      .eq('active', true);
-    
-    if (parametersError) {
-      console.error('Error fetching parameters:', parametersError);
-      setError(parametersError.message);
-      throw new Error(`Failed to fetch parameters: ${parametersError.message}`);
-    }
-    
-    // Get the tweaks for these parameters
-    const { data: tweaks, error: tweaksError } = await supabase
-      .from('parameter_tweaks')
-      .select('*')
-      .in('parameter_id', parameterIds)
-      .eq('active', true)
-      .order('order', { ascending: true });
-    
-    if (tweaksError) {
-      console.error('Error fetching parameter tweaks:', tweaksError);
-      setError(tweaksError.message);
-      throw new Error(`Failed to fetch parameter tweaks: ${tweaksError.message}`);
-    }
-    
-    // Combine parameters with their tweaks and rules
-    const parametersWithTweaks = parameters.map(parameter => {
-      const parameterTweaks = tweaks.filter(tweak => tweak.parameter_id === parameter.id);
-      const rule = rules.find(rule => rule.parameter_id === parameter.id);
+    try {
+      // First get all parameter rules for this prompt
+      const { data: rules, error: rulesError } = await supabase
+        .from('prompt_parameter_rules')
+        .select('*')
+        .eq('prompt_id', promptId)
+        .order('order', { ascending: true });
       
-      return {
-        ...parameter,
-        tweaks: parameterTweaks,
-        rule: rule
-      };
-    });
-    
-    // Sort by the order in rules
-    parametersWithTweaks.sort((a, b) => {
-      const aRule = rules.find(rule => rule.parameter_id === a.id);
-      const bRule = rules.find(rule => rule.parameter_id === b.id);
+      if (rulesError) {
+        console.error('Error fetching parameter rules:', rulesError);
+        setError(rulesError.message);
+        throw new Error(`Failed to fetch parameter rules: ${rulesError.message}`);
+      }
       
-      return (aRule?.order || 0) - (bRule?.order || 0);
-    });
-    
-    return parametersWithTweaks;
+      if (!rules || rules.length === 0) {
+        console.log(`No parameter rules found for prompt ${promptId}`);
+        return [];
+      }
+      
+      // Get the parameter IDs from rules
+      const parameterIds = rules.map(rule => rule.parameter_id);
+      
+      // Get the parameters
+      const { data: parameters, error: parametersError } = await supabase
+        .from('prompt_parameters')
+        .select('*')
+        .in('id', parameterIds)
+        .eq('active', true);
+      
+      if (parametersError) {
+        console.error('Error fetching parameters:', parametersError);
+        setError(parametersError.message);
+        throw new Error(`Failed to fetch parameters: ${parametersError.message}`);
+      }
+      
+      // Get the tweaks for these parameters
+      const { data: tweaks, error: tweaksError } = await supabase
+        .from('parameter_tweaks')
+        .select('*')
+        .in('parameter_id', parameterIds)
+        .eq('active', true)
+        .order('order', { ascending: true });
+      
+      if (tweaksError) {
+        console.error('Error fetching parameter tweaks:', tweaksError);
+        setError(tweaksError.message);
+        throw new Error(`Failed to fetch parameter tweaks: ${tweaksError.message}`);
+      }
+      
+      // Combine parameters with their tweaks and rules
+      const parametersWithTweaks = parameters.map(parameter => {
+        const parameterTweaks = tweaks.filter(tweak => tweak.parameter_id === parameter.id);
+        const rule = rules.find(rule => rule.parameter_id === parameter.id);
+        
+        return {
+          ...parameter,
+          tweaks: parameterTweaks,
+          rule: rule
+        };
+      });
+      
+      // Sort by the order in rules
+      parametersWithTweaks.sort((a, b) => {
+        const aRule = rules.find(rule => rule.parameter_id === a.id);
+        const bRule = rules.find(rule => rule.parameter_id === b.id);
+        
+        return (aRule?.order || 0) - (bRule?.order || 0);
+      });
+      
+      return parametersWithTweaks;
+    } catch (error) {
+      console.error('Error in getParametersForPrompt:', error);
+      throw error;
+    }
   };
 
   // Create parameter rule

@@ -1,31 +1,33 @@
 
 import { useState, useEffect } from "react";
-import { Prompt } from "@/hooks/useCrewkitPrompts";
-import { useCrewkitPrompts } from "@/hooks/useCrewkitPrompts";
+import { useCrewkitPrompts, Prompt } from "@/hooks/useCrewkitPrompts";
 
 export function usePromptFetching(promptId: string | undefined, isOpen: boolean) {
-  const { getPromptById } = useCrewkitPrompts();
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Fetch prompt when promptId changes
+  const [error, setError] = useState<string | null>(null);
+  const { getPromptById } = useCrewkitPrompts();
+  
   useEffect(() => {
     const fetchPrompt = async () => {
-      if (promptId && isOpen) {
-        try {
+      try {
+        if (promptId && isOpen) {
           setIsLoading(true);
-          const promptData = await getPromptById(promptId);
-          setPrompt(promptData);
-          setIsLoading(false);
-        } catch (error) {
-          console.error("Error fetching prompt:", error);
+          setError(null);
+          const fetchedPrompt = await getPromptById(promptId);
+          setPrompt(fetchedPrompt);
           setIsLoading(false);
         }
+      } catch (error) {
+        console.error("Error fetching prompt:", error);
+        setError("Failed to load prompt details.");
+        setPrompt(null);
+        setIsLoading(false);
       }
     };
     
     fetchPrompt();
   }, [promptId, isOpen, getPromptById]);
-
-  return { prompt, isLoading };
+  
+  return { prompt, isLoading, error };
 }

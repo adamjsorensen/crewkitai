@@ -10,8 +10,8 @@ export function usePromptWizard(promptId: string | undefined, isOpen: boolean, o
   const { user } = useAuth();
   
   // Fetch prompt and parameters
-  const { prompt, isLoading: isPromptLoading } = usePromptFetching(promptId, isOpen);
-  const { parameters, isLoading: isParametersLoading } = useParameterFetching(prompt?.id, isOpen);
+  const { prompt, isLoading: isPromptLoading, error: promptError } = usePromptFetching(promptId, isOpen);
+  const { parameters, isLoading: isParametersLoading, error: parameterError } = useParameterFetching(prompt?.id, isOpen);
   
   // Manage wizard state
   const { 
@@ -41,11 +41,13 @@ export function usePromptWizard(promptId: string | undefined, isOpen: boolean, o
   );
 
   const isLoading = isPromptLoading || isParametersLoading;
+  const error = promptError || parameterError;
 
   return {
     prompt,
     parameters,
     isLoading,
+    error,
     generating,
     selectedTweaks,
     additionalContext,
