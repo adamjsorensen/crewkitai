@@ -45,6 +45,17 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
     navigate(`/dashboard/admin/${value}`);
   };
 
+  const tabs = [
+    { value: "ai-settings", icon: <BrainCircuit className="h-4 w-4" />, label: "AI Settings" },
+    { value: "compass-settings", icon: <Compass className="h-4 w-4" />, label: "Compass Settings" },
+    { value: "content-settings", icon: <Sparkles className="h-4 w-4" />, label: "Content Settings" },
+    { value: "prompts", icon: <FileText className="h-4 w-4" />, label: "Prompts" },
+    { value: "parameters", icon: <ListFilter className="h-4 w-4" />, label: "Parameters" },
+    { value: "feature-flags", icon: <ToggleLeft className="h-4 w-4" />, label: "Feature Flags" },
+    { value: "app-settings", icon: <Settings className="h-4 w-4" />, label: "App Settings" },
+    { value: "database", icon: <Database className="h-4 w-4" />, label: "Database" },
+  ];
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-4">
@@ -53,49 +64,30 @@ const AdminLayout = ({ children, activeTab = "ai-settings" }: AdminLayoutProps) 
             <Shield className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">Admin Console</h1>
-            <p className="text-muted-foreground">Manage application settings and configuration</p>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Admin Console</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Manage application settings and configuration</p>
           </div>
         </div>
         
         <Separator className="my-0" />
         
-        <Card className="p-6">
+        <Card className="p-4 md:p-6">
           <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="ai-settings" className="flex items-center gap-1.5">
-                <BrainCircuit className="h-4 w-4" />
-                <span>AI Settings</span>
-              </TabsTrigger>
-              <TabsTrigger value="compass-settings" className="flex items-center gap-1.5">
-                <Compass className="h-4 w-4" />
-                <span>Compass Settings</span>
-              </TabsTrigger>
-              <TabsTrigger value="content-settings" className="flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4" />
-                <span>Content Settings</span>
-              </TabsTrigger>
-              <TabsTrigger value="prompts" className="flex items-center gap-1.5">
-                <FileText className="h-4 w-4" />
-                <span>Prompts</span>
-              </TabsTrigger>
-              <TabsTrigger value="parameters" className="flex items-center gap-1.5">
-                <ListFilter className="h-4 w-4" />
-                <span>Parameters</span>
-              </TabsTrigger>
-              <TabsTrigger value="feature-flags" className="flex items-center gap-1.5">
-                <ToggleLeft className="h-4 w-4" />
-                <span>Feature Flags</span>
-              </TabsTrigger>
-              <TabsTrigger value="app-settings" className="flex items-center gap-1.5">
-                <Settings className="h-4 w-4" />
-                <span>App Settings</span>
-              </TabsTrigger>
-              <TabsTrigger value="database" className="flex items-center gap-1.5">
-                <Database className="h-4 w-4" />
-                <span>Database</span>
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto pb-2 hide-scrollbar">
+              <TabsList className="mb-6 inline-flex w-auto min-w-max">
+                {tabs.map(tab => (
+                  <TabsTrigger 
+                    key={tab.value} 
+                    value={tab.value} 
+                    className="flex items-center gap-1.5 whitespace-nowrap"
+                    title={tab.label}
+                  >
+                    {tab.icon}
+                    <span className="max-w-[80px] md:max-w-none truncate">{tab.label}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
             
             <TabsContent value={activeTab} className="mt-0">
               {children}

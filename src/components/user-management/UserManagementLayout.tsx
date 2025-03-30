@@ -54,6 +54,12 @@ const UserManagementLayout = ({ children, activeTab = "user-list" }: UserManagem
     );
   }
 
+  const tabs = [
+    { id: "user-list", label: "Users", icon: <Users className="h-4 w-4" />, path: "/dashboard/user-management/user-list" },
+    { id: "add-user", label: "Add User", icon: <UserPlus className="h-4 w-4" />, path: "/dashboard/user-management/add-user" },
+    { id: "activity-logs", label: "Activity", icon: <History className="h-4 w-4" />, path: "/dashboard/user-management/activity-logs" }
+  ];
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-4">
@@ -62,8 +68,8 @@ const UserManagementLayout = ({ children, activeTab = "user-list" }: UserManagem
             <Users className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">User Management</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">User Management</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               Manage users, permissions, and monitor user activity
             </p>
           </div>
@@ -71,36 +77,25 @@ const UserManagementLayout = ({ children, activeTab = "user-list" }: UserManagem
         
         <Separator className="my-0" />
         
-        <Card className="p-6">
+        <Card className="p-4 md:p-6">
           {/* Only show tabs when not in detail view */}
           {currentTab && (
             <Tabs value={currentTab} className="w-full">
-              <TabsList className="grid grid-cols-3 w-full max-w-md">
-                <TabsTrigger 
-                  value="user-list" 
-                  onClick={() => navigate("/dashboard/user-management/user-list")}
-                  className="flex items-center gap-2"
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Users</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="add-user" 
-                  onClick={() => navigate("/dashboard/user-management/add-user")}
-                  className="flex items-center gap-2"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span>Add User</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="activity-logs" 
-                  onClick={() => navigate("/dashboard/user-management/activity-logs")}
-                  className="flex items-center gap-2"
-                >
-                  <History className="h-4 w-4" />
-                  <span>Activity</span>
-                </TabsTrigger>
-              </TabsList>
+              <div className="overflow-x-auto hide-scrollbar">
+                <TabsList className="grid grid-cols-3 w-full max-w-md">
+                  {tabs.map(tab => (
+                    <TabsTrigger 
+                      key={tab.id}
+                      value={tab.id}
+                      onClick={() => navigate(tab.path)}
+                      className="flex items-center gap-2 whitespace-nowrap"
+                    >
+                      {tab.icon}
+                      <span className="truncate">{tab.label}</span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
             </Tabs>
           )}
 

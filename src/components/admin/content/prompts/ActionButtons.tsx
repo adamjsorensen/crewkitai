@@ -13,22 +13,22 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   onCreatePrompt
 }) => {
   return (
-    <div className="space-x-2">
+    <div className="flex flex-col sm:flex-row gap-2">
       <Button 
         variant="outline" 
         onClick={onCreateCategory}
-        className="gap-1.5"
+        className="gap-1.5 w-full sm:w-auto justify-center"
       >
         <PlusCircle className="h-4 w-4" />
-        <span>New Category</span>
+        <span className="truncate">New Category</span>
       </Button>
       
       <Button 
         onClick={onCreatePrompt}
-        className="gap-1.5"
+        className="gap-1.5 w-full sm:w-auto justify-center"
       >
         <PlusCircle className="h-4 w-4" />
-        <span>New Prompt</span>
+        <span className="truncate">New Prompt</span>
       </Button>
     </div>
   );

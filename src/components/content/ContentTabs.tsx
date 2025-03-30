@@ -37,12 +37,15 @@ const ContentTabs = ({
   
   return (
     <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-      <TabsList>
-        <TabsTrigger value="all">All Content</TabsTrigger>
-        <TabsTrigger value="marketing">Marketing</TabsTrigger>
-        <TabsTrigger value="sales">Sales</TabsTrigger>
-        <TabsTrigger value="operations">Operations</TabsTrigger>
-      </TabsList>
+      <div className="overflow-x-auto hide-scrollbar">
+        <TabsList className="inline-flex w-auto min-w-max">
+          {tabValues.map((tabValue) => (
+            <TabsTrigger key={tabValue} value={tabValue} className="whitespace-nowrap">
+              {tabValue === "all" ? "All Content" : tabValue.charAt(0).toUpperCase() + tabValue.slice(1)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
       
       {tabValues.map((tabValue) => (
         <TabsContent key={tabValue} value={tabValue}>

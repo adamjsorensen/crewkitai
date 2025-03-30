@@ -41,11 +41,11 @@ const FeatureFlagsPanel = () => {
   };
   
   return (
-    <div className="container py-8">
-      <Card className="mx-auto max-w-2xl">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Feature Flags</CardTitle>
-          <CardDescription>
+    <div className="container py-4 md:py-8 px-2 md:px-4">
+      <Card className="mx-auto max-w-full md:max-w-2xl">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl md:text-2xl font-bold">Feature Flags</CardTitle>
+          <CardDescription className="text-sm">
             Toggle features on and off without redeploying your application
           </CardDescription>
         </CardHeader>
@@ -75,7 +75,7 @@ const FeatureFlagsPanel = () => {
             )}
           </div>
           
-          <div className="mt-6 text-sm text-gray-500">
+          <div className="mt-6 text-xs md:text-sm text-gray-500">
             <p>
               Feature flags allow you to control the availability of features in your application.
               Toggle a flag to enable or disable a feature for all users.

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HubAreaType, Prompt } from "@/hooks/useCrewkitPrompts";
@@ -18,63 +19,43 @@ const HubTabs: React.FC<HubTabsProps> = ({
   isLoading,
   onCreatePrompt
 }) => {
+  const hubs = [
+    { value: "marketing", label: "Marketing" },
+    { value: "sales", label: "Sales" },
+    { value: "operations", label: "Operations" },
+    { value: "client_communications", label: "Client Communications" },
+    { value: "general", label: "General" }
+  ];
+
   return (
     <Tabs 
       defaultValue={activeHub} 
       onValueChange={(value) => setActiveHub(value as HubAreaType)}
     >
-      <TabsList>
-        <TabsTrigger value="marketing">Marketing</TabsTrigger>
-        <TabsTrigger value="sales">Sales</TabsTrigger>
-        <TabsTrigger value="operations">Operations</TabsTrigger>
-        <TabsTrigger value="client_communications">Client Communications</TabsTrigger>
-        <TabsTrigger value="general">General</TabsTrigger>
-      </TabsList>
+      <div className="overflow-x-auto hide-scrollbar">
+        <TabsList className="inline-flex w-auto min-w-max">
+          {hubs.map(hub => (
+            <TabsTrigger 
+              key={hub.value} 
+              value={hub.value} 
+              className="whitespace-nowrap"
+            >
+              {hub.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
       
-      <TabsContent value="marketing" className="mt-6">
-        <PromptsManagement 
-          hub="marketing" 
-          prompts={hubPrompts} 
-          isLoading={isLoading} 
-          onCreatePrompt={onCreatePrompt}
-        />
-      </TabsContent>
-      
-      <TabsContent value="sales" className="mt-6">
-        <PromptsManagement 
-          hub="sales" 
-          prompts={hubPrompts} 
-          isLoading={isLoading} 
-          onCreatePrompt={onCreatePrompt}
-        />
-      </TabsContent>
-      
-      <TabsContent value="operations" className="mt-6">
-        <PromptsManagement 
-          hub="operations" 
-          prompts={hubPrompts} 
-          isLoading={isLoading} 
-          onCreatePrompt={onCreatePrompt}
-        />
-      </TabsContent>
-      
-      <TabsContent value="client_communications" className="mt-6">
-        <PromptsManagement 
-          hub="client_communications" 
-          prompts={hubPrompts} 
-          isLoading={isLoading} 
-          onCreatePrompt={onCreatePrompt}
-        />
-      </TabsContent>
-      
-      <TabsContent value="general" className="mt-6">
-        <PromptsManagement 
-          hub="general" 
-          prompts={hubPrompts} 
-          isLoading={isLoading} 
-          onCreatePrompt={onCreatePrompt}
-        />
-      </TabsContent>
+      {hubs.map(hub => (
+        <TabsContent key={hub.value} value={hub.value} className="mt-6">
+          <PromptsManagement 
+            hub={hub.value as HubAreaType} 
+            prompts={hubPrompts} 
+            isLoading={isLoading} 
+            onCreatePrompt={onCreatePrompt}
+          />
+        </TabsContent>
+      ))}
     </Tabs>
   );
 };

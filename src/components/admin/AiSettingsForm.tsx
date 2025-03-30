@@ -71,38 +71,60 @@ const AiSettingsForm = () => {
   if (isLoading) {
     return <LoadingSpinner />;
   }
+
+  const subtabs = {
+    "model-settings": [
+      { id: "system-prompt", label: "System Prompt" },
+      { id: "temperature", label: "Temperature" },
+      { id: "max-tokens", label: "Max Tokens" },
+      { id: "models", label: "Models Config" }
+    ],
+    "responses": [
+      { id: "follow-up", label: "Follow-up Questions" },
+      { id: "prompt", label: "Question Prompt" }
+    ],
+    "welcome-content": [],
+    "content-filters": [],
+    "compass-settings": [
+      { id: "enabled", label: "AI Enabled" },
+      { id: "system-prompt", label: "System Prompt" }
+    ]
+  };
   
   return (
     <Card>
       <CardHeader className="pb-3">
-        <h2 className="text-2xl font-semibold">AI Coach Settings</h2>
+        <h2 className="text-xl md:text-2xl font-semibold">AI Coach Settings</h2>
       </CardHeader>
       
       <CardContent>
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="model-settings" className="flex items-center gap-1.5">
-              <Settings className="h-4 w-4" />
-              <span>Model Settings</span>
-            </TabsTrigger>
-            <TabsTrigger value="responses" className="flex items-center gap-1.5">
-              <HelpCircle className="h-4 w-4" />
-              <span>Responses</span>
-            </TabsTrigger>
-            <TabsTrigger value="welcome-content" className="flex items-center gap-1.5">
-              <MessageSquare className="h-4 w-4" />
-              <span>Welcome Content</span>
-            </TabsTrigger>
-            <TabsTrigger value="content-filters" className="flex items-center gap-1.5">
-              <AlertTriangle className="h-4 w-4" />
-              <span>Content Filters</span>
-            </TabsTrigger>
-            <TabsTrigger value="compass-settings" className="flex items-center gap-1.5">
-              <Compass className="h-4 w-4" />
-              <span>Compass</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto hide-scrollbar">
+            <TabsList className="mb-6 inline-flex w-auto min-w-max">
+              <TabsTrigger value="model-settings" className="flex items-center gap-1.5 whitespace-nowrap">
+                <Settings className="h-4 w-4" />
+                <span>Model Settings</span>
+              </TabsTrigger>
+              <TabsTrigger value="responses" className="flex items-center gap-1.5 whitespace-nowrap">
+                <HelpCircle className="h-4 w-4" />
+                <span>Responses</span>
+              </TabsTrigger>
+              <TabsTrigger value="welcome-content" className="flex items-center gap-1.5 whitespace-nowrap">
+                <MessageSquare className="h-4 w-4" />
+                <span>Welcome Content</span>
+              </TabsTrigger>
+              <TabsTrigger value="content-filters" className="flex items-center gap-1.5 whitespace-nowrap">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Content Filters</span>
+              </TabsTrigger>
+              <TabsTrigger value="compass-settings" className="flex items-center gap-1.5 whitespace-nowrap">
+                <Compass className="h-4 w-4" />
+                <span>Compass</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
+          {/* Model Settings Tab */}
           <TabsContent value="model-settings">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -115,11 +137,14 @@ const AiSettingsForm = () => {
                 
                 <ModelsConfigField form={form} />
                 
-                <SaveButton isSaving={isSaving} />
+                <div className="flex justify-end">
+                  <SaveButton isSaving={isSaving} />
+                </div>
               </form>
             </Form>
           </TabsContent>
           
+          {/* Responses Tab */}
           <TabsContent value="responses">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -127,19 +152,24 @@ const AiSettingsForm = () => {
                 
                 <FollowUpPromptField form={form} />
                 
-                <SaveButton isSaving={isSaving} />
+                <div className="flex justify-end">
+                  <SaveButton isSaving={isSaving} />
+                </div>
               </form>
             </Form>
           </TabsContent>
           
+          {/* Welcome Content Tab */}
           <TabsContent value="welcome-content">
             <WelcomeContentManagement />
           </TabsContent>
           
+          {/* Content Filters Tab */}
           <TabsContent value="content-filters">
             <ContentFilters />
           </TabsContent>
           
+          {/* Compass Settings Tab */}
           <TabsContent value="compass-settings">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -147,7 +177,9 @@ const AiSettingsForm = () => {
                 
                 <CompassSystemPromptField form={form} />
                 
-                <SaveButton isSaving={isSaving} />
+                <div className="flex justify-end">
+                  <SaveButton isSaving={isSaving} />
+                </div>
               </form>
             </Form>
           </TabsContent>
