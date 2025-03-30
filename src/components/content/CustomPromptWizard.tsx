@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +9,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, AlertTriangle, HelpCircle, RefreshCw } from "lucide-react";
+import { Loader2, FileText, AlertTriangle, HelpCircle, RefreshCw, WifiOff } from "lucide-react";
 import { usePromptWizard } from "@/hooks/usePromptWizard";
 import ParameterCustomization from "./wizard/ParameterCustomization";
 import AdditionalContextStep from "./wizard/AdditionalContextStep";
 import ReviewStep from "./wizard/ReviewStep";
 import WizardNavigation from "./wizard/WizardNavigation";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 
 interface CustomPromptWizardProps {
@@ -27,7 +27,39 @@ interface CustomPromptWizardProps {
 
 const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardProps) => {
   const { toast } = useToast();
-  const [retryCount, setRetryCount] = React.useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
+  
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => {
+      setNetworkStatus('online');
+      toast({
+        title: "You're back online",
+        description: "Reconnected to the server. You can retry loading the prompt.",
+      });
+    };
+    
+    const handleOffline = () => {
+      setNetworkStatus('offline');
+      toast({
+        title: "You're offline",
+        description: "Please check your internet connection.",
+        variant: "destructive"
+      });
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Set initial state
+    setNetworkStatus(navigator.onLine ? 'online' : 'offline');
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [toast]);
   
   const {
     prompt,
@@ -46,10 +78,11 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     handlePrevious,
     handleTweakChange,
     handleSave,
-    setAdditionalContext
+    setAdditionalContext,
+    refetchPrompt
   } = usePromptWizard(promptId, isOpen, onClose, retryCount);
   
-  // Handle retry
+  // Handle retry with exponential backoff
   const handleRetry = () => {
     console.log("Retrying prompt fetch...");
     setRetryCount(prev => prev + 1);
@@ -57,6 +90,9 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
       title: "Retrying",
       description: "Attempting to load the prompt again",
     });
+    
+    // Call the new refetch function
+    refetchPrompt();
   };
   
   // Render current step content
@@ -117,14 +153,26 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
         
         <Progress value={progressValue} className="h-1" />
         
+        {networkStatus === 'offline' && (
+          <Alert variant="destructive" className="mb-4">
+            <WifiOff className="h-4 w-4" />
+            <AlertTitle>You're offline</AlertTitle>
+            <AlertDescription>
+              Please check your internet connection and try again when you're back online.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-muted-foreground">Loading prompt...</span>
           </div>
         ) : error ? (
           <div className="py-6">
             <Alert variant="destructive" className="mb-4">
               <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Error loading prompt</AlertTitle>
               <AlertDescription>
                 {error}
               </AlertDescription>
@@ -137,7 +185,11 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
                 <Button variant="outline" onClick={onClose}>
                   Close
                 </Button>
-                <Button onClick={handleRetry} className="gap-2">
+                <Button 
+                  onClick={handleRetry} 
+                  className="gap-2"
+                  disabled={networkStatus === 'offline'}
+                >
                   <RefreshCw className="h-4 w-4" />
                   Retry
                 </Button>
@@ -154,7 +206,11 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
               <Button variant="outline" onClick={onClose}>
                 Close
               </Button>
-              <Button onClick={handleRetry} className="gap-2">
+              <Button 
+                onClick={handleRetry} 
+                className="gap-2"
+                disabled={networkStatus === 'offline'}
+              >
                 <RefreshCw className="h-4 w-4" />
                 Retry
               </Button>
@@ -192,6 +248,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
             onPrevious={handlePrevious}
             onNext={handleNext}
             onSave={handleSave}
+            networkStatus={networkStatus}
           />
         </DialogFooter>
       </DialogContent>
