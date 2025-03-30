@@ -1,16 +1,14 @@
 
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCrewkitPrompts } from "@/hooks/useCrewkitPrompts";
-import { Prompt } from "@/hooks/useCrewkitPrompts";
-import { useCrewkitPromptParameters, ParameterWithTweaks } from "@/hooks/useCrewkitPromptParameters";
-import PromptFormFields, { PromptFormValues } from "./shared/PromptFormFields";
-import ParameterSelection, { SelectedParameter } from "./shared/ParameterSelection";
+import { PromptFormValues } from "./shared/PromptFormFields";
+import { SelectedParameter } from "./shared/ParameterSelection";
+import PromptFormContainer from "./prompts/PromptFormContainer";
+import ParameterRuleManager from "./prompts/ParameterRuleManager";
 
 // Define the hub area type to match the expected type in Prompt
 type HubAreaType = 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
@@ -31,9 +29,9 @@ const CreatePromptDialog = ({
   hubArea,
 }: CreatePromptDialogProps) => {
   const { createPrompt } = useCrewkitPrompts();
-  const { parameters, createParameterRule, isLoading: isLoadingParameters } = useCrewkitPromptParameters();
   const [selectedParameters, setSelectedParameters] = useState<SelectedParameter[]>([]);
   const [selectedParameterIds, setSelectedParameterIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Define validation schema based on whether we're creating a category or prompt
   const formSchema = z.object({
@@ -71,49 +69,10 @@ const CreatePromptDialog = ({
     }
   }, [open, form, hubArea]);
 
-  // Update selectedParameterIds when selectedParameters changes
-  useEffect(() => {
-    setSelectedParameterIds(selectedParameters.map(param => param.id));
-  }, [selectedParameters]);
-
-  const handleParameterSelect = (parameterId: string) => {
-    // Skip if already selected
-    if (selectedParameterIds.includes(parameterId)) return;
-
-    const parameterToAdd = parameters.find(p => p.id === parameterId);
-    if (parameterToAdd) {
-      const newParam: SelectedParameter = {
-        id: parameterToAdd.id,
-        name: parameterToAdd.name,
-        isRequired: false,
-        order: selectedParameters.length, // Add to the end
-      };
-      
-      setSelectedParameters([...selectedParameters, newParam]);
-    }
-  };
-
-  const handleRemoveParameter = (parameterId: string) => {
-    const updatedParameters = selectedParameters.filter(p => p.id !== parameterId);
-    // Update order after removal
-    const reorderedParameters = updatedParameters.map((p, index) => ({
-      ...p,
-      order: index,
-    }));
-    
-    setSelectedParameters(reorderedParameters);
-  };
-
-  const handleRequiredChange = (parameterId: string, isRequired: boolean) => {
-    const updatedParameters = selectedParameters.map(p => 
-      p.id === parameterId ? { ...p, isRequired } : p
-    );
-    
-    setSelectedParameters(updatedParameters);
-  };
-
   const handleSubmit = async (values: PromptFormValues) => {
     try {
+      setIsLoading(true);
+      
       // Convert hubArea string to the appropriate type (or null if empty)
       const hubAreaValue: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
       
@@ -129,35 +88,17 @@ const CreatePromptDialog = ({
         display_order: 0,
         created_by: null,
         is_default: false,
-      } as Prompt);
-      
-      // If this is not a category and we have parameters selected, create parameter rules
-      if (!isCategory && newPrompt && selectedParameters.length > 0) {
-        // Create parameter rules for each selected parameter
-        for (const param of selectedParameters) {
-          await createParameterRule.mutateAsync({
-            prompt_id: newPrompt.id,
-            parameter_id: param.id,
-            is_active: true,
-            is_required: param.isRequired,
-            order: param.order,
-          });
-        }
-      }
+      });
       
       onOpenChange(false);
       form.reset();
       setSelectedParameters([]);
     } catch (error) {
       console.error("Error creating prompt:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Convert parameters to ParameterWithTweaks[] type to satisfy the component prop
-  const parametersWithTweaks: ParameterWithTweaks[] = parameters.map(param => ({
-    ...param,
-    tweaks: [] // Add empty tweaks array
-  }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -169,38 +110,22 @@ const CreatePromptDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <PromptFormFields 
-              form={form} 
-              isCategory={isCategory} 
-            />
-
-            {!isCategory && (
-              <ParameterSelection
-                parameters={parametersWithTweaks}
-                selectedParameters={selectedParameters}
-                selectedParameterIds={selectedParameterIds}
-                onParameterSelect={handleParameterSelect}
-                onRemoveParameter={handleRemoveParameter}
-                onRequiredChange={handleRequiredChange}
-              />
-            )}
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">
-                Create {isCategory ? "Category" : "Prompt"}
-              </Button>
-            </div>
-          </form>
-        </Form>
+        <PromptFormContainer
+          form={form}
+          isCategory={isCategory}
+          isLoading={isLoading}
+          onSubmit={handleSubmit}
+          onCancel={() => onOpenChange(false)}
+        >
+          <ParameterRuleManager
+            promptId={null}
+            isCategory={isCategory}
+            selectedParameters={selectedParameters}
+            setSelectedParameters={setSelectedParameters}
+            selectedParameterIds={selectedParameterIds}
+            setSelectedParameterIds={setSelectedParameterIds}
+          />
+        </PromptFormContainer>
       </DialogContent>
     </Dialog>
   );
