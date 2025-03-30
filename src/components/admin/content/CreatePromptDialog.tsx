@@ -1,32 +1,19 @@
 
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCrewkitPrompts } from "@/hooks/useCrewkitPrompts";
 import { Prompt } from "@/hooks/useCrewkitPrompts";
 import { useCrewkitPromptParameters } from "@/hooks/useCrewkitPromptParameters";
-import { Badge } from "@/components/ui/badge";
-import { X, GripVertical } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import PromptFormFields, { PromptFormValues } from "./shared/PromptFormFields";
+import ParameterSelection, { SelectedParameter } from "./shared/ParameterSelection";
 
 // Define the hub area type to match the expected type in Prompt
 type HubAreaType = 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
-
-const hubAreas = [
-  { value: "marketing", label: "Marketing" },
-  { value: "sales", label: "Sales" },
-  { value: "operations", label: "Operations" },
-  { value: "client_communications", label: "Client Communications" },
-  { value: "general", label: "General" },
-];
 
 type CreatePromptDialogProps = {
   open: boolean;
@@ -34,14 +21,6 @@ type CreatePromptDialogProps = {
   parentId: string | null;
   isCategory: boolean;
   hubArea?: "marketing" | "sales" | "operations" | "client_communications" | "general";
-};
-
-// For drag and drop ordering
-type SelectedParameter = {
-  id: string;
-  name: string;
-  isRequired: boolean;
-  order: number;
 };
 
 const CreatePromptDialog = ({
@@ -66,19 +45,15 @@ const CreatePromptDialog = ({
       : z.string({ required_error: "Prompt content is required" }).min(10, {
           message: "Prompt content must be at least 10 characters",
         }),
-    parameters: z.array(z.string()).optional(),
   });
 
-  type FormValues = z.infer<typeof formSchema>;
-
-  const form = useForm<FormValues>({
+  const form = useForm<PromptFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       description: "",
       hubArea: hubArea || "",
       prompt: "",
-      parameters: [],
     },
   });
 
@@ -90,7 +65,6 @@ const CreatePromptDialog = ({
         description: "",
         hubArea: hubArea || "",
         prompt: "",
-        parameters: [],
       });
       setSelectedParameters([]);
       setSelectedParameterIds([]);
@@ -138,7 +112,7 @@ const CreatePromptDialog = ({
     setSelectedParameters(updatedParameters);
   };
 
-  const handleSubmit = async (values: FormValues) => {
+  const handleSubmit = async (values: PromptFormValues) => {
     try {
       // Convert hubArea string to the appropriate type (or null if empty)
       const hubAreaValue: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
@@ -191,170 +165,20 @@ const CreatePromptDialog = ({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <PromptFormFields 
+              form={form} 
+              isCategory={isCategory} 
             />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter description (optional)"
-                      className="h-20"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {(!parentId || isCategory) && (
-              <FormField
-                control={form.control}
-                name="hubArea"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hub Area</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select hub area" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isCategory && (
-                          <SelectItem value="">No specific hub</SelectItem>
-                        )}
-                        {hubAreas.map((hub) => (
-                          <SelectItem key={hub.value} value={hub.value}>
-                            {hub.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      {isCategory
-                        ? "Optional: Assign this category to a specific hub"
-                        : "Choose which hub this prompt belongs to"}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
 
             {!isCategory && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="prompt"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Prompt Content</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter the base prompt content"
-                          className="min-h-[200px] font-mono text-sm"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        This is the core text that will be used as the base prompt.
-                        Parameter tweaks will be appended to this.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Parameter selection section */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-1">Parameters</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Select parameters that users can customize for this prompt
-                    </p>
-                    
-                    <Select onValueChange={handleParameterSelect}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Add parameter" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {parameters
-                          .filter(param => param.active && !selectedParameterIds.includes(param.id))
-                          .map(param => (
-                            <SelectItem key={param.id} value={param.id}>
-                              {param.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Selected parameters display */}
-                  {selectedParameters.length > 0 && (
-                    <div className="border rounded-md p-3">
-                      <ScrollArea className="max-h-[200px]">
-                        <div className="space-y-2">
-                          {selectedParameters.map((param, index) => (
-                            <div key={param.id} className="flex items-center gap-2 p-2 bg-secondary/50 rounded-md">
-                              <div className="flex-none text-muted-foreground">
-                                <GripVertical size={16} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{param.name}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1">
-                                  <Checkbox 
-                                    id={`required-${param.id}`}
-                                    checked={param.isRequired}
-                                    onCheckedChange={(checked) => 
-                                      handleRequiredChange(param.id, !!checked)
-                                    }
-                                  />
-                                  <label htmlFor={`required-${param.id}`} className="text-xs">
-                                    Required
-                                  </label>
-                                </div>
-                                <Badge variant="outline" className="text-xs">
-                                  #{index + 1}
-                                </Badge>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-6 w-6"
-                                  onClick={() => handleRemoveParameter(param.id)}
-                                >
-                                  <X size={14} />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
-                </div>
-              </>
+              <ParameterSelection
+                parameters={parameters}
+                selectedParameters={selectedParameters}
+                selectedParameterIds={selectedParameterIds}
+                onParameterSelect={handleParameterSelect}
+                onRemoveParameter={handleRemoveParameter}
+                onRequiredChange={handleRequiredChange}
+              />
             )}
 
             <div className="flex justify-end space-x-2 pt-4">
