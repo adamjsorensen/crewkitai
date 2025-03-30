@@ -1,17 +1,13 @@
-
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCrewkitPrompts } from "@/hooks/useCrewkitPrompts";
+import { useCrewkitPrompts, HubAreaType } from "@/hooks/useCrewkitPrompts";
 import { PromptFormValues } from "./shared/PromptFormFields";
 import { SelectedParameter } from "./shared/ParameterSelection";
 import PromptFormContainer from "./prompts/PromptFormContainer";
 import ParameterRuleManager from "./prompts/ParameterRuleManager";
-
-// Define the hub area type to match the expected type in Prompt
-type HubAreaType = 'marketing' | 'sales' | 'operations' | 'client_communications' | 'general' | null;
 
 type CreatePromptDialogProps = {
   open: boolean;
@@ -33,7 +29,6 @@ const CreatePromptDialog = ({
   const [selectedParameterIds, setSelectedParameterIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Define validation schema based on whether we're creating a category or prompt
   const formSchema = z.object({
     title: z.string().min(3, { message: "Title must be at least 3 characters" }),
     description: z.string().optional(),
@@ -55,7 +50,6 @@ const CreatePromptDialog = ({
     },
   });
 
-  // Reset the form and selected parameters when the dialog opens or closes
   useEffect(() => {
     if (open) {
       form.reset({
@@ -73,10 +67,8 @@ const CreatePromptDialog = ({
     try {
       setIsLoading(true);
       
-      // Convert hubArea string to the appropriate type (or null if empty)
       const hubAreaValue: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
       
-      // First create the prompt
       const newPrompt = await createPrompt.mutateAsync({
         title: values.title,
         description: values.description || null,

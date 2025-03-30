@@ -1,9 +1,7 @@
-
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HubAreaType } from "@/hooks/useCrewkitPrompts";
+import { HubAreaType, Prompt } from "@/hooks/useCrewkitPrompts";
 import PromptsManagement from "@/components/admin/content/PromptsManagement";
-import { Prompt } from "@/hooks/useCrewkitPrompts";
 
 interface HubTabsProps {
   activeHub: HubAreaType;

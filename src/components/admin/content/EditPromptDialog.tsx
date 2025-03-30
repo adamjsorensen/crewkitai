@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCrewkitPrompts, Prompt } from "@/hooks/useCrewkitPrompts";
+import { useCrewkitPrompts, Prompt, HubAreaType } from "@/hooks/useCrewkitPrompts";
 import { useCrewkitPromptParameters, ParameterWithTweaks } from "@/hooks/useCrewkitPromptParameters";
 import { PromptFormValues } from "./shared/PromptFormFields";
 import { SelectedParameter } from "./shared/ParameterSelection";
