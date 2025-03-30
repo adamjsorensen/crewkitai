@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, FileText, AlertTriangle } from "lucide-react";
+import { Loader2, FileText, AlertTriangle, HelpCircle } from "lucide-react";
 import { usePromptWizard } from "@/hooks/usePromptWizard";
 import ParameterCustomization from "./wizard/ParameterCustomization";
 import AdditionalContextStep from "./wizard/AdditionalContextStep";
@@ -135,7 +135,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
             {parameters.length === 0 ? (
               <div className="py-6">
                 <Alert className="mb-4">
-                  <AlertTriangle className="h-4 w-4" />
+                  <HelpCircle className="h-4 w-4" />
                   <AlertDescription>
                     This prompt doesn't have any customization options. You can skip to the additional context.
                   </AlertDescription>

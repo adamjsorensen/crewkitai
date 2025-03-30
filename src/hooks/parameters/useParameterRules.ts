@@ -18,6 +18,7 @@ export function useParameterRules() {
         .from('prompt_parameter_rules')
         .select('*')
         .eq('prompt_id', promptId)
+        .eq('is_active', true)
         .order('order', { ascending: true });
       
       if (rulesError) {
@@ -47,6 +48,11 @@ export function useParameterRules() {
         throw new Error(`Failed to fetch parameters: ${parametersError.message}`);
       }
       
+      if (!parameters || parameters.length === 0) {
+        console.log(`No active parameters found for prompt ${promptId}`);
+        return [];
+      }
+      
       // Get the tweaks for these parameters
       const { data: tweaks, error: tweaksError } = await supabase
         .from('parameter_tweaks')
@@ -63,7 +69,7 @@ export function useParameterRules() {
       
       // Combine parameters with their tweaks and rules
       const parametersWithTweaks = parameters.map(parameter => {
-        const parameterTweaks = tweaks.filter(tweak => tweak.parameter_id === parameter.id);
+        const parameterTweaks = tweaks ? tweaks.filter(tweak => tweak.parameter_id === parameter.id) : [];
         const rule = rules.find(rule => rule.parameter_id === parameter.id);
         
         return {
@@ -82,8 +88,12 @@ export function useParameterRules() {
       });
       
       return parametersWithTweaks;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in getParametersForPrompt:', error);
+      if (!error.message.includes('Failed to fetch')) {
+        // Only throw if it's not already a formatted error
+        throw new Error(`Error loading parameters: ${error.message}`);
+      }
       throw error;
     }
   };
