@@ -15,6 +15,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
+    if (isMobile) return; // Don't observe if on mobile
+    
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class') {
@@ -34,7 +36,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [isMobile]);
 
   return (
     <div className="flex min-h-screen h-screen w-full overflow-hidden">
