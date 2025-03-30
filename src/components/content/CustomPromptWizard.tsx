@@ -34,7 +34,8 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
     selectedTweaks,
     additionalContext,
     currentStepIndex,
-    progress,
+    steps,
+    progressValue,
     canProceed,
     isLastStep,
     handleNext,
@@ -100,7 +101,7 @@ const CustomPromptWizard = ({ promptId, isOpen, onClose }: CustomPromptWizardPro
           </DialogDescription>
         </DialogHeader>
         
-        <Progress value={progress} className="h-1" />
+        <Progress value={progressValue} className="h-1" />
         
         {isLoading ? (
           <div className="flex justify-center items-center py-12">

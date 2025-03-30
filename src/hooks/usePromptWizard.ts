@@ -39,6 +39,9 @@ export function usePromptWizard(promptId: string | undefined, isOpen: boolean, o
     parameters,
     selectedTweaks
   );
+  
+  // Calculate the progress value as a number
+  const progressValue = steps.length ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
 
   const isLoading = isPromptLoading || isParametersLoading;
   const error = promptError || parameterError;
@@ -53,7 +56,7 @@ export function usePromptWizard(promptId: string | undefined, isOpen: boolean, o
     additionalContext,
     currentStepIndex,
     steps,
-    progress,
+    progressValue,
     canProceed: canProceed(currentStepIndex),
     isLastStep: isLastStep(currentStepIndex),
     handleNext,
