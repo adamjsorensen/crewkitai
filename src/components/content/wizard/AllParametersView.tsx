@@ -47,13 +47,27 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
         console.error("[AllParametersView] Parameter missing ID:", param);
       }
       
+      if (!param.name) {
+        console.error("[AllParametersView] Parameter missing name:", param);
+      }
+      
       console.log(`[AllParametersView] Parameter ${param.name || 'unnamed'} (${param.id}) has ${param.tweaks?.length || 0} tweaks`);
       
       if (!param.tweaks || param.tweaks.length === 0) {
         console.warn(`[AllParametersView] Parameter ${param.name || 'unnamed'} has no tweaks`);
+      } else {
+        // Check tweaks validity
+        param.tweaks.forEach(tweak => {
+          if (!tweak.id) {
+            console.error(`[AllParametersView] Tweak missing ID for parameter ${param.name}:`, tweak);
+          }
+        });
       }
     });
-  }, [parameters]);
+    
+    // Log selected tweaks for debugging
+    console.log("[AllParametersView] Current selected tweaks:", selectedTweaks);
+  }, [parameters, selectedTweaks]);
 
   // VALIDATION: Check for invalid parameters array
   if (!parameters || !Array.isArray(parameters)) {
@@ -80,6 +94,11 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
     );
   }
 
+  // Debug display of valid parameters before rendering
+  console.log("[AllParametersView] Rendering parameters:", 
+    parameters.map(p => ({id: p.id, name: p.name, tweaksCount: p.tweaks?.length || 0}))
+  );
+
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-medium">Customize Your Prompt</h3>
@@ -97,7 +116,7 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
         return (
           <Card key={param.id} className="overflow-hidden">
             <CardHeader className="bg-muted/50 py-3">
-              <CardTitle className="text-base">{param.name}</CardTitle>
+              <CardTitle className="text-base">{param.name || 'Unnamed Parameter'}</CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
               {param.description && (
@@ -125,7 +144,7 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
                           <RadioGroupItem id={`${param.id}-${tweak.id}`} value={tweak.id} />
                           <div className="flex-1">
                             <Label htmlFor={`${param.id}-${tweak.id}`} className="font-medium cursor-pointer">
-                              {tweak.name}
+                              {tweak.name || 'Unnamed Tweak'}
                             </Label>
                           </div>
                         </div>

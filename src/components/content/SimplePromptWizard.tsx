@@ -44,7 +44,14 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     }, 100);
   };
   
-  // IMPROVED: Use the enhanced wizard hook with parallel data loading
+  // Log promptId to debug
+  useEffect(() => {
+    if (isOpen) {
+      console.log(`[SimplePromptWizard] Opening with promptId: ${promptId || 'undefined'}`);
+    }
+  }, [isOpen, promptId]);
+  
+  // Use the enhanced wizard hook with direct parameter loading
   const {
     prompt,
     parameters,
@@ -61,7 +68,17 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     handleRetry
   } = useSimplifiedPromptWizard(promptId, isOpen, onClose);
   
-  // IMPROVED: Determine the error type for the error state component
+  // Log the parameters received in the component
+  useEffect(() => {
+    console.log(`[SimplePromptWizard] Parameters received: count=${parameters?.length || 0}`);
+    if (parameters?.length > 0) {
+      console.log("[SimplePromptWizard] First few parameters:", 
+        parameters.slice(0, 3).map(p => ({id: p.id, name: p.name, tweaks: p.tweaks?.length || 0}))
+      );
+    }
+  }, [parameters]);
+  
+  // Determine the error type for the error state component
   const getErrorType = () => {
     if (!error) return 'unknown';
     if (error.includes("not found") || error.includes("doesn't exist")) {
@@ -72,7 +89,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     return 'unknown';
   };
   
-  // IMPROVED: Log connection issues with better debug information
+  // Log connection issues with better debug information
   useEffect(() => {
     if (networkStatus === 'offline') {
       console.log("[SimplePromptWizard] Network is offline - this will affect data loading");
@@ -82,13 +99,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     console.log(`[SimplePromptWizard] Prompt ID: ${promptId}, isLoading: ${isLoading}, error: ${error ? 'yes' : 'no'}`);
     
   }, [networkStatus, promptId, isLoading, error]);
-  
-  // IMPROVED: Log when parameters change to debug rendering issues
-  useEffect(() => {
-    if (parameters) {
-      console.log(`[SimplePromptWizard] Parameters updated: ${parameters.length} items`);
-    }
-  }, [parameters]);
   
   if (!isOpen) return null;
   

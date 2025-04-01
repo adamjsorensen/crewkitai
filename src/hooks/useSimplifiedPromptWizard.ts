@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePromptFetching } from "./prompt-wizard/usePromptFetching";
 import { usePromptParameters } from "./usePromptParameters";
 import { useToast } from "@/hooks/use-toast";
-import { Prompt } from "./useCrewkitPrompts";
 
 export function useSimplifiedPromptWizard(
   promptId: string | undefined, 
@@ -21,7 +20,6 @@ export function useSimplifiedPromptWizard(
   const [debouncedLoading, setDebouncedLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
-  const [paramFetchInitiated, setParamFetchInitiated] = useState(false);
   
   // Check network status
   useEffect(() => {
@@ -60,14 +58,6 @@ export function useSimplifiedPromptWizard(
     retry: retryParameters
   } = usePromptParameters(promptId);
   
-  // Flag to track when parameter fetch has been initiated
-  useEffect(() => {
-    if (promptId && !paramFetchInitiated) {
-      console.log(`[useSimplifiedPromptWizard] Initiating parameter fetch for promptId: ${promptId}`);
-      setParamFetchInitiated(true);
-    }
-  }, [promptId, paramFetchInitiated]);
-  
   // Combine loading states with logging
   const isLoading = isPromptLoading || isParametersLoading;
   
@@ -97,7 +87,6 @@ export function useSimplifiedPromptWizard(
       setSelectedTweaks({});
       setAdditionalContext("");
       setDebouncedLoading(true); // Ensure loading state is true when opening
-      setParamFetchInitiated(false);
     }
   }, [isOpen, promptId]);
   
@@ -113,6 +102,8 @@ export function useSimplifiedPromptWizard(
         if (!validParameters) {
           console.error("[useSimplifiedPromptWizard] Invalid parameters data detected:", 
             parameters.filter(p => !p || !p.id || !p.name));
+        } else {
+          console.log("[useSimplifiedPromptWizard] Valid parameters data confirmed");
         }
       } else if (parameters?.length === 0 && !parametersError) {
         console.log("[useSimplifiedPromptWizard] No parameters found for prompt - this may be expected for some prompts");
@@ -133,7 +124,7 @@ export function useSimplifiedPromptWizard(
           console.error("[useSimplifiedPromptWizard] Invalid prompt data:", prompt);
         }
       } else if (promptId) {
-        console.log("[useSimplifiedPromptWizard] Failed to load prompt for ID:", promptId);
+        console.warn("[useSimplifiedPromptWizard] Failed to load prompt for ID:", promptId);
       }
     }
   }, [prompt, promptId, isPromptLoading]);
@@ -147,13 +138,12 @@ export function useSimplifiedPromptWizard(
     }));
   }, []);
   
-  // IMPROVED: Manual retry function for all data with better logging
+  // IMPROVED: Manual retry function for all data
   const handleRetry = useCallback(() => {
     console.log("[useSimplifiedPromptWizard] Manually retrying all data fetch");
     setRetryCount(prev => prev + 1);
     refetchPrompt();
     retryParameters();
-    setParamFetchInitiated(false);
     
     toast({
       title: "Retrying",
@@ -161,7 +151,7 @@ export function useSimplifiedPromptWizard(
     });
   }, [refetchPrompt, retryParameters, toast]);
   
-  // VALIDATION: Validate the form with better logging
+  // VALIDATION: Validate the form
   const isFormValid = useCallback(() => {
     // Validate that parameters are loaded correctly
     if (!parameters || !Array.isArray(parameters)) {
