@@ -29,6 +29,18 @@ export function usePromptParameters(promptId: string | undefined) {
       try {
         console.log(`Fetching parameters for prompt ID: ${promptId}`);
         
+        // Check if we can connect to Supabase first
+        try {
+          const { error: connectionTest } = await supabase.from('prompts').select('id').limit(1);
+          if (connectionTest) {
+            console.error("Connection test failed:", connectionTest);
+            throw new Error(`Database connection error: ${connectionTest.message}`);
+          }
+        } catch (connectionErr: any) {
+          console.error("Supabase connection check failed:", connectionErr);
+          throw new Error(`Database connection issue: ${connectionErr.message || connectionErr}`);
+        }
+        
         // Step 1: Get parameter rules for this prompt
         const { data: ruleData, error: ruleError } = await supabase
           .from('prompt_parameter_rules')
@@ -38,6 +50,7 @@ export function usePromptParameters(promptId: string | undefined) {
           .order('order');
         
         if (ruleError) {
+          console.error("Error fetching parameter rules:", ruleError);
           throw new Error(`Error fetching parameter rules: ${ruleError.message}`);
         }
         
@@ -61,6 +74,7 @@ export function usePromptParameters(promptId: string | undefined) {
           .eq('active', true);
           
         if (paramError) {
+          console.error("Error fetching parameters:", paramError);
           throw new Error(`Error fetching parameters: ${paramError.message}`);
         }
         
@@ -82,8 +96,11 @@ export function usePromptParameters(promptId: string | undefined) {
           .order('order');
           
         if (tweakError) {
+          console.error("Error fetching parameter tweaks:", tweakError);
           throw new Error(`Error fetching parameter tweaks: ${tweakError.message}`);
         }
+        
+        console.log(`Found ${tweakData?.length || 0} tweaks for parameters`);
         
         // Group tweaks by parameter ID
         const tweaksByParameter: Record<string, any[]> = {};

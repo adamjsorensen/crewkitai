@@ -19,6 +19,7 @@ export function useSimplifiedPromptWizard(
   const [additionalContext, setAdditionalContext] = useState("");
   const [generating, setGenerating] = useState(false);
   const [debouncedLoading, setDebouncedLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Fetch prompt details
   const { 
@@ -26,14 +27,14 @@ export function useSimplifiedPromptWizard(
     isLoading: isPromptLoading, 
     error: promptError, 
     refetch: refetchPrompt 
-  } = usePromptFetching(promptId, isOpen);
+  } = usePromptFetching(promptId, isOpen, retryCount);
   
   // Fetch parameters with the simplified hook
   const { 
     parameters, 
     isLoading: isParametersLoading, 
     error: parametersError 
-  } = usePromptParameters(promptId);
+  } = usePromptParameters(prompt?.id);
   
   // Combine loading states
   const isLoading = isPromptLoading || isParametersLoading;
@@ -63,6 +64,28 @@ export function useSimplifiedPromptWizard(
     }
   }, [isOpen, promptId]);
   
+  // Debug logging for parameters
+  useEffect(() => {
+    if (prompt && !isParametersLoading) {
+      console.log("Parameters loaded for prompt:", prompt.id);
+      console.log("Parameters count:", parameters?.length || 0);
+      if (parameters?.length === 0) {
+        console.log("Warning: No parameters found for prompt that should have parameters");
+      }
+    }
+  }, [prompt, parameters, isParametersLoading]);
+  
+  // Debug logging for prompts
+  useEffect(() => {
+    if (!isPromptLoading) {
+      if (prompt) {
+        console.log("Prompt loaded successfully:", prompt.title);
+      } else if (promptId) {
+        console.log("Failed to load prompt for ID:", promptId);
+      }
+    }
+  }, [prompt, promptId, isPromptLoading]);
+  
   // Handle tweak selection
   const handleTweakChange = (parameterId: string, tweakId: string) => {
     console.log(`useSimplifiedPromptWizard - tweak selected: ${tweakId} for parameter: ${parameterId}`);
@@ -72,10 +95,17 @@ export function useSimplifiedPromptWizard(
     }));
   };
   
+  // Manual retry function
+  const handleRetry = () => {
+    console.log("Manually retrying prompt fetch");
+    setRetryCount(prev => prev + 1);
+    refetchPrompt();
+  };
+  
   // Validate the form
   const isFormValid = () => {
     // Check if all required parameters have a selection
-    const requiredParameters = parameters.filter(param => param.rule?.is_required);
+    const requiredParameters = parameters?.filter(param => param.rule?.is_required) || [];
     const isValid = requiredParameters.every(param => selectedTweaks[param.id]);
     console.log("useSimplifiedPromptWizard - form validity check:", { 
       isValid, 
@@ -189,6 +219,7 @@ export function useSimplifiedPromptWizard(
     setAdditionalContext,
     handleSave,
     isFormValid,
-    refetchPrompt
+    refetchPrompt,
+    handleRetry
   };
 }

@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, RefreshCw } from "lucide-react";
 import { useSimplifiedPromptWizard } from "@/hooks/useSimplifiedPromptWizard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AllParametersView from "./wizard/AllParametersView";
@@ -18,6 +18,8 @@ import LoadingState from "./wizard/LoadingState";
 import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
 import NetworkStatusMonitor from "./wizard/NetworkStatusMonitor";
 import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface SimplePromptWizardProps {
   promptId?: string;
@@ -32,7 +34,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
 }) => {
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
   const [activeTab, setActiveTab] = useState("customize");
-  const [retryCount, setRetryCount] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
   
   // Wrap the onClose function to add a transition delay
@@ -57,25 +58,26 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     setAdditionalContext,
     handleSave,
     isFormValid,
-    refetchPrompt
+    handleRetry
   } = useSimplifiedPromptWizard(promptId, isOpen, onClose);
-  
-  // Handle retry
-  const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
-    refetchPrompt();
-  };
   
   // Determine the error type for the error state component
   const getErrorType = () => {
     if (!error) return 'unknown';
     if (error.includes("not found") || error.includes("doesn't exist")) {
       return 'not-found';
-    } else if (error.includes("connection") || error.includes("timed out") || error.includes("network")) {
+    } else if (error.includes("connection") || error.includes("network") || error.includes("Failed to fetch")) {
       return 'connection';
     }
     return 'unknown';
   };
+  
+  // Log connection issues
+  useEffect(() => {
+    if (networkStatus === 'offline') {
+      console.log("Network is offline - this will affect data loading");
+    }
+  }, [networkStatus]);
   
   if (!isOpen) return null;
   
@@ -127,11 +129,34 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
                     <p>Prompt ID: {prompt.id}</p>
                     <p>Parameters count: {parameters?.length || 0}</p>
                     <p>Has parameters: {parameters && parameters.length > 0 ? 'Yes' : 'No'}</p>
-                    <p>Parameters: {JSON.stringify(parameters.map(p => p.name))}</p>
+                    <p>Parameters: {JSON.stringify(parameters?.map(p => p.name))}</p>
                     <p>Selected tweaks: {Object.keys(selectedTweaks).length}</p>
+                    <p>Network: {networkStatus}</p>
                   </div>
                 </details>
               </div>
+            )}
+            
+            {/* Network warning banner */}
+            {networkStatus === 'offline' && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Network Error</AlertTitle>
+                <AlertDescription>
+                  You appear to be offline. Please check your connection and try again.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {/* Parameter empty state notice */}
+            {parameters?.length === 0 && (
+              <Alert className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No Customization Options</AlertTitle>
+                <AlertDescription>
+                  This prompt doesn't have any customization parameters. You can add context in the next tab.
+                </AlertDescription>
+              </Alert>
             )}
             
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -142,7 +167,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
               
               <TabsContent value="customize" className="py-4">
                 <AllParametersView 
-                  parameters={parameters} 
+                  parameters={parameters || []} 
                   selectedTweaks={selectedTweaks}
                   onTweakChange={handleTweakChange}
                 />
@@ -159,10 +184,22 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
         )}
         
         <DialogFooter>
+          {error && !isLoading && (
+            <Button 
+              variant="outline" 
+              onClick={handleRetry} 
+              className="mr-auto"
+              disabled={networkStatus === 'offline'}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          )}
+          
           <Button
             type="button"
             onClick={handleSave}
-            disabled={!isFormValid() || generating || isLoading || networkStatus === 'offline'}
+            disabled={!isFormValid() || generating || isLoading || error !== null || networkStatus === 'offline'}
             className="gap-1"
           >
             {generating ? (

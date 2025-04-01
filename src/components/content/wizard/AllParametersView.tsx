@@ -21,7 +21,7 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
 }) => {
   // Debug logging to track parameter rendering
   useEffect(() => {
-    console.log("AllParametersView received parameters:", JSON.stringify(parameters));
+    console.log("AllParametersView received parameters:", parameters);
     console.log("AllParametersView received selectedTweaks:", selectedTweaks);
     
     if (!parameters || parameters.length === 0) {
