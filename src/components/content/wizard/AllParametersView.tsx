@@ -19,30 +19,40 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
   selectedTweaks,
   onTweakChange
 }) => {
-  // Debug logging to track parameter rendering
+  // Enhanced validation and debug logging
   useEffect(() => {
-    console.log("AllParametersView received parameters:", parameters);
-    console.log("AllParametersView received selectedTweaks:", selectedTweaks);
-    
     if (!parameters || parameters.length === 0) {
       console.warn("AllParametersView: No parameters provided or empty array");
-    } else {
-      // Validate parameter data
-      parameters.forEach(param => {
-        if (!param.id) {
-          console.error("Parameter missing ID:", param);
-        }
-        
-        console.log(`Parameter ${param.name || 'unnamed'} (${param.id}) has ${param.tweaks?.length || 0} tweaks`);
-        
-        if (!param.tweaks || param.tweaks.length === 0) {
-          console.warn(`Parameter ${param.name || 'unnamed'} has no tweaks`);
-        }
-      });
+      return;
     }
-  }, [parameters, selectedTweaks]);
+    
+    // Validate parameter data
+    parameters.forEach(param => {
+      if (!param.id) {
+        console.error("Parameter missing ID:", param);
+      }
+      
+      console.log(`Parameter ${param.name || 'unnamed'} (${param.id}) has ${param.tweaks?.length || 0} tweaks`);
+      
+      if (!param.tweaks || param.tweaks.length === 0) {
+        console.warn(`Parameter ${param.name || 'unnamed'} has no tweaks`);
+      }
+    });
+  }, [parameters]);
 
-  if (!parameters || parameters.length === 0) {
+  if (!parameters || !Array.isArray(parameters)) {
+    console.error("Invalid parameters value:", parameters);
+    return (
+      <Alert className="mb-4">
+        <AlertTriangle className="h-4 w-4 text-amber-500" />
+        <AlertDescription>
+          Error loading parameters data. The data format is invalid.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (parameters.length === 0) {
     return (
       <Alert className="mb-4">
         <Info className="h-4 w-4 text-blue-500" />
@@ -64,6 +74,9 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
           return null;
         }
         
+        // Check if parameter has tweaks
+        const hasTweaks = param.tweaks && param.tweaks.length > 0;
+        
         return (
           <Card key={param.id} className="overflow-hidden">
             <CardHeader className="bg-muted/50 py-3">
@@ -82,7 +95,7 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
                 }}
               >
                 <div className="space-y-2">
-                  {param.tweaks && param.tweaks.length > 0 ? (
+                  {hasTweaks ? (
                     param.tweaks.map((tweak) => {
                       if (!tweak || !tweak.id) {
                         console.error("Invalid tweak for parameter", param.name, tweak);

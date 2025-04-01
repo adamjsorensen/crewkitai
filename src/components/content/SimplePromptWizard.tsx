@@ -9,17 +9,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Check, RefreshCw } from "lucide-react";
+import { Loader2, Check, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { useSimplifiedPromptWizard } from "@/hooks/useSimplifiedPromptWizard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AllParametersView from "./wizard/AllParametersView";
 import AdditionalContextStep from "./wizard/AdditionalContextStep";
 import LoadingState from "./wizard/LoadingState";
 import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
-import NetworkStatusMonitor from "./wizard/NetworkStatusMonitor";
 import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 
 interface SimplePromptWizardProps {
   promptId?: string;
@@ -32,7 +31,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
   isOpen, 
   onClose 
 }) => {
-  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
   const [activeTab, setActiveTab] = useState("customize");
   const [isClosing, setIsClosing] = useState(false);
   
@@ -54,6 +52,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     generating,
     selectedTweaks,
     additionalContext,
+    networkStatus,
     handleTweakChange,
     setAdditionalContext,
     handleSave,
@@ -87,17 +86,22 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
       ? `Customize Prompt: ${prompt.title}` 
       : "Customize Prompt";
   
+  const hasParameters = parameters && parameters.length > 0;
+  
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">{dialogTitle}</DialogTitle>
+          <DialogTitle className="text-xl flex items-center gap-2">
+            {networkStatus === 'offline' && <WifiOff className="h-5 w-5 text-red-500" />}
+            {networkStatus === 'online' && !error && <Wifi className="h-5 w-5 text-green-500" />}
+            {dialogTitle}
+          </DialogTitle>
           <DialogDescription>
             Customize this prompt to generate content tailored to your needs
           </DialogDescription>
         </DialogHeader>
         
-        <NetworkStatusMonitor onStatusChange={setNetworkStatus} />
         <NetworkStatusAlert networkStatus={networkStatus} />
         
         {isLoading ? (
@@ -128,7 +132,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
                   <div className="mt-2 space-y-1">
                     <p>Prompt ID: {prompt.id}</p>
                     <p>Parameters count: {parameters?.length || 0}</p>
-                    <p>Has parameters: {parameters && parameters.length > 0 ? 'Yes' : 'No'}</p>
+                    <p>Has parameters: {hasParameters ? 'Yes' : 'No'}</p>
                     <p>Parameters: {JSON.stringify(parameters?.map(p => p.name))}</p>
                     <p>Selected tweaks: {Object.keys(selectedTweaks).length}</p>
                     <p>Network: {networkStatus}</p>
@@ -137,21 +141,9 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
               </div>
             )}
             
-            {/* Network warning banner */}
-            {networkStatus === 'offline' && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Network Error</AlertTitle>
-                <AlertDescription>
-                  You appear to be offline. Please check your connection and try again.
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            {/* Parameter empty state notice */}
-            {parameters?.length === 0 && (
-              <Alert className="mb-4">
-                <AlertCircle className="h-4 w-4" />
+            {!hasParameters && (
+              <Alert className="mb-4" variant="default">
+                <Info className="h-4 w-4" />
                 <AlertTitle>No Customization Options</AlertTitle>
                 <AlertDescription>
                   This prompt doesn't have any customization parameters. You can add context in the next tab.
@@ -161,16 +153,25 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
             
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full">
-                <TabsTrigger value="customize" className="flex-1">Customize</TabsTrigger>
+                <TabsTrigger value="customize" className="flex-1">
+                  Customize {hasParameters && <span className="ml-1 text-xs">({parameters.length})</span>}
+                </TabsTrigger>
                 <TabsTrigger value="context" className="flex-1">Add Context</TabsTrigger>
               </TabsList>
               
               <TabsContent value="customize" className="py-4">
-                <AllParametersView 
-                  parameters={parameters || []} 
-                  selectedTweaks={selectedTweaks}
-                  onTweakChange={handleTweakChange}
-                />
+                {hasParameters ? (
+                  <AllParametersView 
+                    parameters={parameters} 
+                    selectedTweaks={selectedTweaks}
+                    onTweakChange={handleTweakChange}
+                  />
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <p>No customization options available for this prompt.</p>
+                    <p className="mt-2">You can add additional context in the next tab.</p>
+                  </div>
+                )}
               </TabsContent>
               
               <TabsContent value="context" className="py-4">
