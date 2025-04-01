@@ -2,7 +2,7 @@
 import React, { useEffect } from "react";
 import { ParameterWithTweaks } from "@/types/promptParameters";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -19,31 +19,24 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
   selectedTweaks,
   onTweakChange
 }) => {
-  // Add detailed logging to debug parameters
+  // Debug logging to track parameter rendering
   useEffect(() => {
-    console.log("AllParametersView received parameters:", parameters);
+    console.log("AllParametersView received parameters:", JSON.stringify(parameters));
     console.log("AllParametersView received selectedTweaks:", selectedTweaks);
     
     if (!parameters || parameters.length === 0) {
       console.warn("AllParametersView: No parameters provided or empty array");
     } else {
-      // Deep validation of parameter data
+      // Validate parameter data
       parameters.forEach(param => {
         if (!param.id) {
           console.error("Parameter missing ID:", param);
         }
         
-        console.log(`Parameter ${param.name} (${param.id}) has ${param.tweaks?.length || 0} tweaks`);
+        console.log(`Parameter ${param.name || 'unnamed'} (${param.id}) has ${param.tweaks?.length || 0} tweaks`);
         
         if (!param.tweaks || param.tweaks.length === 0) {
-          console.warn(`Parameter ${param.name} has no tweaks`);
-        } else {
-          // Validate tweaks
-          param.tweaks.forEach(tweak => {
-            if (!tweak.id) {
-              console.error("Tweak missing ID for parameter:", param.name, tweak);
-            }
-          });
+          console.warn(`Parameter ${param.name || 'unnamed'} has no tweaks`);
         }
       });
     }
@@ -52,7 +45,7 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
   if (!parameters || parameters.length === 0) {
     return (
       <Alert className="mb-4">
-        <AlertTriangle className="h-4 w-4 text-blue-500" />
+        <Info className="h-4 w-4 text-blue-500" />
         <AlertDescription>
           This prompt doesn't have any customization parameters.
         </AlertDescription>
@@ -65,7 +58,7 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
       <h3 className="text-lg font-medium">Customize Your Prompt</h3>
       
       {parameters.map((param, index) => {
-        // Extra validation to avoid rendering issues
+        // Skip invalid parameters
         if (!param || !param.id) {
           console.error("Invalid parameter at index", index, param);
           return null;
@@ -91,7 +84,6 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
                 <div className="space-y-2">
                   {param.tweaks && param.tweaks.length > 0 ? (
                     param.tweaks.map((tweak) => {
-                      // Extra validation for tweak
                       if (!tweak || !tweak.id) {
                         console.error("Invalid tweak for parameter", param.name, tweak);
                         return null;
@@ -129,6 +121,6 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
       })}
     </div>
   );
-};
+}
 
 export default AllParametersView;
