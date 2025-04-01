@@ -67,6 +67,9 @@ const ParameterCard = React.memo(({
   onTweakChange: (parameterId: string, tweakId: string) => void;
   isLast: boolean;
 }) => {
+  // Debug logging for parameter rendering
+  console.log(`[ParameterCard] Rendering parameter ${param.name} with ${param.tweaks?.length || 0} tweaks`);
+  
   // Improved validation for tweaks array - memoized
   const hasTweaks = useMemo(() => {
     return param.tweaks && 
@@ -98,6 +101,7 @@ const ParameterCard = React.memo(({
               {param.tweaks.map((tweak) => {
                 // Skip invalid tweaks
                 if (!tweak || !tweak.id) {
+                  console.log(`[ParameterCard] Skipping invalid tweak for parameter ${param.name}`);
                   return null;
                 }
                 
@@ -142,6 +146,8 @@ const AllParametersView = React.memo(({
   selectedTweaks,
   onTweakChange
 }: AllParametersViewProps) => {
+  console.log(`[AllParametersView] Rendering with ${parameters?.length || 0} parameters`);
+  
   // Validate and create a safe copy of parameters with a memo
   const safeParameters = useMemo(() => {
     if (!Array.isArray(parameters)) {
@@ -150,11 +156,15 @@ const AllParametersView = React.memo(({
     }
     
     // Filter out invalid parameters
-    return parameters.filter(p => p && p.id && p.name);
+    const filteredParams = parameters.filter(p => p && p.id && p.name);
+    console.log(`[AllParametersView] Filtered ${parameters.length} parameters to ${filteredParams.length} valid ones`);
+    
+    return filteredParams;
   }, [parameters]);
   
   // Handle empty parameters array
   if (safeParameters.length === 0) {
+    console.log("[AllParametersView] No valid parameters to render");
     return (
       <Alert className="mb-4">
         <Info className="h-4 w-4 text-blue-500" />

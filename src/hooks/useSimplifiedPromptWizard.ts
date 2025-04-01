@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePromptFetching } from "./prompt-wizard/usePromptFetching";
 import { usePromptParameters } from "./usePromptParameters";
@@ -18,6 +17,9 @@ export function useSimplifiedPromptWizard(
   const [additionalContext, setAdditionalContext] = useState("");
   const [generating, setGenerating] = useState(false);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
+  
+  // Track if this is the first load
+  const isFirstLoadRef = useRef(true);
   
   // Maintain cache of parameters to prevent unnecessary re-renders
   const parametersCache = useRef<any[]>([]);
@@ -46,13 +48,21 @@ export function useSimplifiedPromptWizard(
     };
   }, []);
   
-  // Update refs when props change 
+  // Update refs when props change - only update if really changed
   useEffect(() => {
-    promptIdRef.current = promptId;
-    stableIsOpenRef.current = isOpen;
+    if (promptIdRef.current !== promptId) {
+      console.log(`[useSimplifiedPromptWizard] Prompt ID changed from ${promptIdRef.current} to ${promptId}`);
+      promptIdRef.current = promptId;
+      isFirstLoadRef.current = true;
+    }
+    
+    if (stableIsOpenRef.current !== isOpen) {
+      console.log(`[useSimplifiedPromptWizard] isOpen changed from ${stableIsOpenRef.current} to ${isOpen}`);
+      stableIsOpenRef.current = isOpen;
+    }
   }, [promptId, isOpen]);
   
-  // IMPROVED: Fetch prompt details with retry capability
+  // IMPROVED: Fetch prompt details with retry capability and better caching
   const { 
     prompt, 
     isLoading: isPromptLoading, 
@@ -65,7 +75,8 @@ export function useSimplifiedPromptWizard(
     parameters, 
     isLoading: isParametersLoading, 
     error: parametersError,
-    retry: retryParameters
+    retry: retryParameters,
+    lastSuccessfulFetch
   } = usePromptParameters(promptId);
   
   // Update parameters cache when new parameters are loaded - ONLY if they've changed
@@ -75,11 +86,37 @@ export function useSimplifiedPromptWizard(
         JSON.stringify(parameters) !== JSON.stringify(parametersCache.current)) {
       console.log(`[useSimplifiedPromptWizard] Updating parameters cache with ${parameters.length} items`);
       parametersCache.current = [...parameters];
+      
+      // Debug the parameters structure
+      if (parameters.length > 0) {
+        console.log('[useSimplifiedPromptWizard] First parameter structure:', {
+          id: parameters[0].id,
+          name: parameters[0].name,
+          hasTweaks: Array.isArray(parameters[0].tweaks) && parameters[0].tweaks.length > 0,
+          tweaksCount: parameters[0].tweaks?.length || 0
+        });
+      }
     }
   }, [parameters]);
   
-  // Calculate the combined loading state - Simplified to avoid race conditions
-  const isLoading = isPromptLoading || isParametersLoading;
+  // Fixed loading state calculation to prevent flickering
+  const isLoading = useMemo(() => {
+    // First, check if we've completed an initial successful load to avoid constant loading states
+    if (lastSuccessfulFetch && !isFirstLoadRef.current) {
+      return false;
+    }
+    
+    // Otherwise, use standard loading indicators
+    return isPromptLoading || isParametersLoading;
+  }, [isPromptLoading, isParametersLoading, lastSuccessfulFetch]);
+  
+  // Update first load state once we have completed a load
+  useEffect(() => {
+    if (!isLoading && isFirstLoadRef.current) {
+      console.log('[useSimplifiedPromptWizard] First load complete, marking as not first load anymore');
+      isFirstLoadRef.current = false;
+    }
+  }, [isLoading]);
   
   // Reset form state when wizard opens with a new prompt - using stable references
   useEffect(() => {
@@ -92,6 +129,7 @@ export function useSimplifiedPromptWizard(
   
   // Handle tweak selection with stable callback
   const handleTweakChange = useCallback((parameterId: string, tweakId: string) => {
+    console.log(`[useSimplifiedPromptWizard] Selecting tweak ${tweakId} for parameter ${parameterId}`);
     setSelectedTweaks(prev => ({
       ...prev,
       [parameterId]: tweakId,

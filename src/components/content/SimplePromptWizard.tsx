@@ -44,15 +44,21 @@ const TabsContentSection = React.memo(({
   additionalContext: string;
   setAdditionalContext: (value: string) => void;
 }) => {
+  // Add debug logging for parameter rendering
+  console.log(`[TabsContentSection] Rendering with ${safeParameters.length} parameters`);
+  
   return (
     <>
       <TabsContent value="customize" className="py-4 min-h-[300px]">
         {hasParameters ? (
-          <AllParametersView 
-            parameters={safeParameters} 
-            selectedTweaks={selectedTweaks}
-            onTweakChange={handleTweakChange}
-          />
+          <>
+            {console.log("[TabsContentSection] Rendering AllParametersView")}
+            <AllParametersView 
+              parameters={safeParameters} 
+              selectedTweaks={selectedTweaks}
+              onTweakChange={handleTweakChange}
+            />
+          </>
         ) : (
           <div className="py-8 text-center text-muted-foreground">
             <p>No customization options available for this prompt.</p>
@@ -82,6 +88,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   const [showLoadingState, setShowLoadingState] = useState(false);
   const [didMount, setDidMount] = useState(false);
   const [stableOpen, setStableOpen] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   // Create a stable onClose function
   const handleClose = useCallback(() => {
@@ -109,17 +116,36 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   useEffect(() => {
     if (isOpen !== stableOpen) {
       setStableOpen(isOpen);
+      // Reset initial load state when opening/closing
+      if (isOpen) {
+        setInitialLoadComplete(false);
+      }
     }
   }, [isOpen, stableOpen]);
 
-  // Delayed loading state to prevent flashing
+  // Use a more stable approach for loading state
   useEffect(() => {
-    const timer = isLoading 
-      ? setTimeout(() => setShowLoadingState(true), 200)
-      : setTimeout(() => setShowLoadingState(false), 300);
+    let timer: ReturnType<typeof setTimeout>;
+    
+    if (isLoading && !showLoadingState) {
+      // Set loading state with a delay to prevent flashing
+      timer = setTimeout(() => {
+        setShowLoadingState(true);
+      }, 200);
+    } else if (!isLoading && showLoadingState) {
+      // Only set initialLoadComplete if this is the first load completing
+      if (!initialLoadComplete) {
+        setInitialLoadComplete(true);
+      }
+      
+      // Add a delay before hiding loading state
+      timer = setTimeout(() => {
+        setShowLoadingState(false);
+      }, 300);
+    }
     
     return () => clearTimeout(timer);
-  }, [isLoading]);
+  }, [isLoading, showLoadingState, initialLoadComplete]);
   
   // Mark component as mounted only once to prevent re-rendering cycles
   useEffect(() => {
@@ -129,12 +155,12 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     }
   }, []);
   
-  // Effect to log component lifecycle - reduced frequency
+  // Effect to log component lifecycle - reduced frequency and with better debugging
   useEffect(() => {
     if (didMount) {
-      console.log(`[SimplePromptWizard] State update: promptId=${promptId}, isLoading=${isLoading}, hasParameters=${parameters?.length || 0}`);
+      console.log(`[SimplePromptWizard] State update: promptId=${promptId}, isLoading=${isLoading}, showLoadingState=${showLoadingState}, initialLoadComplete=${initialLoadComplete}, hasParameters=${parameters?.length || 0}`);
     }
-  }, [promptId, isLoading, parameters, didMount]);
+  }, [promptId, isLoading, parameters, didMount, showLoadingState, initialLoadComplete]);
   
   // Safeguard against dialog closing when we don't want it to
   const handleOpenChange = useCallback((open: boolean) => {
@@ -145,10 +171,27 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   
   // Safely access parameters with memo to prevent recomputation
   const safeParameters = useMemo(() => {
-    return Array.isArray(parameters) ? parameters : [];
+    const result = Array.isArray(parameters) ? parameters : [];
+    console.log(`[SimplePromptWizard] Creating safeParameters with ${result.length} items`);
+    return result;
   }, [parameters]);
   
   const hasParameters = safeParameters.length > 0;
+  
+  // Enhanced debug logging for parameters
+  useEffect(() => {
+    if (hasParameters) {
+      console.log(`[SimplePromptWizard] Has ${safeParameters.length} parameters:`, 
+        safeParameters.map(p => ({id: p.id, name: p.name}))
+      );
+    }
+  }, [safeParameters, hasParameters]);
+  
+  const shouldShowContent = useMemo(() => {
+    const shouldShow = !showLoadingState && !error && prompt && initialLoadComplete;
+    console.log(`[SimplePromptWizard] Should show content: ${shouldShow} (showLoadingState=${showLoadingState}, error=${!!error}, prompt=${!!prompt}, initialLoadComplete=${initialLoadComplete})`);
+    return shouldShow;
+  }, [showLoadingState, error, prompt, initialLoadComplete]);
   
   const dialogTitle = useMemo(() => {
     if (showLoadingState) return "Loading...";
@@ -156,6 +199,8 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   }, [showLoadingState, prompt]);
   
   if (!stableOpen) return null;
+  
+  console.log(`[SimplePromptWizard] Rendering with showLoadingState=${showLoadingState}, error=${!!error}, prompt=${!!prompt}, initialLoadComplete=${initialLoadComplete}`);
   
   return (
     <Dialog open={stableOpen} onOpenChange={handleOpenChange}>
@@ -190,7 +235,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
         )}
         
         {/* Show content when not loading and no error - ONLY when we have data */}
-        {!showLoadingState && !error && prompt && (
+        {shouldShowContent && (
           <div className="min-h-[350px]">
             {process.env.NODE_ENV === 'development' && (
               <Alert className="mb-2 bg-yellow-50 border-yellow-300">
