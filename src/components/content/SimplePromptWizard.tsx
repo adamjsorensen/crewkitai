@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -35,6 +36,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
   
   const renderCount = useRef(0);
   const prevLoadingState = useRef<boolean | null>(null);
+  const loadingStateKey = useRef<string>(`loading-${Date.now()}`);
   
   const handleClose = () => {
     setIsClosing(true);
@@ -72,6 +74,13 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     
     if (prevLoadingState.current !== isLoading) {
       console.log(`[SimplePromptWizard] Loading state changed: ${prevLoadingState.current} -> ${isLoading}`);
+      
+      if (isLoading) {
+        // Generate a new key when we go into loading state to force a remount
+        loadingStateKey.current = `loading-${Date.now()}`;
+        console.log(`[SimplePromptWizard] New loading state key: ${loadingStateKey.current}`);
+      }
+      
       prevLoadingState.current = isLoading;
     }
   });
@@ -117,6 +126,12 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
   const safeParameters = Array.isArray(parameters) ? parameters : [];
   const hasParameters = safeParameters.length > 0;
   
+  // Add memoization here to prevent unnecessary re-renders of child components
+  const renderLoadingState = () => {
+    console.log(`[SimplePromptWizard] Rendering LoadingState with key ${loadingStateKey.current}`);
+    return <LoadingState key={loadingStateKey.current} />;
+  };
+  
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -134,14 +149,13 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
         
         <NetworkStatusAlert networkStatus={networkStatus} />
         
-        {isLoading && (
-          <div className="text-xs text-muted-foreground mb-2 p-2 border rounded bg-muted/30 hidden">
-            Loading State Debug: {String(isLoading)}, Render: {renderCount.current}
-          </div>
-        )}
+        <div className="text-xs text-muted-foreground mb-2 p-2 border rounded bg-muted/30">
+          Debug Info: Loading: {String(isLoading)}, Render: {renderCount.current}, 
+          Parameters: {safeParameters.length}, Key: {loadingStateKey.current.substring(0, 8)}
+        </div>
         
         {isLoading ? (
-          <LoadingState />
+          renderLoadingState()
         ) : error ? (
           <ErrorAndRetryState 
             error={error} 
@@ -161,21 +175,20 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
           />
         ) : (
           <div className="min-h-[350px]">
-            {process.env.NODE_ENV !== 'production' && (
-              <div className="mb-4 p-2 bg-gray-100 text-xs rounded-md">
-                <details>
-                  <summary className="cursor-pointer font-medium">Debug Info</summary>
-                  <div className="mt-2 space-y-1">
-                    <p>Prompt ID: {prompt.id}</p>
-                    <p>Parameters count: {safeParameters.length}</p>
-                    <p>Has parameters: {hasParameters ? 'Yes' : 'No'}</p>
-                    <p>Parameters: {JSON.stringify(safeParameters.map(p => p.name))}</p>
-                    <p>Selected tweaks: {Object.keys(selectedTweaks).length}</p>
-                    <p>Network: {networkStatus}</p>
-                  </div>
-                </details>
-              </div>
-            )}
+            <div className="mb-4 p-2 bg-gray-100 text-xs rounded-md">
+              <details>
+                <summary className="cursor-pointer font-medium">Debug Info</summary>
+                <div className="mt-2 space-y-1">
+                  <p>Prompt ID: {prompt.id}</p>
+                  <p>Parameters count: {safeParameters.length}</p>
+                  <p>Has parameters: {hasParameters ? 'Yes' : 'No'}</p>
+                  <p>Parameters: {JSON.stringify(safeParameters.map(p => p.name))}</p>
+                  <p>Selected tweaks: {Object.keys(selectedTweaks).length}</p>
+                  <p>Network: {networkStatus}</p>
+                  <p>Total renders: {renderCount.current}</p>
+                </div>
+              </details>
+            </div>
             
             {!hasParameters && (
               <Alert className="mb-4" variant="default">
