@@ -17,6 +17,7 @@ import LoadingState from "./wizard/LoadingState";
 import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
 import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
 import DebugModePanel from "./wizard/DebugModePanel";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const LOG_LEVEL = {
   ERROR: 0,

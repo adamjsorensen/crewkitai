@@ -13,9 +13,9 @@ export const checkEdgeFunctionStatus = async (functionName: string): Promise<{
   try {
     console.log(`Checking status of edge function: ${functionName}`);
     
-    // Make a simple OPTIONS request to the edge function
+    // Make a simple GET request to the edge function instead of OPTIONS
     const { error } = await supabase.functions.invoke(functionName, {
-      method: 'OPTIONS',
+      method: 'GET',
     });
     
     if (error) {
