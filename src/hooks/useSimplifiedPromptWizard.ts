@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePromptFetching } from "./prompt-wizard/usePromptFetching";
@@ -33,6 +32,19 @@ const logger = {
     if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) console.log(`[useSimplifiedPromptWizard] ${message}`, ...args);
   }
 };
+
+// Keep track of function calls for debugging
+const functionCallCounter = {
+  count: 0,
+  reset: () => { functionCallCounter.count = 0; },
+  increment: () => { 
+    functionCallCounter.count++; 
+    return functionCallCounter.count;
+  }
+};
+
+// Network status detection
+const checkNetworkStatus = () => navigator.onLine ? 'online' : 'offline';
 
 export function useSimplifiedPromptWizard(
   promptId: string | undefined, 
@@ -256,10 +268,16 @@ export function useSimplifiedPromptWizard(
     return isValid;
   }, [parameters, selectedTweaks]);
   
-  // Generate content with improved error handling and stability
+  // Generate content with improved error handling and detailed logging
   const handleSave = useCallback(async () => {
+    // Reset function call counter at the beginning of each save attempt
+    functionCallCounter.reset();
+    const callId = functionCallCounter.increment();
+    
+    logger.info(`Starting content generation process [Call #${callId}]...`);
+    
     if (!prompt || !user?.id) {
-      logger.error("Missing prompt or user data:", { 
+      logger.error(`[Call #${callId}] Missing prompt or user data:`, { 
         promptExists: !!prompt, 
         userIdExists: !!user?.id 
       });
@@ -272,7 +290,7 @@ export function useSimplifiedPromptWizard(
     }
     
     if (!isFormValid()) {
-      logger.warn("Form validation failed");
+      logger.warn(`[Call #${callId}] Form validation failed`);
       toast({
         title: "Required Selections Missing",
         description: "Please complete all required customization options",
@@ -283,9 +301,17 @@ export function useSimplifiedPromptWizard(
     
     try {
       setGenerating(true);
-      logger.info("Starting content generation process...");
+      
+      // Log network status before proceeding
+      const currentNetworkStatus = checkNetworkStatus();
+      logger.info(`[Call #${callId}] Network status: ${currentNetworkStatus}`);
+      
+      if (currentNetworkStatus === 'offline') {
+        throw new Error("You're currently offline. Please check your internet connection and try again.");
+      }
       
       // 1. Create a custom prompt
+      logger.debug(`[Call #${callId}] Creating custom prompt for base prompt ID: ${prompt.id}`);
       const { data: customPrompt, error: customPromptError } = await supabase
         .from('custom_prompts')
         .insert({
@@ -296,15 +322,15 @@ export function useSimplifiedPromptWizard(
         .single();
       
       if (customPromptError) {
-        logger.error("Error creating custom prompt:", customPromptError);
+        logger.error(`[Call #${callId}] Error creating custom prompt:`, customPromptError);
         throw new Error(`Failed to create custom prompt: ${customPromptError.message}`);
       }
       
-      logger.debug("Created custom prompt:", customPrompt.id);
+      logger.debug(`[Call #${callId}] Created custom prompt:`, customPrompt.id);
       
       // 2. Save selected tweaks
       const tweakIds = Object.values(selectedTweaks).filter(Boolean);
-      logger.debug("Selected tweak IDs:", tweakIds);
+      logger.debug(`[Call #${callId}] Selected tweak IDs:`, tweakIds);
       
       if (tweakIds.length > 0) {
         const customizations = tweakIds.map(tweakId => ({
@@ -312,20 +338,20 @@ export function useSimplifiedPromptWizard(
           parameter_tweak_id: tweakId,
         }));
         
-        logger.debug("Saving customizations:", customizations.length);
+        logger.debug(`[Call #${callId}] Saving ${customizations.length} customizations`);
         const { error: customizationsError } = await supabase
           .from('prompt_customizations')
           .insert(customizations);
         
         if (customizationsError) {
-          logger.error("Error saving customizations:", customizationsError);
+          logger.error(`[Call #${callId}] Error saving customizations:`, customizationsError);
           throw new Error(`Failed to save customizations: ${customizationsError.message}`);
         }
       }
       
       // 3. Save additional context if provided
       if (additionalContext.trim()) {
-        logger.debug("Saving additional context");
+        logger.debug(`[Call #${callId}] Saving additional context (${additionalContext.length} chars)`);
         const { error: contextError } = await supabase
           .from('prompt_additional_context')
           .insert({
@@ -334,55 +360,123 @@ export function useSimplifiedPromptWizard(
           });
         
         if (contextError) {
-          logger.error("Error saving additional context:", contextError);
+          logger.error(`[Call #${callId}] Error saving additional context:`, contextError);
           throw new Error(`Failed to save additional context: ${contextError.message}`);
         }
       }
       
       // 4. Call the edge function to generate content
-      logger.debug("Calling Supabase edge function to generate content");
-      const { data: generationResult, error: generationError } = await supabase.functions.invoke(
-        'crewkit-generate-content',
-        {
-          body: { customPromptId: customPrompt.id },
-        }
-      );
+      logger.info(`[Call #${callId}] Calling edge function to generate content for customPromptId: ${customPrompt.id}`);
       
-      if (generationError) {
-        logger.error("Edge function error:", generationError);
-        throw new Error(`Content generation failed: ${generationError.message}`);
-      }
-      
-      if (!generationResult) {
-        throw new Error("No content was generated");
-      }
-      
-      logger.debug("Content generated successfully:", generationResult);
-      
-      // If successful, navigate to the generated content page
-      toast({
-        title: "Content Generated",
-        description: "Your content was successfully generated",
+      // Add detailed logs for the function invocation
+      logger.debug(`[Call #${callId}] Edge function request details`, {
+        functionName: 'crewkit-generate-content',
+        requestBody: { customPromptId: customPrompt.id },
+        userAuthenticated: !!user?.id,
+        timestamp: new Date().toISOString()
       });
       
-      onClose();
-      navigate(`/dashboard/generated/${generationResult.generationId}`);
+      try {
+        // Measure request time
+        const requestStartTime = Date.now();
+        
+        const { data: generationResult, error: generationError } = await supabase.functions.invoke(
+          'crewkit-generate-content',
+          {
+            body: { customPromptId: customPrompt.id },
+          }
+        );
+        
+        const requestTime = Date.now() - requestStartTime;
+        logger.info(`[Call #${callId}] Edge function response received in ${requestTime}ms`);
+        
+        if (generationError) {
+          logger.error(`[Call #${callId}] Edge function error:`, generationError);
+          
+          // Log more details about the error
+          logger.debug(`[Call #${callId}] Edge function error details:`, {
+            name: generationError.name,
+            message: generationError.message,
+            code: generationError.code,
+            status: generationError.status,
+            statusText: generationError.statusText,
+            responseData: generationError.data,
+            stack: generationError.stack
+          });
+          
+          throw new Error(`Content generation failed: ${generationError.message}`);
+        }
+        
+        if (!generationResult) {
+          logger.error(`[Call #${callId}] No content was generated, empty response`);
+          throw new Error("No content was generated");
+        }
+        
+        logger.debug(`[Call #${callId}] Content generated successfully:`, {
+          generationId: generationResult.generationId,
+          contentLength: generationResult.generatedContent?.length || 0
+        });
+        
+        // If successful, navigate to the generated content page
+        logger.info(`[Call #${callId}] Navigation to generated content page: ${generationResult.generationId}`);
+        
+        toast({
+          title: "Content Generated",
+          description: "Your content was successfully generated",
+        });
+        
+        onClose();
+        navigate(`/dashboard/generated/${generationResult.generationId}`);
+      } catch (fetchError: any) {
+        // Detailed logging for fetch errors
+        logger.error(`[Call #${callId}] Fetch error while calling edge function:`, fetchError);
+        
+        // Try to get more details about the network error
+        if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
+          logger.debug(`[Call #${callId}] Network fetch error details:`, {
+            message: fetchError.message,
+            type: fetchError.name,
+            url: 'crewkit-generate-content',
+            stack: fetchError.stack,
+            networkStatus: checkNetworkStatus()
+          });
+          
+          throw new Error(`Network error: ${fetchError.message}. Please check your connection and try again.`);
+        }
+        
+        throw fetchError;
+      }
       
     } catch (error: any) {
-      logger.error("Error in content generation process:", error);
+      logger.error(`[Call #${callId}] Error in content generation process:`, error);
       
       // More descriptive error message based on the error
       let errorMessage = "An unexpected error occurred";
+      let errorDetails = "";
       
       if (error.message.includes("OPENAI_API_KEY")) {
         errorMessage = "OpenAI API key is missing or invalid. Please contact the administrator.";
-      } else if (error.message.includes("network") || error.message.includes("fetch")) {
+        errorDetails = "The edge function could not authenticate with the OpenAI API.";
+      } else if (error.message.includes("network") || error.message.includes("fetch") || error.message.includes("Failed to fetch")) {
         errorMessage = "Network error occurred. Please check your connection and try again.";
+        errorDetails = `Network status: ${checkNetworkStatus()}. Error: ${error.message}`;
       } else if (error.message.includes("customPromptId")) {
         errorMessage = "Invalid prompt configuration. Please try a different prompt.";
+        errorDetails = error.message;
+      } else if (error.message.includes("edge function")) {
+        errorMessage = "Error calling content generation service. Please try again later.";
+        errorDetails = error.message;
       } else {
         errorMessage = error.message || "Content generation failed";
+        errorDetails = error.stack || "";
       }
+      
+      logger.error(`[Call #${callId}] Error details:`, {
+        message: errorMessage,
+        details: errorDetails,
+        originalError: error.message,
+        stack: error.stack
+      });
       
       toast({
         title: "Error generating content",
@@ -390,6 +484,7 @@ export function useSimplifiedPromptWizard(
         variant: "destructive"
       });
     } finally {
+      logger.info(`[Call #${callId}] Content generation process completed`);
       setGenerating(false);
     }
   }, [prompt, user, selectedTweaks, additionalContext, isFormValid, toast, onClose, navigate]);

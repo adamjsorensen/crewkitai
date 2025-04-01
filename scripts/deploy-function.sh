@@ -21,6 +21,7 @@ fi
 
 # Deploy the function with secrets
 echo "Deploying CrewKit Generate Content Edge Function..."
+# Deploy with --no-verify-jwt for testing purposes
 supabase functions deploy crewkit-generate-content --no-verify-jwt
 
 # Set secrets for the function
@@ -29,4 +30,3 @@ supabase secrets set OPENAI_API_KEY="$OPENAI_API_KEY"
 
 echo "Deployment complete! Function is now available at:"
 echo "https://cicnpivviiqycyudgxxg.supabase.co/functions/v1/crewkit-generate-content"
-

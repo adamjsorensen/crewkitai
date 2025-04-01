@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
@@ -17,9 +16,8 @@ import AdditionalContextStep from "./wizard/AdditionalContextStep";
 import LoadingState from "./wizard/LoadingState";
 import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
 import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import DebugModePanel from "./wizard/DebugModePanel";
 
-// Logging levels control
 const LOG_LEVEL = {
   ERROR: 0,
   WARN: 1,
@@ -27,10 +25,8 @@ const LOG_LEVEL = {
   DEBUG: 3
 };
 
-// Set this to control logging verbosity
 const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.DEBUG;
 
-// Custom logger to control logging
 const logger = {
   error: (message: string, ...args: any[]) => {
     if (CURRENT_LOG_LEVEL >= LOG_LEVEL.ERROR) console.error(`[SimplePromptWizard] ${message}`, ...args);
@@ -52,7 +48,6 @@ interface SimplePromptWizardProps {
   onClose: () => void;
 }
 
-// Create a separate memoized component for the tabs content
 const TabsContentSection = React.memo(({ 
   activeTab, 
   hasParameters, 
@@ -72,7 +67,6 @@ const TabsContentSection = React.memo(({
   setAdditionalContext: (value: string) => void;
   onForceRefresh?: () => void;
 }) => {
-  // Log rendering conditionally
   if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
     logger.debug(`TabsContentSection rendering with ${safeParameters.length} parameters`);
   }
@@ -119,7 +113,6 @@ const TabsContentSection = React.memo(({
 
 TabsContentSection.displayName = "TabsContentSection";
 
-// Performance monitoring wrapper
 class RenderTracker {
   private lastRender: number = 0;
   private renderCount: number = 0;
@@ -136,7 +129,6 @@ class RenderTracker {
     const now = Date.now();
     const timeSinceLastRender = now - this.lastRender;
     
-    // Only log every 5th render or if renders are happening rapidly
     if (this.renderCount % 5 === 0 || (timeSinceLastRender < 100 && this.lastRender !== 0)) {
       logger.debug(`${this.componentName} rendered ${this.renderCount} times. Time since last render: ${timeSinceLastRender}ms`);
     }
@@ -152,7 +144,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
 }) => {
   const renderTracker = useMemo(() => new RenderTracker('SimplePromptWizard'), []);
   
-  // Track renders in development mode
   if (process.env.NODE_ENV !== 'production') {
     renderTracker.trackRender();
   }
@@ -164,9 +155,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [forceRefreshCount, setForceRefreshCount] = useState(0);
   
-  // Create a stable onClose function
   const handleClose = useCallback(() => {
-    // Clear any pending timeouts
     if (loadingTimeout) {
       clearTimeout(loadingTimeout);
     }
@@ -174,7 +163,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     onClose();
   }, [onClose, loadingTimeout]);
   
-  // Use a single hook for all prompt wizard functionality
   const {
     prompt,
     parameters,
@@ -192,7 +180,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     forceRefreshData
   } = useSimplifiedPromptWizard(promptId, stableOpen, handleClose, forceRefreshCount);
   
-  // Force refresh when needed for debugging or recovery
   const handleForceRefresh = useCallback(() => {
     logger.info("Force refresh requested");
     setForceRefreshCount(prev => prev + 1);
@@ -202,28 +189,23 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     }
   }, [forceRefreshData]);
   
-  // Stabilize the open state to prevent re-rendering loops
   useEffect(() => {
     if (isOpen !== stableOpen) {
       setStableOpen(isOpen);
-      // Reset states when opening/closing
       if (isOpen) {
         setInitialLoadComplete(false);
         logger.debug("Dialog opened, resetting state");
       }
     }
   }, [isOpen, stableOpen]);
-
-  // More stable approach for loading state with proper cleanup
+  
   useEffect(() => {
-    // Clear any existing timeout
     if (loadingTimeout) {
       clearTimeout(loadingTimeout);
       setLoadingTimeout(null);
     }
     
     if (isLoading && !showLoadingState) {
-      // Set loading state with a delay to prevent flashing
       const timeout = setTimeout(() => {
         logger.debug("Loading timeout triggered, showing loading state");
         setShowLoadingState(true);
@@ -231,13 +213,11 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
       
       setLoadingTimeout(timeout);
     } else if (!isLoading && showLoadingState) {
-      // Mark initial load as complete
       if (!initialLoadComplete) {
         logger.debug("Initial load complete");
         setInitialLoadComplete(true);
       }
       
-      // Add a small delay before hiding loading state for smoother transitions
       const timeout = setTimeout(() => {
         logger.debug("Hiding loading state");
         setShowLoadingState(false);
@@ -246,7 +226,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
       setLoadingTimeout(timeout);
     }
     
-    // Cleanup function
     return () => {
       if (loadingTimeout) {
         clearTimeout(loadingTimeout);
@@ -254,7 +233,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     };
   }, [isLoading, showLoadingState, initialLoadComplete]);
   
-  // Effect to log parameters data for debugging
   useEffect(() => {
     if (parameters?.length > 0 && CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
       logger.debug(`Parameters updated: count=${parameters.length}`);
@@ -266,14 +244,12 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     }
   }, [parameters]);
   
-  // Safeguard against dialog closing when we don't want it to
   const handleOpenChange = useCallback((open: boolean) => {
     if (!open && !isLoading && !generating) {
       handleClose();
     }
   }, [handleClose, isLoading, generating]);
   
-  // Safely access parameters with memo to prevent recomputation
   const safeParameters = useMemo(() => {
     const result = Array.isArray(parameters) ? parameters : [];
     
@@ -288,7 +264,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     return safeParameters.length > 0;
   }, [safeParameters]);
   
-  // Compute if content should be shown - with proper dependency tracking
   const shouldShowContent = useMemo(() => {
     const shouldShow = !showLoadingState && !error && prompt && (initialLoadComplete || !isLoading);
     
@@ -299,26 +274,45 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     return shouldShow;
   }, [showLoadingState, error, prompt, initialLoadComplete, isLoading]);
   
-  // Compute dialog title once
   const dialogTitle = useMemo(() => {
     if (showLoadingState) return "Loading...";
     return prompt ? `Customize Prompt: ${prompt.title}` : "Customize Prompt";
   }, [showLoadingState, prompt]);
   
-  // Log when safeParameters change
   useEffect(() => {
     if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
       logger.debug(`Parameters state: count=${safeParameters.length}, hasParameters=${hasParameters}, shouldShowContent=${shouldShowContent}`);
     }
   }, [safeParameters, hasParameters, shouldShowContent]);
   
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (loadingTimeout) {
         clearTimeout(loadingTimeout);
       }
     };
+  }, []);
+  
+  const [isDebugMode, setIsDebugMode] = useState(() => {
+    if (process.env.NODE_ENV !== 'production') return true;
+    return localStorage.getItem('crewkit_debug_mode') === 'true';
+  });
+  
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        setIsDebugMode(prev => {
+          const newValue = !prev;
+          if (process.env.NODE_ENV === 'production') {
+            localStorage.setItem('crewkit_debug_mode', newValue.toString());
+          }
+          return newValue;
+        });
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
   
   if (!stableOpen) return null;
@@ -340,10 +334,21 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
         
         <NetworkStatusAlert networkStatus={networkStatus} />
         
-        {/* Show loading state */}
+        <DebugModePanel 
+          isEnabled={isDebugMode}
+          error={error}
+          networkStatus={networkStatus}
+          isLoading={isLoading}
+          isGenerating={generating}
+          promptId={promptId}
+          parametersCount={safeParameters.length}
+          selectedTweaksCount={Object.keys(selectedTweaks).length}
+          onForceRefresh={handleForceRefresh}
+          onRetry={handleRetry}
+        />
+        
         {showLoadingState && <LoadingState message="Loading prompt customization options..." />}
         
-        {/* Show error state */}
         {!showLoadingState && error && (
           <ErrorAndRetryState 
             error={error} 
@@ -355,22 +360,8 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
           />
         )}
         
-        {/* Show content when not loading and no error - ONLY when we have data */}
         {shouldShowContent && (
           <div className="min-h-[350px]">
-            {process.env.NODE_ENV !== 'production' && (
-              <Alert className="mb-2 bg-yellow-50 border-yellow-300">
-                <Info className="h-4 w-4 text-yellow-500" />
-                <AlertTitle className="text-sm text-yellow-700">Debug Info</AlertTitle>
-                <AlertDescription className="text-xs text-yellow-800">
-                  Parameters count: {safeParameters.length} | 
-                  Loading: {isLoading ? 'Yes' : 'No'} | 
-                  Show loading: {showLoadingState ? 'Yes' : 'No'} | 
-                  Initial load: {initialLoadComplete ? 'Complete' : 'Pending'}
-                </AlertDescription>
-              </Alert>
-            )}
-            
             {!hasParameters && safeParameters.length === 0 && (
               <Alert className="mb-4" variant="default">
                 <Info className="h-4 w-4" />
@@ -389,7 +380,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
                 <TabsTrigger value="context" className="flex-1">Add Context</TabsTrigger>
               </TabsList>
               
-              {/* Use the memoized component for tabs content */}
               <TabsContentSection
                 activeTab={activeTab}
                 hasParameters={hasParameters}
@@ -417,7 +407,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
             </Button>
           )}
           
-          {process.env.NODE_ENV !== 'production' && shouldShowContent && (
+          {isDebugMode && (
             <Button 
               variant="ghost" 
               size="sm"
