@@ -13,17 +13,18 @@ export function useSimplifiedPromptWizard(
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // State for the form
+  // State for the form with stable references
   const [selectedTweaks, setSelectedTweaks] = useState<Record<string, string>>({});
   const [additionalContext, setAdditionalContext] = useState("");
   const [generating, setGenerating] = useState(false);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
   
-  // Use a ref to track loading state transitions for debugging
-  const loadingTransitionsRef = useRef<string[]>([]);
+  // Maintain cache of parameters to prevent unnecessary re-renders
+  const parametersCache = useRef<any[]>([]);
   
-  // Track number of parameter loads
-  const parameterLoadCountRef = useRef(0);
+  // Set up data consistency checking
+  const promptIdRef = useRef<string | undefined>(promptId);
+  const stableIsOpenRef = useRef(isOpen);
   
   // Check network status
   useEffect(() => {
@@ -45,6 +46,12 @@ export function useSimplifiedPromptWizard(
     };
   }, []);
   
+  // Update refs when props change 
+  useEffect(() => {
+    promptIdRef.current = promptId;
+    stableIsOpenRef.current = isOpen;
+  }, [promptId, isOpen]);
+  
   // IMPROVED: Fetch prompt details with retry capability
   const { 
     prompt, 
@@ -53,16 +60,7 @@ export function useSimplifiedPromptWizard(
     refetch: refetchPrompt 
   } = usePromptFetching(promptId, isOpen);
   
-  // Track when usePromptParameters is called
-  useEffect(() => {
-    if (promptId && isOpen) {
-      console.log(`[usePromptParameters] Triggering parameter fetch for promptId: ${promptId}`);
-      parameterLoadCountRef.current += 1;
-      console.log(`[usePromptParameters] Parameter load attempt #${parameterLoadCountRef.current}`);
-    }
-  }, [promptId, isOpen]);
-  
-  // DIRECT PARAMETER FETCHING: Pass promptId directly to usePromptParameters
+  // DIRECT PARAMETER FETCHING: Use stable references to prevent re-fetching
   const { 
     parameters, 
     isLoading: isParametersLoading, 
@@ -70,104 +68,30 @@ export function useSimplifiedPromptWizard(
     retry: retryParameters
   } = usePromptParameters(promptId);
   
-  // Track specific parameter loading states with timestamps
+  // Update parameters cache when new parameters are loaded - ONLY if they've changed
   useEffect(() => {
-    console.log(`[useSimplifiedPromptWizard] Parameter loading state changed: ${isParametersLoading} at ${new Date().toISOString()}`);
-    console.log(`[useSimplifiedPromptWizard] Parameters array: ${parameters ? 'exists' : 'null'}, length: ${parameters?.length || 0}`);
-    
-    if (!isParametersLoading && parameters) {
-      console.log(`[useSimplifiedPromptWizard] Parameters loaded successfully: ${parameters.length} items`);
-      if (parameters.length > 0) {
-        console.log(`[useSimplifiedPromptWizard] First parameter: ${parameters[0]?.name || 'unnamed'}, has tweaks: ${(parameters[0]?.tweaks?.length || 0) > 0}`);
-      }
+    if (parameters && 
+        parameters.length > 0 && 
+        JSON.stringify(parameters) !== JSON.stringify(parametersCache.current)) {
+      console.log(`[useSimplifiedPromptWizard] Updating parameters cache with ${parameters.length} items`);
+      parametersCache.current = [...parameters];
     }
-  }, [isParametersLoading, parameters]);
+  }, [parameters]);
   
   // Calculate the combined loading state - Simplified to avoid race conditions
   const isLoading = isPromptLoading || isParametersLoading;
   
-  // Track loading state changes for debugging
-  useEffect(() => {
-    const loadingState = `prompt:${isPromptLoading},params:${isParametersLoading},timestamp:${Date.now()}`;
-    loadingTransitionsRef.current.push(loadingState);
-    
-    console.log(`[useSimplifiedPromptWizard] Loading states - prompt: ${isPromptLoading}, parameters: ${isParametersLoading}, combined: ${isLoading}`);
-    
-    // Circuit breaker for loading state
-    if (loadingTransitionsRef.current.length > 20) {
-      console.warn("[useSimplifiedPromptWizard] Too many loading transitions, possible infinite loop");
-      console.log("Loading transitions:", loadingTransitionsRef.current);
-    }
-  }, [isPromptLoading, isParametersLoading, isLoading]);
-  
-  // Reset form state when wizard opens with a new prompt
+  // Reset form state when wizard opens with a new prompt - using stable references
   useEffect(() => {
     if (isOpen) {
       console.log(`[useSimplifiedPromptWizard] Resetting form state for promptId: ${promptId}`);
       setSelectedTweaks({});
       setAdditionalContext("");
-      loadingTransitionsRef.current = [];
-      parameterLoadCountRef.current = 0;
     }
   }, [isOpen, promptId]);
   
-  // VALIDATION: Debug logging for parameters with enhanced validation
-  useEffect(() => {
-    if (prompt && !isParametersLoading) {
-      console.log(`[useSimplifiedPromptWizard] Parameters loaded for prompt: ${prompt.id}`);
-      console.log(`[useSimplifiedPromptWizard] Parameters count: ${parameters?.length || 0}`);
-      
-      // Validate parameters data integrity
-      if (parameters && parameters.length > 0) {
-        const validParameters = parameters.every(p => p && p.id && p.name);
-        if (!validParameters) {
-          console.error("[useSimplifiedPromptWizard] Invalid parameters data detected:", 
-            parameters.filter(p => !p || !p.id || !p.name));
-        } else {
-          console.log("[useSimplifiedPromptWizard] Valid parameters data confirmed");
-          
-          // Check tweaks for each parameter
-          let tweakIssuesFound = false;
-          parameters.forEach(param => {
-            if (!param.tweaks || !Array.isArray(param.tweaks)) {
-              console.error(`[useSimplifiedPromptWizard] Parameter ${param.name} has invalid tweaks property:`, param.tweaks);
-              tweakIssuesFound = true;
-            } else if (param.tweaks.length === 0) {
-              console.warn(`[useSimplifiedPromptWizard] Parameter ${param.name} has no tweaks`);
-            }
-          });
-          
-          if (tweakIssuesFound) {
-            console.warn("[useSimplifiedPromptWizard] Some parameters have tweak data issues");
-          }
-        }
-      } else if (parameters?.length === 0 && !parametersError) {
-        console.log("[useSimplifiedPromptWizard] No parameters found for prompt - this may be expected for some prompts");
-      } else if (parametersError) {
-        console.error("[useSimplifiedPromptWizard] Error loading parameters:", parametersError);
-      }
-    }
-  }, [prompt, parameters, isParametersLoading, parametersError]);
-  
-  // Debug logging for prompts with data validation
-  useEffect(() => {
-    if (!isPromptLoading) {
-      if (prompt) {
-        console.log("[useSimplifiedPromptWizard] Prompt loaded successfully:", prompt.title);
-        
-        // Validate prompt data integrity
-        if (!prompt.id || !prompt.title) {
-          console.error("[useSimplifiedPromptWizard] Invalid prompt data:", prompt);
-        }
-      } else if (promptId) {
-        console.warn("[useSimplifiedPromptWizard] Failed to load prompt for ID:", promptId);
-      }
-    }
-  }, [prompt, promptId, isPromptLoading]);
-  
-  // Handle tweak selection
+  // Handle tweak selection with stable callback
   const handleTweakChange = useCallback((parameterId: string, tweakId: string) => {
-    console.log(`[useSimplifiedPromptWizard] Tweak selected: ${tweakId} for parameter: ${parameterId}`);
     setSelectedTweaks(prev => ({
       ...prev,
       [parameterId]: tweakId,
@@ -179,8 +103,6 @@ export function useSimplifiedPromptWizard(
     console.log("[useSimplifiedPromptWizard] Manually retrying all data fetch");
     refetchPrompt();
     retryParameters();
-    loadingTransitionsRef.current = [];
-    parameterLoadCountRef.current = 0;
     
     toast({
       title: "Retrying",
@@ -188,27 +110,19 @@ export function useSimplifiedPromptWizard(
     });
   }, [refetchPrompt, retryParameters, toast]);
   
-  // VALIDATION: Validate the form
+  // VALIDATION: Validate the form with stable data references
   const isFormValid = useCallback(() => {
-    // Add timestamps to trace performance
-    console.log(`[useSimplifiedPromptWizard] Form validity check started at: ${new Date().toISOString()}`);
+    // Use cached parameters to validate
+    const paramsToCheck = parameters && parameters.length > 0 ? parameters : parametersCache.current;
     
     // Validate that parameters are loaded correctly
-    if (!parameters || !Array.isArray(parameters)) {
-      console.error("[useSimplifiedPromptWizard] Parameters not available or not an array:", parameters);
-      return false;
+    if (!paramsToCheck || !Array.isArray(paramsToCheck) || paramsToCheck.length === 0) {
+      return true; // If no parameters, form is valid
     }
     
     // Check if all required parameters have a selection
-    const requiredParameters = parameters.filter(param => param && param.rule?.is_required) || [];
+    const requiredParameters = paramsToCheck.filter(param => param && param.rule?.is_required) || [];
     const isValid = requiredParameters.every(param => selectedTweaks[param.id]);
-    
-    console.log("[useSimplifiedPromptWizard] Form validity check:", { 
-      isValid, 
-      requiredParameters: requiredParameters.length,
-      selectedTweaks: Object.keys(selectedTweaks).length,
-      parametersLoaded: parameters?.length
-    });
     
     return isValid;
   }, [parameters, selectedTweaks]);
@@ -241,16 +155,19 @@ export function useSimplifiedPromptWizard(
     try {
       setGenerating(true);
       
-      // VALIDATION: Collect all selected tweaks with validation
+      // Use cached parameters for consistency
+      const paramsToUse = parameters && parameters.length > 0 ? parameters : parametersCache.current;
+      
+      // Collect all selected tweaks with validation
       const tweakIds = Object.values(selectedTweaks).filter(Boolean);
       console.log("[useSimplifiedPromptWizard] Selected tweak IDs:", tweakIds);
       
-      if (tweakIds.length === 0 && parameters.some(p => p.rule?.is_required)) {
+      if (tweakIds.length === 0 && paramsToUse.some(p => p.rule?.is_required)) {
         throw new Error("Required selections are missing");
       }
       
       // Find the actual tweaks from the parameters
-      const selectedTweakDetails = parameters
+      const selectedTweakDetails = paramsToUse
         .flatMap(param => param.tweaks || [])
         .filter(tweak => tweakIds.includes(tweak.id));
       
@@ -314,17 +231,11 @@ export function useSimplifiedPromptWizard(
   
   // Calculate loading and error states with combined error messages
   const error = promptError || parametersError;
-  
-  // Log error state changes
-  useEffect(() => {
-    if (error) {
-      console.error("[useSimplifiedPromptWizard] Error state:", { promptError, parametersError, combinedError: error });
-    }
-  }, [error, promptError, parametersError]);
 
   return {
     prompt,
-    parameters,
+    // Return cached parameters if current parameters are empty
+    parameters: parameters && parameters.length > 0 ? parameters : parametersCache.current,
     isLoading, 
     error,
     generating,

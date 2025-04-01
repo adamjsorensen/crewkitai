@@ -14,6 +14,7 @@ interface AllParametersViewProps {
   onTweakChange: (parameterId: string, tweakId: string) => void;
 }
 
+// Memoize the parameter option to prevent re-renders
 const ParameterOption = React.memo(({ 
   parameterId, 
   tweak, 
@@ -54,6 +55,7 @@ const ParameterOption = React.memo(({
 
 ParameterOption.displayName = "ParameterOption";
 
+// Memoize the entire parameter card
 const ParameterCard = React.memo(({ 
   param, 
   selectedTweakId, 
@@ -65,7 +67,7 @@ const ParameterCard = React.memo(({
   onTweakChange: (parameterId: string, tweakId: string) => void;
   isLast: boolean;
 }) => {
-  // Improved validation for tweaks array
+  // Improved validation for tweaks array - memoized
   const hasTweaks = useMemo(() => {
     return param.tweaks && 
            Array.isArray(param.tweaks) && 
@@ -76,8 +78,6 @@ const ParameterCard = React.memo(({
   const handleValueChange = React.useCallback((value: string) => {
     onTweakChange(param.id, value);
   }, [param.id, onTweakChange]);
-
-  console.log(`[ParameterCard] Rendering parameter: ${param.name}, hasTweaks: ${hasTweaks}, tweaks: ${param.tweaks?.length || 0}`);
 
   return (
     <Card key={param.id} className="overflow-hidden">
@@ -98,7 +98,6 @@ const ParameterCard = React.memo(({
               {param.tweaks.map((tweak) => {
                 // Skip invalid tweaks
                 if (!tweak || !tweak.id) {
-                  console.warn(`[ParameterCard] Invalid tweak found in parameter ${param.name}`);
                   return null;
                 }
                 
@@ -137,28 +136,21 @@ const ParameterCard = React.memo(({
 
 ParameterCard.displayName = "ParameterCard";
 
+// Main component that renders parameters, highly optimized
 const AllParametersView = React.memo(({
   parameters,
   selectedTweaks,
   onTweakChange
 }: AllParametersViewProps) => {
-  // Force cast to array to prevent runtime errors and validate parameters
+  // Validate and create a safe copy of parameters with a memo
   const safeParameters = useMemo(() => {
-    // Log what we receive to debug
-    console.log(`[AllParametersView] Received parameters:`, {
-      isArray: Array.isArray(parameters),
-      length: parameters?.length || 0,
-      data: parameters
-    });
+    if (!Array.isArray(parameters)) {
+      console.warn("[AllParametersView] Received non-array parameters:", parameters);
+      return [];
+    }
     
-    // Ensure we have an array and filter out invalid parameters
-    const filtered = Array.isArray(parameters) 
-      ? parameters.filter(p => p && p.id && p.name)
-      : [];
-      
-    console.log(`[AllParametersView] Filtered to ${filtered.length} valid parameters`);
-    
-    return filtered;
+    // Filter out invalid parameters
+    return parameters.filter(p => p && p.id && p.name);
   }, [parameters]);
   
   // Handle empty parameters array
@@ -177,8 +169,8 @@ const AllParametersView = React.memo(({
     <div className="space-y-6">
       <h3 className="text-lg font-medium">Customize Your Prompt</h3>
       
-      {safeParameters.length > 0 ? (
-        safeParameters.map((param, index) => (
+      <div className="space-y-6">
+        {safeParameters.map((param, index) => (
           <ParameterCard
             key={param.id}
             param={param}
@@ -186,15 +178,8 @@ const AllParametersView = React.memo(({
             onTweakChange={onTweakChange}
             isLast={index === safeParameters.length - 1}
           />
-        ))
-      ) : (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Parameter data is not available or improperly formatted.
-          </AlertDescription>
-        </Alert>
-      )}
+        ))}
+      </div>
     </div>
   );
 });

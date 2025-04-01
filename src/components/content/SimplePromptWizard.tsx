@@ -18,6 +18,7 @@ import LoadingState from "./wizard/LoadingState";
 import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
 import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { debounce } from "@/lib/utils";
 
 interface SimplePromptWizardProps {
   promptId?: string;
@@ -32,7 +33,8 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
 }) => {
   const [activeTab, setActiveTab] = useState("customize");
   const [showLoadingState, setShowLoadingState] = useState(false);
-  const [forceRender, setForceRender] = useState(0); // Added to force re-render when needed
+  const [didMount, setDidMount] = useState(false);
+  const [stableOpen, setStableOpen] = useState(false);
   
   // Create a stable onClose function
   const handleClose = useCallback(() => {
@@ -54,83 +56,62 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     handleSave,
     isFormValid,
     handleRetry
-  } = useSimplifiedPromptWizard(promptId, isOpen, handleClose);
+  } = useSimplifiedPromptWizard(promptId, stableOpen, handleClose);
   
-  // Force a re-render when parameters load to ensure they display properly
+  // Stabilize the open state to prevent re-rendering loops
   useEffect(() => {
-    if (parameters && parameters.length > 0) {
-      console.log("[SimplePromptWizard] Parameters loaded, forcing re-render", parameters.length);
-      setForceRender(prev => prev + 1);
+    if (isOpen !== stableOpen) {
+      setStableOpen(isOpen);
     }
-  }, [parameters]);
-  
-  // Delayed loading state to prevent flashing with debounce
+  }, [isOpen, stableOpen]);
+
+  // Delayed loading state to prevent flashing
   useEffect(() => {
-    let timer: number | null = null;
+    const timer = isLoading 
+      ? setTimeout(() => setShowLoadingState(true), 200)
+      : setTimeout(() => setShowLoadingState(false), 300);
     
-    if (isLoading) {
-      // Show loading state after a small delay to prevent flashes
-      timer = window.setTimeout(() => {
-        setShowLoadingState(true);
-      }, 150); // Slightly longer delay to reduce flickering
-    } else {
-      // Small delay before hiding loading state to prevent flickering
-      timer = window.setTimeout(() => {
-        setShowLoadingState(false);
-      }, 50);
-    }
-    
-    return () => {
-      if (timer !== null) {
-        clearTimeout(timer);
-      }
-    };
+    return () => clearTimeout(timer);
   }, [isLoading]);
   
-  // Effect to log component lifecycle
+  // Mark component as mounted only once to prevent re-rendering cycles
   useEffect(() => {
-    console.log(`[SimplePromptWizard] Mounted with promptId: ${promptId}, isOpen: ${isOpen}, forceRender: ${forceRender}`);
-    console.log(`[SimplePromptWizard] Loading state: ${isLoading}, Error: ${error ? 'yes' : 'no'}`);
-    
-    return () => {
-      console.log(`[SimplePromptWizard] Unmounting with promptId: ${promptId}`);
-    };
-  }, [promptId, isOpen, isLoading, error, forceRender]);
-  
-  // Log parameters when they change
-  useEffect(() => {
-    if (parameters?.length > 0) {
-      console.log(`[SimplePromptWizard] Parameters loaded: ${parameters.length}`);
-      // DEBUG: Log the actual parameter data to verify it's complete
-      parameters.forEach((param, index) => {
-        console.log(`Parameter ${index}:`, {
-          id: param.id,
-          name: param.name,
-          tweaks: param.tweaks?.length || 0,
-          required: param.rule?.is_required
-        });
-      });
-    } else {
-      console.log(`[SimplePromptWizard] No parameters loaded or parameters empty array`);
+    if (!didMount) {
+      console.log("[SimplePromptWizard] Component mounted once and stable");
+      setDidMount(true);
     }
-  }, [parameters, forceRender]);
+  }, []);
   
-  if (!isOpen) return null;
+  // Effect to log component lifecycle - reduced frequency
+  useEffect(() => {
+    if (didMount) {
+      console.log(`[SimplePromptWizard] State update: promptId=${promptId}, isLoading=${isLoading}, hasParameters=${parameters?.length || 0}`);
+    }
+  }, [promptId, isLoading, parameters, didMount]);
   
-  const dialogTitle = useMemo(() => {
-    if (showLoadingState) return "Loading...";
-    return prompt ? `Customize Prompt: ${prompt.title}` : "Customize Prompt";
-  }, [showLoadingState, prompt]);
+  // Safeguard against dialog closing when we don't want it to
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open && !isLoading && !generating) {
+      handleClose();
+    }
+  }, [handleClose, isLoading, generating]);
   
-  // Safely access parameters
+  // Safely access parameters with memo to prevent recomputation
   const safeParameters = useMemo(() => {
     return Array.isArray(parameters) ? parameters : [];
   }, [parameters]);
   
   const hasParameters = safeParameters.length > 0;
   
+  const dialogTitle = useMemo(() => {
+    if (showLoadingState) return "Loading...";
+    return prompt ? `Customize Prompt: ${prompt.title}` : "Customize Prompt";
+  }, [showLoadingState, prompt]);
+  
+  if (!stableOpen) return null;
+  
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={stableOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center gap-2">
@@ -161,15 +142,14 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
           />
         )}
         
-        {/* Show content when not loading and no error */}
+        {/* Show content when not loading and no error - ONLY when we have data */}
         {!showLoadingState && !error && prompt && (
           <div className="min-h-[350px]">
-            {/* Debug information */}
             {process.env.NODE_ENV === 'development' && (
               <Alert className="mb-2 bg-yellow-50 border-yellow-300">
                 <Info className="h-4 w-4 text-yellow-500" />
                 <AlertDescription className="text-xs text-yellow-800">
-                  Debug: Parameters count: {safeParameters.length}, ForceRender: {forceRender}
+                  Debug: Parameters count: {safeParameters.length}
                 </AlertDescription>
               </Alert>
             )}
@@ -192,27 +172,32 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
                 <TabsTrigger value="context" className="flex-1">Add Context</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="customize" className="py-4 min-h-[300px]">
-                {hasParameters ? (
-                  <AllParametersView 
-                    parameters={safeParameters} 
-                    selectedTweaks={selectedTweaks}
-                    onTweakChange={handleTweakChange}
-                  />
-                ) : (
-                  <div className="py-8 text-center text-muted-foreground">
-                    <p>No customization options available for this prompt.</p>
-                    <p className="mt-2">You can add additional context in the next tab.</p>
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="context" className="py-4 min-h-[300px]">
-                <AdditionalContextStep 
-                  additionalContext={additionalContext} 
-                  setAdditionalContext={setAdditionalContext}
-                />
-              </TabsContent>
+              {/* Wrap the content in a memo to prevent re-renders */}
+              <React.memo(() => (
+                <>
+                  <TabsContent value="customize" className="py-4 min-h-[300px]">
+                    {hasParameters ? (
+                      <AllParametersView 
+                        parameters={safeParameters} 
+                        selectedTweaks={selectedTweaks}
+                        onTweakChange={handleTweakChange}
+                      />
+                    ) : (
+                      <div className="py-8 text-center text-muted-foreground">
+                        <p>No customization options available for this prompt.</p>
+                        <p className="mt-2">You can add additional context in the next tab.</p>
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="context" className="py-4 min-h-[300px]">
+                    <AdditionalContextStep 
+                      additionalContext={additionalContext} 
+                      setAdditionalContext={setAdditionalContext}
+                    />
+                  </TabsContent>
+                </>
+              ))}
             </Tabs>
           </div>
         )}
