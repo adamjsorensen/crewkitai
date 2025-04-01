@@ -25,10 +25,19 @@ export function usePromptGeneration({
   const [generating, setGenerating] = useState(false);
 
   const handleSave = async () => {
-    if (!userId || !prompt) return;
+    if (!userId || !prompt) {
+      toast({
+        title: "Error",
+        description: "Missing user ID or prompt data",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setGenerating(true);
     try {
+      console.log("Starting content generation process...");
+      
       // 1. Create a custom prompt
       const { data: customPrompt, error: customPromptError } = await supabase
         .from('custom_prompts')
@@ -39,7 +48,12 @@ export function usePromptGeneration({
         .select()
         .single();
       
-      if (customPromptError) throw customPromptError;
+      if (customPromptError) {
+        console.error("Error creating custom prompt:", customPromptError);
+        throw new Error(`Failed to create custom prompt: ${customPromptError.message}`);
+      }
+      
+      console.log("Created custom prompt:", customPrompt.id);
       
       // 2. Save selected tweaks
       const customizations = Object.entries(selectedTweaks).map(([_, tweakId]) => ({
@@ -48,15 +62,20 @@ export function usePromptGeneration({
       }));
       
       if (customizations.length > 0) {
+        console.log("Saving customizations:", customizations.length);
         const { error: customizationsError } = await supabase
           .from('prompt_customizations')
           .insert(customizations);
         
-        if (customizationsError) throw customizationsError;
+        if (customizationsError) {
+          console.error("Error saving customizations:", customizationsError);
+          throw new Error(`Failed to save customizations: ${customizationsError.message}`);
+        }
       }
       
       // 3. Save additional context if provided
       if (additionalContext.trim()) {
+        console.log("Saving additional context");
         const { error: contextError } = await supabase
           .from('prompt_additional_context')
           .insert({
@@ -64,10 +83,14 @@ export function usePromptGeneration({
             context_text: additionalContext,
           });
         
-        if (contextError) throw contextError;
+        if (contextError) {
+          console.error("Error saving additional context:", contextError);
+          throw new Error(`Failed to save additional context: ${contextError.message}`);
+        }
       }
       
       // 4. Call the edge function to generate content
+      console.log("Calling edge function to generate content");
       const { data: generationResult, error: generationError } = await supabase.functions.invoke(
         'crewkit-generate-content',
         {
@@ -75,17 +98,45 @@ export function usePromptGeneration({
         }
       );
       
-      if (generationError) throw generationError;
+      if (generationError) {
+        console.error("Edge function error:", generationError);
+        throw new Error(`Content generation failed: ${generationError.message}`);
+      }
+      
+      if (!generationResult) {
+        throw new Error("No content was generated");
+      }
+      
+      console.log("Content generated successfully:", generationResult);
       
       // If successful, navigate to the generated content page
+      toast({
+        title: "Content Generated",
+        description: "Your content was successfully generated",
+      });
+      
       onClose();
       navigate(`/dashboard/generated/${generationResult.generationId}`);
       
     } catch (error: any) {
-      console.error("Error creating and generating custom prompt:", error);
+      console.error("Error in content generation process:", error);
+      
+      // More descriptive error message based on the error
+      let errorMessage = "An unexpected error occurred";
+      
+      if (error.message.includes("OPENAI_API_KEY")) {
+        errorMessage = "OpenAI API key is missing or invalid. Please contact the administrator.";
+      } else if (error.message.includes("network") || error.message.includes("fetch")) {
+        errorMessage = "Network error occurred. Please check your connection and try again.";
+      } else if (error.message.includes("customPromptId")) {
+        errorMessage = "Invalid prompt configuration. Please try a different prompt.";
+      } else {
+        errorMessage = error.message || "Content generation failed";
+      }
+      
       toast({
         title: "Error generating content",
-        description: error.message || "An unexpected error occurred",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

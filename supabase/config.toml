@@ -1,2 +1,5 @@
 
 project_id = "cicnpivviiqycyudgxxg"
+
+[functions.crewkit-generate-content]
+verify_jwt = true

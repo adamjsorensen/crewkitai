@@ -6,19 +6,38 @@ interface RequestData {
   customPromptId: string;
 }
 
+// Define CORS headers for browser requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json'
+};
+
 // Logging function for debugging
 const logEvent = async (message: string, data: any = {}) => {
   console.log(`[crewkit-generate-content] ${message}`, data);
 };
 
 serve(async (req: Request) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders
+    });
+  }
+
   try {
     // Get the authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing or invalid authorization header" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          error: "Missing or invalid authorization header",
+          details: "Authorization header must be provided with a Bearer token"
+        }),
+        { status: 401, headers: corsHeaders }
       );
     }
 
@@ -28,27 +47,46 @@ serve(async (req: Request) => {
     // Create Supabase client with the user's JWT
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    
+    if (!supabaseUrl || !supabaseKey) {
+      await logEvent("Missing Supabase configuration", { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
+      return new Response(
+        JSON.stringify({ error: "Server configuration error", details: "Supabase URL or key not configured" }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Verify the JWT token and get the user
     const { data: userData, error: authError } = await supabase.auth.getUser(jwt);
     if (authError || !userData.user) {
+      await logEvent("Authentication error", { error: authError });
       return new Response(
-        JSON.stringify({ error: "Unauthorized: Invalid token" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized: Invalid token", details: authError?.message }),
+        { status: 401, headers: corsHeaders }
       );
     }
 
     const userId = userData.user.id;
 
     // Get the request data
-    const requestData: RequestData = await req.json();
+    let requestData: RequestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      await logEvent("Invalid JSON in request body", { error: error.message });
+      return new Response(
+        JSON.stringify({ error: "Invalid request format", details: "Request body must be valid JSON" }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
 
     // Validate the request
     if (!requestData.customPromptId) {
       return new Response(
-        JSON.stringify({ error: "Missing required field: customPromptId" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing required field: customPromptId", details: "This field is required to identify which prompt to use" }),
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -85,10 +123,13 @@ serve(async (req: Request) => {
       .single();
 
     if (customPromptError || !customPromptData) {
-      await logEvent("Error fetching custom prompt", { error: customPromptError });
+      await logEvent("Error fetching custom prompt", { error: customPromptError, promptId: requestData.customPromptId });
       return new Response(
-        JSON.stringify({ error: "Failed to fetch custom prompt" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          error: "Failed to fetch custom prompt", 
+          details: customPromptError?.message || "The requested prompt could not be found" 
+        }),
+        { status: 404, headers: corsHeaders }
       );
     }
 
@@ -105,10 +146,7 @@ serve(async (req: Request) => {
 
     if (aiSettingsError) {
       await logEvent("Error fetching AI settings", { error: aiSettingsError });
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch AI settings" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
+      // Continue with defaults, but log the error
     }
 
     // Parse AI settings with defaults
@@ -116,7 +154,7 @@ serve(async (req: Request) => {
       systemPrompt: "You are an expert content writer for painting professionals. Create high-quality content.",
       temperature: 0.7,
       maxTokens: 2000,
-      model: "gpt-4o-mini",
+      model: "gpt-4o-mini", // Updated to the latest model
     };
 
     if (aiSettings) {
@@ -138,7 +176,7 @@ serve(async (req: Request) => {
               break;
           }
         } catch (e) {
-          console.error(`Error parsing setting ${setting.name}:`, e);
+          await logEvent(`Error parsing setting ${setting.name}:`, e);
         }
       });
     }
@@ -148,7 +186,7 @@ serve(async (req: Request) => {
       .from("profiles")
       .select("id, full_name, business_name, business_type, painter_type, years_in_business")
       .eq("id", userId)
-      .single();
+      .maybeSingle(); // Use maybeSingle to handle cases where profile might not exist
 
     if (profileError) {
       await logEvent("Error fetching user profile", { error: profileError });
@@ -184,93 +222,135 @@ serve(async (req: Request) => {
 
     await logEvent("Assembled prompt", { basePrompt });
 
-    // 5. Make a request to the AI model API
+    // 5. Check if OpenAI API key is configured
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) {
+      await logEvent("OpenAI API key not configured");
       return new Response(
-        JSON.stringify({ error: "OpenAI API key not configured" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          error: "OpenAI API key not configured", 
+          details: "Please ask your administrator to configure the OPENAI_API_KEY in Supabase Edge Function Secrets" 
+        }),
+        { status: 500, headers: corsHeaders }
       );
     }
 
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: settings.model,
-        messages: [
-          { role: "system", content: settings.systemPrompt },
-          { role: "user", content: basePrompt }
-        ],
+    // 6. Make a request to the OpenAI API
+    try {
+      await logEvent("Making request to OpenAI API", { 
+        model: settings.model, 
         temperature: settings.temperature,
-        max_tokens: settings.maxTokens,
-      })
-    });
-
-    const aiData = await aiResponse.json();
-
-    await logEvent("AI response received", { status: aiResponse.status });
-
-    if (!aiResponse.ok) {
-      return new Response(
-        JSON.stringify({ error: "Error from AI service", details: aiData }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    const generatedContent = aiData.choices[0].message.content;
-
-    // 6. Save the generation to the database
-    const { data: generationData, error: generationError } = await supabase
-      .from("prompt_generations")
-      .insert({
-        custom_prompt_id: requestData.customPromptId,
-        generated_content: generatedContent,
-        created_by: userId
-      })
-      .select("id")
-      .single();
-
-    if (generationError) {
-      await logEvent("Error saving generation", { error: generationError });
-      // Continue anyway to return the content to the user
-    }
-
-    // 7. Log the activity
-    const { error: logError } = await supabase
-      .from("activity_logs")
-      .insert({
-        user_id: userId,
-        action_type: "content_generated",
-        details: {
-          prompt_id: customPromptData.prompts?.id,
-          prompt_title: customPromptData.prompts?.title,
-          generation_id: generationData?.id
-        }
+        max_tokens: settings.maxTokens
+      });
+      
+      const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: settings.model,
+          messages: [
+            { role: "system", content: settings.systemPrompt },
+            { role: "user", content: basePrompt }
+          ],
+          temperature: settings.temperature,
+          max_tokens: settings.maxTokens,
+        })
       });
 
-    if (logError) {
-      await logEvent("Error logging activity", { error: logError });
-      // Continue anyway
-    }
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        await logEvent("OpenAI API error", { 
+          status: aiResponse.status, 
+          statusText: aiResponse.statusText,
+          errorBody: errorText
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            error: "Error from AI service", 
+            details: `OpenAI API returned status ${aiResponse.status}: ${aiResponse.statusText}`,
+            openaiError: errorText
+          }),
+          { status: 502, headers: corsHeaders }
+        );
+      }
 
-    // 8. Return the generated content
+      const aiData = await aiResponse.json();
+      await logEvent("AI response received", { status: aiResponse.status });
+
+      if (!aiData.choices || !aiData.choices.length) {
+        await logEvent("Invalid response format from OpenAI", { aiData });
+        return new Response(
+          JSON.stringify({ error: "Invalid response from AI service", details: "The AI service did not return any choices" }),
+          { status: 502, headers: corsHeaders }
+        );
+      }
+
+      const generatedContent = aiData.choices[0].message.content;
+
+      // 7. Save the generation to the database
+      const { data: generationData, error: generationError } = await supabase
+        .from("prompt_generations")
+        .insert({
+          custom_prompt_id: requestData.customPromptId,
+          generated_content: generatedContent,
+          created_by: userId
+        })
+        .select("id")
+        .single();
+
+      if (generationError) {
+        await logEvent("Error saving generation", { error: generationError });
+        // Continue anyway to return the content to the user, but log the error
+      }
+
+      // 8. Log the activity
+      const { error: logError } = await supabase
+        .from("activity_logs")
+        .insert({
+          user_id: userId,
+          action_type: "content_generated",
+          details: {
+            prompt_id: customPromptData.prompts?.id,
+            prompt_title: customPromptData.prompts?.title,
+            generation_id: generationData?.id
+          }
+        });
+
+      if (logError) {
+        await logEvent("Error logging activity", { error: logError });
+        // Continue anyway
+      }
+
+      // 9. Return the generated content
+      return new Response(
+        JSON.stringify({ 
+          generatedContent: generatedContent,
+          generationId: generationData?.id || null 
+        }),
+        { status: 200, headers: corsHeaders }
+      );
+    } catch (error) {
+      await logEvent("Error calling OpenAI API", { error: error.message, stack: error.stack });
+      return new Response(
+        JSON.stringify({ 
+          error: "Error communicating with AI service", 
+          details: error.message || "An unexpected error occurred while trying to generate content" 
+        }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+  } catch (error) {
+    await logEvent("Unhandled error", { error: error.message, stack: error.stack });
     return new Response(
       JSON.stringify({ 
-        generatedContent: generatedContent,
-        generationId: generationData?.id || null 
+        error: "Internal server error", 
+        details: error.message || "An unexpected error occurred in the edge function" 
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
-
-  } catch (error) {
-    console.error("Unhandled error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error", details: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: corsHeaders }
     );
   }
 });
