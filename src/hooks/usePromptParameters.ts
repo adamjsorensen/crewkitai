@@ -13,7 +13,7 @@ const LOG_LEVEL = {
 };
 
 // Set this to control logging verbosity
-const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.WARN;
+const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.INFO;
 
 // Custom logger to control logging
 const logger = {
@@ -36,15 +36,17 @@ const MIN_TIME_BETWEEN_TESTS = 60000; // 1 minute
 let lastConnectionTest = 0;
 
 /**
- * Cache for storing fetched parameters by promptId
+ * Cache for storing fetched parameters by promptId with version control
  */
 const parametersCache = new Map<string, {
   data: ParameterWithTweaks[],
-  timestamp: number
+  timestamp: number,
+  version: number
 }>();
 
-// Cache expiration time
+// Cache control
 const CACHE_EXPIRY_TIME = 5 * 60 * 1000; // 5 minutes
+let globalCacheVersion = 1; // Used to force cache refreshes when needed
 
 /**
  * Hook for fetching prompt parameters with their tweaks with improved caching and performance
@@ -54,6 +56,7 @@ export function usePromptParameters(promptId: string | undefined) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [cacheVersion, setCacheVersion] = useState(globalCacheVersion);
   const { toast } = useToast();
   
   // Track when parameters were last successfully fetched
@@ -68,6 +71,17 @@ export function usePromptParameters(promptId: string | undefined) {
   // Debounce fetch to prevent multiple concurrent calls
   const fetchingRef = useRef(false);
 
+  // Force cache refresh - useful for debugging and recovery from errors
+  const forceRefresh = useCallback(() => {
+    if (promptId) {
+      logger.info(`Forcing cache refresh for promptId ${promptId}`);
+      parametersCache.delete(promptId);
+      globalCacheVersion++;
+      setCacheVersion(globalCacheVersion);
+      setRetryCount(prev => prev + 1);
+    }
+  }, [promptId]);
+
   // Use cached data if available and not expired
   const useCachedData = useCallback((promptId: string | undefined) => {
     if (!promptId) return null;
@@ -75,17 +89,17 @@ export function usePromptParameters(promptId: string | undefined) {
     const cachedEntry = parametersCache.get(promptId);
     if (cachedEntry) {
       const now = Date.now();
-      if (now - cachedEntry.timestamp < CACHE_EXPIRY_TIME) {
-        logger.debug(`Using cached parameters for prompt ID: ${promptId}`);
+      if (now - cachedEntry.timestamp < CACHE_EXPIRY_TIME && cachedEntry.version === cacheVersion) {
+        logger.debug(`Using cached parameters for prompt ID: ${promptId} (v${cachedEntry.version})`);
         return cachedEntry.data;
       } else {
-        // Cache expired, remove it
-        logger.debug(`Cache expired for prompt ID: ${promptId}`);
+        // Cache expired or version mismatch, remove it
+        logger.debug(`Cache expired or version changed for prompt ID: ${promptId}`);
         parametersCache.delete(promptId);
       }
     }
     return null;
-  }, []);
+  }, [cacheVersion]);
 
   // Database connection test with throttling
   const testDatabaseConnection = useCallback(async () => {
@@ -138,8 +152,17 @@ export function usePromptParameters(promptId: string | undefined) {
         setParameters(cachedData);
         setIsLoading(false);
         setError(null);
+        lastSuccessfulFetchRef.current = Date.now();
       }
-      // Still fetch in the background to update the cache
+      
+      // Still fetch in the background to update the cache, but with lower priority
+      setTimeout(() => {
+        fetchParameters().catch(err => {
+          logger.warn("Background parameters refresh failed:", err);
+        });
+      }, 2000);
+      
+      return;
     }
 
     // Set fetching flag to prevent duplicate requests
@@ -147,7 +170,7 @@ export function usePromptParameters(promptId: string | undefined) {
     const attemptNumber = ++fetchAttemptCountRef.current;
     
     try {
-      logger.info(`Fetching parameters for prompt ID: ${promptId} (Attempt: ${attemptNumber}, Retry: ${retryCount})`);
+      logger.info(`Fetching parameters for prompt ID: ${promptId} (Attempt: ${attemptNumber}, Retry: ${retryCount}, Version: ${cacheVersion})`);
       
       // Test connection first (throttled)
       const connectionOk = await testDatabaseConnection();
@@ -155,6 +178,9 @@ export function usePromptParameters(promptId: string | undefined) {
       if (!connectionOk) {
         throw new Error("Database connection test failed");
       }
+      
+      // Add debug log right before the main query
+      logger.debug(`Executing database query for parameters, promptId=${promptId}`);
       
       // SINGLE OPERATION: Fetch everything in a single operation with joins
       const { data: parametersWithRules, error: queryError } = await supabase
@@ -190,6 +216,9 @@ export function usePromptParameters(promptId: string | undefined) {
         .eq('is_active', true)
         .order('order');
       
+      // Log the raw response for debugging
+      logger.debug(`Query executed. Results:`, parametersWithRules?.length || 0);
+      
       if (queryError) {
         logger.error("Error in joined parameter query:", queryError);
         throw new Error(`Database query failed: ${queryError.message}`);
@@ -201,7 +230,8 @@ export function usePromptParameters(promptId: string | undefined) {
         // Update cache with empty array
         parametersCache.set(promptId, {
           data: [],
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          version: cacheVersion
         });
         
         if (isMountedRef.current) {
@@ -248,10 +278,17 @@ export function usePromptParameters(promptId: string | undefined) {
         })
         .filter(Boolean) as ParameterWithTweaks[];
       
-      // Update the cache
+      // Log the transformed data for debugging
+      logger.debug(`Transformed to ${transformedParameters.length} parameters with tweaks`);
+      if (transformedParameters.length > 0) {
+        logger.debug(`First parameter: ${transformedParameters[0]?.name}, tweaks: ${transformedParameters[0]?.tweaks?.length || 0}`);
+      }
+      
+      // Update the cache with version control
       parametersCache.set(promptId, {
         data: transformedParameters,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        version: cacheVersion
       });
       
       if (isMountedRef.current) {
@@ -288,7 +325,7 @@ export function usePromptParameters(promptId: string | undefined) {
     } finally {
       fetchingRef.current = false;
     }
-  }, [promptId, toast, retryCount, testDatabaseConnection, useCachedData]);
+  }, [promptId, toast, retryCount, testDatabaseConnection, useCachedData, cacheVersion]);
 
   // Fetch parameters when promptId changes or when retry is triggered
   useEffect(() => {
@@ -301,9 +338,15 @@ export function usePromptParameters(promptId: string | undefined) {
       setParameters(cachedData);
       setIsLoading(false);
       setError(null);
+      lastSuccessfulFetchRef.current = Date.now();
       
       // Still fetch in background to refresh cache but don't show loading state
-      fetchParameters();
+      setTimeout(() => {
+        fetchParameters().catch(err => {
+          logger.warn("Background parameters refresh failed:", err);
+        });
+      }, 1000);
+      
       return;
     }
     
@@ -311,7 +354,7 @@ export function usePromptParameters(promptId: string | undefined) {
     fetchParameters();
     
     return () => {};
-  }, [fetchParameters, promptId, useCachedData]);
+  }, [fetchParameters, promptId, useCachedData, retryCount]);
   
   // Track component mounted state
   useEffect(() => {
@@ -334,6 +377,7 @@ export function usePromptParameters(promptId: string | undefined) {
     isLoading, 
     error, 
     retry,
+    forceRefresh,
     lastSuccessfulFetch: lastSuccessfulFetchRef.current 
   };
 }

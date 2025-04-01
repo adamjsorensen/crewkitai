@@ -1,17 +1,19 @@
 
 import React, { useMemo } from "react";
 import { ParameterWithTweaks } from "@/types/promptParameters";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 
 interface AllParametersViewProps {
   parameters: ParameterWithTweaks[];
   selectedTweaks: Record<string, string>;
   onTweakChange: (parameterId: string, tweakId: string) => void;
+  onForceRefresh?: () => void;
 }
 
 // Logging levels control
@@ -175,7 +177,8 @@ ParameterCard.displayName = "ParameterCard";
 const AllParametersView = React.memo(({
   parameters,
   selectedTweaks,
-  onTweakChange
+  onTweakChange,
+  onForceRefresh
 }: AllParametersViewProps) => {
   // Log rendering only in development and not too frequently
   if (CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) {
@@ -198,6 +201,36 @@ const AllParametersView = React.memo(({
     
     return filteredParams;
   }, [parameters]);
+
+  // Debug button for development only
+  const debugSection = useMemo(() => {
+    if (process.env.NODE_ENV !== 'production' && onForceRefresh) {
+      return (
+        <div className="mb-4">
+          <Alert className="bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-500" />
+            <AlertTitle className="text-blue-700">Debug Information</AlertTitle>
+            <AlertDescription className="text-blue-600">
+              <div className="flex flex-col space-y-1">
+                <span>Parameters loaded: {safeParameters.length}</span>
+                <span>Selected tweaks: {Object.keys(selectedTweaks).length}</span>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={onForceRefresh}
+                  className="w-fit mt-2 text-xs"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Force Refresh Parameters
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
+    }
+    return null;
+  }, [safeParameters.length, selectedTweaks, onForceRefresh]);
   
   // Handle empty parameters array
   if (safeParameters.length === 0) {
@@ -206,17 +239,22 @@ const AllParametersView = React.memo(({
     }
     
     return (
-      <Alert className="mb-4">
-        <Info className="h-4 w-4 text-blue-500" />
-        <AlertDescription>
-          This prompt doesn't have any customization parameters.
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-4">
+        {debugSection}
+        <Alert>
+          <Info className="h-4 w-4 text-blue-500" />
+          <AlertDescription>
+            This prompt doesn't have any customization parameters.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {debugSection}
+      
       <h3 className="text-lg font-medium">Customize Your Prompt</h3>
       
       <div className="space-y-6">

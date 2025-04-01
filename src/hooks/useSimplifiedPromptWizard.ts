@@ -14,7 +14,7 @@ const LOG_LEVEL = {
 };
 
 // Set this to control logging verbosity
-const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.WARN;
+const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.DEBUG;
 
 // Custom logger to control logging
 const logger = {
@@ -35,7 +35,8 @@ const logger = {
 export function useSimplifiedPromptWizard(
   promptId: string | undefined, 
   isOpen: boolean, 
-  onClose: () => void
+  onClose: () => void,
+  forceRefreshTrigger: number = 0
 ) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -109,7 +110,8 @@ export function useSimplifiedPromptWizard(
     prompt, 
     isLoading: isPromptLoading, 
     error: promptError, 
-    refetch: refetchPrompt 
+    refetch: refetchPrompt,
+    forceRefresh: forceRefreshPrompt
   } = usePromptFetching(promptId, isOpen);
   
   // IMPROVED: Parameter fetching with optimized caching
@@ -118,6 +120,7 @@ export function useSimplifiedPromptWizard(
     isLoading: isParametersLoading, 
     error: parametersError,
     retry: retryParameters,
+    forceRefresh: forceRefreshParameters,
     lastSuccessfulFetch
   } = usePromptParameters(promptId);
   
@@ -140,6 +143,34 @@ export function useSimplifiedPromptWizard(
       }
     }
   }, [parameters]);
+  
+  // React to the force refresh trigger
+  useEffect(() => {
+    if (forceRefreshTrigger > 0 && promptId) {
+      logger.info(`Force refresh triggered (${forceRefreshTrigger})`);
+      if (typeof forceRefreshPrompt === 'function') {
+        forceRefreshPrompt();
+      }
+      if (typeof forceRefreshParameters === 'function') {
+        forceRefreshParameters();
+      }
+    }
+  }, [forceRefreshTrigger, promptId, forceRefreshPrompt, forceRefreshParameters]);
+  
+  // Function to force refresh all data
+  const forceRefreshData = useCallback(() => {
+    logger.info("Force refreshing all data");
+    if (typeof forceRefreshPrompt === 'function') {
+      forceRefreshPrompt();
+    }
+    if (typeof forceRefreshParameters === 'function') {
+      forceRefreshParameters();
+    }
+    toast({
+      title: "Refreshing Data",
+      description: "Forced refresh of all prompt data"
+    });
+  }, [forceRefreshPrompt, forceRefreshParameters, toast]);
   
   // Optimize loading state to prevent flickering
   const isLoading = useMemo(() => {
@@ -342,6 +373,7 @@ export function useSimplifiedPromptWizard(
     handleSave,
     isFormValid,
     refetchPrompt,
-    handleRetry
+    handleRetry,
+    forceRefreshData
   };
 }

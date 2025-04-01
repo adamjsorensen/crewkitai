@@ -28,7 +28,7 @@ const LOG_LEVEL = {
 };
 
 // Set this to control logging verbosity
-const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.WARN;
+const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.DEBUG;
 
 // Custom logger to control logging
 const logger = {
@@ -60,7 +60,8 @@ const TabsContentSection = React.memo(({
   selectedTweaks, 
   handleTweakChange, 
   additionalContext, 
-  setAdditionalContext 
+  setAdditionalContext,
+  onForceRefresh 
 }: { 
   activeTab: string; 
   hasParameters: boolean; 
@@ -69,6 +70,7 @@ const TabsContentSection = React.memo(({
   handleTweakChange: (parameterId: string, tweakId: string) => void;
   additionalContext: string;
   setAdditionalContext: (value: string) => void;
+  onForceRefresh?: () => void;
 }) => {
   // Log rendering conditionally
   if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
@@ -83,11 +85,24 @@ const TabsContentSection = React.memo(({
             parameters={safeParameters} 
             selectedTweaks={selectedTweaks}
             onTweakChange={handleTweakChange}
+            onForceRefresh={onForceRefresh}
           />
         ) : (
           <div className="py-8 text-center text-muted-foreground">
             <p>No customization options available for this prompt.</p>
             <p className="mt-2">You can add additional context in the next tab.</p>
+            
+            {process.env.NODE_ENV !== 'production' && onForceRefresh && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onForceRefresh} 
+                className="mt-4"
+              >
+                <RefreshCw className="h-3 w-3 mr-2" />
+                Force Refresh
+              </Button>
+            )}
           </div>
         )}
       </TabsContent>
@@ -144,21 +159,20 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   
   const [activeTab, setActiveTab] = useState("customize");
   const [showLoadingState, setShowLoadingState] = useState(false);
-  const [didMount, setDidMount] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
   const [stableOpen, setStableOpen] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [loadingStateTimeoutId, setLoadingStateTimeoutId] = useState<number | null>(null);
+  const [forceRefreshCount, setForceRefreshCount] = useState(0);
   
   // Create a stable onClose function
   const handleClose = useCallback(() => {
     // Clear any pending timeouts
-    if (loadingStateTimeoutId) {
-      window.clearTimeout(loadingStateTimeoutId);
-      setLoadingStateTimeoutId(null);
+    if (loadingTimeout) {
+      clearTimeout(loadingTimeout);
     }
     
     onClose();
-  }, [onClose, loadingStateTimeoutId]);
+  }, [onClose, loadingTimeout]);
   
   // Use a single hook for all prompt wizard functionality
   const {
@@ -174,81 +188,83 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     setAdditionalContext,
     handleSave,
     isFormValid,
-    handleRetry
-  } = useSimplifiedPromptWizard(promptId, stableOpen, handleClose);
+    handleRetry,
+    forceRefreshData
+  } = useSimplifiedPromptWizard(promptId, stableOpen, handleClose, forceRefreshCount);
+  
+  // Force refresh when needed for debugging or recovery
+  const handleForceRefresh = useCallback(() => {
+    logger.info("Force refresh requested");
+    setForceRefreshCount(prev => prev + 1);
+    
+    if (typeof forceRefreshData === 'function') {
+      forceRefreshData();
+    }
+  }, [forceRefreshData]);
   
   // Stabilize the open state to prevent re-rendering loops
   useEffect(() => {
     if (isOpen !== stableOpen) {
       setStableOpen(isOpen);
-      // Reset initial load state when opening/closing
+      // Reset states when opening/closing
       if (isOpen) {
         setInitialLoadComplete(false);
+        logger.debug("Dialog opened, resetting state");
       }
     }
   }, [isOpen, stableOpen]);
 
-  // Use a more stable approach for loading state with cleanup
+  // More stable approach for loading state with proper cleanup
   useEffect(() => {
-    // Clear any existing timeout when deps change
-    if (loadingStateTimeoutId) {
-      window.clearTimeout(loadingStateTimeoutId);
-      setLoadingStateTimeoutId(null);
+    // Clear any existing timeout
+    if (loadingTimeout) {
+      clearTimeout(loadingTimeout);
+      setLoadingTimeout(null);
     }
-    
-    let newTimeoutId: number | null = null;
     
     if (isLoading && !showLoadingState) {
       // Set loading state with a delay to prevent flashing
-      newTimeoutId = window.setTimeout(() => {
+      const timeout = setTimeout(() => {
+        logger.debug("Loading timeout triggered, showing loading state");
         setShowLoadingState(true);
-        setLoadingStateTimeoutId(null);
-      }, 200);
+      }, 300);
       
-      setLoadingStateTimeoutId(newTimeoutId);
+      setLoadingTimeout(timeout);
     } else if (!isLoading && showLoadingState) {
-      // Only set initialLoadComplete if this is the first load completing
+      // Mark initial load as complete
       if (!initialLoadComplete) {
+        logger.debug("Initial load complete");
         setInitialLoadComplete(true);
       }
       
-      // Add a delay before hiding loading state
-      newTimeoutId = window.setTimeout(() => {
+      // Add a small delay before hiding loading state for smoother transitions
+      const timeout = setTimeout(() => {
+        logger.debug("Hiding loading state");
         setShowLoadingState(false);
-        setLoadingStateTimeoutId(null);
       }, 300);
       
-      setLoadingStateTimeoutId(newTimeoutId);
+      setLoadingTimeout(timeout);
     }
     
+    // Cleanup function
     return () => {
-      if (newTimeoutId) {
-        window.clearTimeout(newTimeoutId);
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
       }
     };
   }, [isLoading, showLoadingState, initialLoadComplete]);
   
-  // Mark component as mounted only once to prevent re-rendering cycles
+  // Effect to log parameters data for debugging
   useEffect(() => {
-    if (!didMount) {
-      logger.debug("Component mounted once and stable");
-      setDidMount(true);
-    }
-    
-    // Cleanup timeouts on unmount
-    return () => {
-      if (loadingStateTimeoutId) {
-        window.clearTimeout(loadingStateTimeoutId);
+    if (parameters?.length > 0 && CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+      logger.debug(`Parameters updated: count=${parameters.length}`);
+      
+      if (parameters.length > 0) {
+        const firstParam = parameters[0];
+        logger.debug(`First parameter: ${firstParam.name}, tweaks: ${firstParam.tweaks?.length || 0}`);
       }
-    };
-  }, [didMount, loadingStateTimeoutId]);
-  
-  // Effect to log component lifecycle - reduced frequency and with better debugging
-  useEffect(() => {
-    if (didMount && CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
-      logger.debug(`State update: promptId=${promptId}, isLoading=${isLoading}, showLoadingState=${showLoadingState}, initialLoadComplete=${initialLoadComplete}, hasParameters=${parameters?.length || 0}`);
     }
-  }, [promptId, isLoading, parameters, didMount, showLoadingState, initialLoadComplete]);
+  }, [parameters]);
   
   // Safeguard against dialog closing when we don't want it to
   const handleOpenChange = useCallback((open: boolean) => {
@@ -262,30 +278,48 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     const result = Array.isArray(parameters) ? parameters : [];
     
     if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
-      logger.debug(`Creating safeParameters with ${result.length} items`);
+      logger.debug(`Creating safeParameters with ${result.length} items, updating UI`);
     }
     
     return result;
   }, [parameters]);
   
-  const hasParameters = safeParameters.length > 0;
+  const hasParameters = useMemo(() => {
+    return safeParameters.length > 0;
+  }, [safeParameters]);
   
   // Compute if content should be shown - with proper dependency tracking
   const shouldShowContent = useMemo(() => {
-    const shouldShow = !showLoadingState && !error && prompt && initialLoadComplete;
+    const shouldShow = !showLoadingState && !error && prompt && (initialLoadComplete || !isLoading);
     
     if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
       logger.debug(`Should show content: ${shouldShow} (showLoadingState=${showLoadingState}, error=${!!error}, prompt=${!!prompt}, initialLoadComplete=${initialLoadComplete})`);
     }
     
     return shouldShow;
-  }, [showLoadingState, error, prompt, initialLoadComplete]);
+  }, [showLoadingState, error, prompt, initialLoadComplete, isLoading]);
   
   // Compute dialog title once
   const dialogTitle = useMemo(() => {
     if (showLoadingState) return "Loading...";
     return prompt ? `Customize Prompt: ${prompt.title}` : "Customize Prompt";
   }, [showLoadingState, prompt]);
+  
+  // Log when safeParameters change
+  useEffect(() => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+      logger.debug(`Parameters state: count=${safeParameters.length}, hasParameters=${hasParameters}, shouldShowContent=${shouldShowContent}`);
+    }
+  }, [safeParameters, hasParameters, shouldShowContent]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }
+    };
+  }, []);
   
   if (!stableOpen) return null;
   
@@ -324,16 +358,20 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
         {/* Show content when not loading and no error - ONLY when we have data */}
         {shouldShowContent && (
           <div className="min-h-[350px]">
-            {process.env.NODE_ENV === 'development' && CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG && (
+            {process.env.NODE_ENV !== 'production' && (
               <Alert className="mb-2 bg-yellow-50 border-yellow-300">
                 <Info className="h-4 w-4 text-yellow-500" />
+                <AlertTitle className="text-sm text-yellow-700">Debug Info</AlertTitle>
                 <AlertDescription className="text-xs text-yellow-800">
-                  Debug: Parameters count: {safeParameters.length}
+                  Parameters count: {safeParameters.length} | 
+                  Loading: {isLoading ? 'Yes' : 'No'} | 
+                  Show loading: {showLoadingState ? 'Yes' : 'No'} | 
+                  Initial load: {initialLoadComplete ? 'Complete' : 'Pending'}
                 </AlertDescription>
               </Alert>
             )}
             
-            {!hasParameters && (
+            {!hasParameters && safeParameters.length === 0 && (
               <Alert className="mb-4" variant="default">
                 <Info className="h-4 w-4" />
                 <AlertTitle>No Customization Options</AlertTitle>
@@ -360,6 +398,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
                 handleTweakChange={handleTweakChange}
                 additionalContext={additionalContext}
                 setAdditionalContext={setAdditionalContext}
+                onForceRefresh={handleForceRefresh}
               />
             </Tabs>
           </div>
@@ -375,6 +414,18 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
+            </Button>
+          )}
+          
+          {process.env.NODE_ENV !== 'production' && shouldShowContent && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleForceRefresh} 
+              className="mr-auto text-xs"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Force Refresh
             </Button>
           )}
           

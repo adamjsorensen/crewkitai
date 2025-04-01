@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface LoadingStateProps {
   message?: string;
+  timeoutWarningThreshold?: number;
 }
 
 // Logging levels control
@@ -36,11 +37,13 @@ const logger = {
 };
 
 const LoadingState: React.FC<LoadingStateProps> = React.memo(({ 
-  message = "Loading prompt..." 
+  message = "Loading prompt...",
+  timeoutWarningThreshold = 5000
 }) => {
   const mountTimeRef = useRef<number>(Date.now());
   const updateIntervalRef = useRef<number | null>(null);
   const [loadingTime, setLoadingTime] = React.useState<number>(0);
+  const [showDebugInfo, setShowDebugInfo] = React.useState(process.env.NODE_ENV !== 'production');
   
   useEffect(() => {
     if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
@@ -49,18 +52,16 @@ const LoadingState: React.FC<LoadingStateProps> = React.memo(({
     
     mountTimeRef.current = Date.now();
     
-    // Update loading time every second for debugging, but only in development
-    if (process.env.NODE_ENV !== 'production') {
-      updateIntervalRef.current = window.setInterval(() => {
-        const currentDuration = Date.now() - mountTimeRef.current;
-        setLoadingTime(currentDuration);
-        
-        // Log every 2 seconds
-        if (currentDuration > 0 && currentDuration % 2000 < 100 && CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) {
-          logger.info(`Still loading after ${Math.floor(currentDuration / 1000)}s`);
-        }
-      }, 1000);
-    }
+    // Update loading time every second
+    updateIntervalRef.current = window.setInterval(() => {
+      const currentDuration = Date.now() - mountTimeRef.current;
+      setLoadingTime(currentDuration);
+      
+      // Log every 2 seconds
+      if (currentDuration > 0 && currentDuration % 2000 < 100 && CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) {
+        logger.info(`Still loading after ${Math.floor(currentDuration / 1000)}s`);
+      }
+    }, 1000);
     
     return () => {
       const duration = Date.now() - mountTimeRef.current;
@@ -70,18 +71,24 @@ const LoadingState: React.FC<LoadingStateProps> = React.memo(({
       }
       
       if (updateIntervalRef.current) {
-        clearInterval(updateIntervalRef.current);
+        window.clearInterval(updateIntervalRef.current);
         updateIntervalRef.current = null;
       }
     };
   }, []);
   
   // Add warning if loading takes too long
-  const loadingWarning = loadingTime > 5000 ? (
+  const loadingWarning = loadingTime > timeoutWarningThreshold ? (
     <p className="text-xs text-amber-600 text-center mt-2">
-      Loading is taking longer than expected...
+      Loading is taking longer than expected... 
+      {showDebugInfo && <span> ({Math.floor(loadingTime / 1000)}s)</span>}
     </p>
   ) : null;
+  
+  // Toggle debug info
+  const toggleDebugInfo = () => {
+    setShowDebugInfo(prev => !prev);
+  };
   
   return (
     <div 
@@ -94,6 +101,25 @@ const LoadingState: React.FC<LoadingStateProps> = React.memo(({
           <span className="ml-2 text-muted-foreground font-medium">{message}</span>
         </div>
         {loadingWarning}
+        {showDebugInfo && process.env.NODE_ENV !== 'production' && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            <button 
+              onClick={toggleDebugInfo} 
+              className="text-xs text-blue-500 hover:underline"
+            >
+              Hide debug info
+            </button>
+            <div className="mt-1">Loading time: {Math.floor(loadingTime / 1000)}s</div>
+          </div>
+        )}
+        {!showDebugInfo && process.env.NODE_ENV !== 'production' && loadingTime > 3000 && (
+          <button 
+            onClick={toggleDebugInfo} 
+            className="mt-2 text-xs text-blue-500 hover:underline"
+          >
+            Show debug info
+          </button>
+        )}
       </div>
       
       <Card className="bg-muted/40">
