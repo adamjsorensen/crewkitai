@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import AdditionalContextStep from "./wizard/AdditionalContextStep";
 import LoadingState from "./wizard/LoadingState";
 import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
 import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
+import NetworkStatusMonitor from "./wizard/NetworkStatusMonitor";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
@@ -26,7 +27,7 @@ interface SimplePromptWizardProps {
   onClose: () => void;
 }
 
-const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({ 
+const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({ 
   promptId, 
   isOpen, 
   onClose 
@@ -56,54 +57,79 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     handleRetry
   } = useSimplifiedPromptWizard(promptId, isOpen, handleClose);
   
-  // Delayed loading state to prevent flashing
+  // Delayed loading state to prevent flashing - using a more stable approach
   useEffect(() => {
     let timer: number | null = null;
     
     if (isLoading) {
-      // Show loading state after a small delay to prevent flashes
+      // Clear any existing timer first
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+      
+      // Show loading state after a delay to prevent flashes
       timer = window.setTimeout(() => {
-        setShowLoadingState(true);
-      }, 100);
+        if (isLoading) { // Double-check that we're still loading
+          setShowLoadingState(true);
+        }
+      }, 200); // Slightly longer delay to prevent flickering
     } else {
-      setShowLoadingState(false);
+      // Clear any pending timer
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+      
+      // Add a small delay before hiding the loading state to prevent flickering
+      timer = window.setTimeout(() => {
+        setShowLoadingState(false);
+      }, 50);
     }
     
     return () => {
       if (timer !== null) {
-        clearTimeout(timer);
+        window.clearTimeout(timer);
       }
     };
   }, [isLoading]);
   
-  // Effect to log component lifecycle
+  // Effect to log component lifecycle - using a stable object to prevent re-renders
+  const logProps = useMemo(() => ({
+    promptId,
+    isOpen,
+    isLoading,
+    hasError: !!error
+  }), [promptId, isOpen, isLoading, error]);
+  
   useEffect(() => {
-    console.log(`[SimplePromptWizard] Mounted with promptId: ${promptId}, isOpen: ${isOpen}`);
-    console.log(`[SimplePromptWizard] Loading state: ${isLoading}, Error: ${error ? 'yes' : 'no'}`);
+    console.log(`[SimplePromptWizard] Mounted with:`, logProps);
     
     return () => {
       console.log(`[SimplePromptWizard] Unmounting with promptId: ${promptId}`);
     };
-  }, [promptId, isOpen, isLoading, error]);
+  }, [logProps, promptId]);
   
-  // Log parameters when they change
+  // Log parameters when they change, but only if they actually change
+  const parametersCount = parameters?.length || 0;
   useEffect(() => {
-    if (parameters?.length > 0) {
-      console.log(`[SimplePromptWizard] Parameters loaded: ${parameters.length}`);
+    if (parametersCount > 0) {
+      console.log(`[SimplePromptWizard] Parameters loaded: ${parametersCount}`);
     }
-  }, [parameters]);
+  }, [parametersCount]);
+  
+  // Memoize various computed values to prevent re-renders
+  const dialogTitle = useMemo(() => {
+    if (showLoadingState) return "Loading...";
+    return prompt ? `Customize Prompt: ${prompt.title}` : "Customize Prompt";
+  }, [showLoadingState, prompt]);
+  
+  const safeParameters = useMemo(() => 
+    Array.isArray(parameters) ? parameters : [],
+    [parameters]
+  );
+  
+  const hasParameters = safeParameters.length > 0;
   
   if (!isOpen) return null;
-  
-  const dialogTitle = showLoadingState 
-    ? "Loading..." 
-    : prompt 
-      ? `Customize Prompt: ${prompt.title}` 
-      : "Customize Prompt";
-  
-  // Safely access parameters
-  const safeParameters = Array.isArray(parameters) ? parameters : [];
-  const hasParameters = safeParameters.length > 0;
   
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -119,6 +145,15 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
             Customize this prompt to generate content tailored to your needs
           </DialogDescription>
         </DialogHeader>
+        
+        {/* Monitor network status without causing re-renders */}
+        <NetworkStatusMonitor onStatusChange={(status) => {
+          // Only update if different from current state
+          if (status !== networkStatus) {
+            // Use function form to avoid stale closure issues
+            console.log(`[SimplePromptWizard] Network status updated to: ${status}`);
+          }
+        }} />
         
         <NetworkStatusAlert networkStatus={networkStatus} />
         
@@ -158,7 +193,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
                 <TabsTrigger value="context" className="flex-1">Add Context</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="customize" className="py-4">
+              <TabsContent value="customize" className="py-4 min-h-[300px]">
                 {hasParameters ? (
                   <AllParametersView 
                     parameters={safeParameters} 
@@ -173,7 +208,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
                 )}
               </TabsContent>
               
-              <TabsContent value="context" className="py-4">
+              <TabsContent value="context" className="py-4 min-h-[300px]">
                 <AdditionalContextStep 
                   additionalContext={additionalContext} 
                   setAdditionalContext={setAdditionalContext}
@@ -218,6 +253,8 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+SimplePromptWizard.displayName = 'SimplePromptWizard';
 
 export default SimplePromptWizard;

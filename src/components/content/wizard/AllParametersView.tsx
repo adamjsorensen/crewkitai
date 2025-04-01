@@ -14,6 +14,76 @@ interface AllParametersViewProps {
   onTweakChange: (parameterId: string, tweakId: string) => void;
 }
 
+// Create a memoized ParameterCard component to prevent unnecessary re-renders
+const ParameterCard = React.memo(({ 
+  param, 
+  selectedTweakId, 
+  onTweakChange, 
+  isLast 
+}: { 
+  param: ParameterWithTweaks; 
+  selectedTweakId: string | undefined; 
+  onTweakChange: (parameterId: string, tweakId: string) => void;
+  isLast: boolean;
+}) => {
+  const hasTweaks = param.tweaks && Array.isArray(param.tweaks) && param.tweaks.length > 0;
+  
+  return (
+    <Card key={param.id} className="overflow-hidden">
+      <CardHeader className="bg-muted/50 py-3">
+        <CardTitle className="text-base">{param.name || 'Unnamed Parameter'}</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-4">
+        {param.description && (
+          <p className="text-sm text-muted-foreground mb-3">{param.description}</p>
+        )}
+        
+        {hasTweaks ? (
+          <RadioGroup 
+            value={selectedTweakId || ''} 
+            onValueChange={(value) => onTweakChange(param.id, value)}
+          >
+            <div className="space-y-2">
+              {param.tweaks.map((tweak) => {
+                // Skip invalid tweaks
+                if (!tweak || !tweak.id) return null;
+                
+                return (
+                  <div key={tweak.id} className="flex items-start space-x-2 p-3 border rounded-md hover:bg-muted/30 transition-colors">
+                    <RadioGroupItem id={`${param.id}-${tweak.id}`} value={tweak.id} />
+                    <div className="flex-1">
+                      <Label htmlFor={`${param.id}-${tweak.id}`} className="font-medium cursor-pointer">
+                        {tweak.name || 'Unnamed Tweak'}
+                      </Label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </RadioGroup>
+        ) : (
+          <Alert className="bg-muted/30 border-muted">
+            <Info className="h-4 w-4 text-muted-foreground" />
+            <AlertDescription className="text-sm text-muted-foreground">
+              No options available for this parameter.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {param.rule?.is_required && !selectedTweakId && (
+          <p className="text-sm text-red-500 mt-2">
+            This selection is required.
+          </p>
+        )}
+      </CardContent>
+      
+      {!isLast && <Separator />}
+    </Card>
+  );
+});
+
+ParameterCard.displayName = 'ParameterCard';
+
 const AllParametersView: React.FC<AllParametersViewProps> = ({
   parameters,
   selectedTweaks,
@@ -45,64 +115,18 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
           return null;
         }
         
-        // Check if parameter has tweaks
-        const hasTweaks = param.tweaks && Array.isArray(param.tweaks) && param.tweaks.length > 0;
-        
         return (
-          <Card key={param.id} className="overflow-hidden">
-            <CardHeader className="bg-muted/50 py-3">
-              <CardTitle className="text-base">{param.name || 'Unnamed Parameter'}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4">
-              {param.description && (
-                <p className="text-sm text-muted-foreground mb-3">{param.description}</p>
-              )}
-              
-              {hasTweaks ? (
-                <RadioGroup 
-                  value={selectedTweaks[param.id] || ''} 
-                  onValueChange={(value) => onTweakChange(param.id, value)}
-                >
-                  <div className="space-y-2">
-                    {param.tweaks.map((tweak) => {
-                      // Skip invalid tweaks
-                      if (!tweak || !tweak.id) return null;
-                      
-                      return (
-                        <div key={tweak.id} className="flex items-start space-x-2 p-3 border rounded-md hover:bg-muted/30 transition-colors">
-                          <RadioGroupItem id={`${param.id}-${tweak.id}`} value={tweak.id} />
-                          <div className="flex-1">
-                            <Label htmlFor={`${param.id}-${tweak.id}`} className="font-medium cursor-pointer">
-                              {tweak.name || 'Unnamed Tweak'}
-                            </Label>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </RadioGroup>
-              ) : (
-                <Alert className="bg-muted/30 border-muted">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                  <AlertDescription className="text-sm text-muted-foreground">
-                    No options available for this parameter.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {param.rule?.is_required && !selectedTweaks[param.id] && (
-                <p className="text-sm text-red-500 mt-2">
-                  This selection is required.
-                </p>
-              )}
-            </CardContent>
-            
-            {index < safeParameters.length - 1 && <Separator />}
-          </Card>
+          <ParameterCard 
+            key={param.id}
+            param={param}
+            selectedTweakId={selectedTweaks[param.id]}
+            onTweakChange={onTweakChange}
+            isLast={index === safeParameters.length - 1}
+          />
         );
       })}
     </div>
   );
 };
 
-export default AllParametersView;
+export default React.memo(AllParametersView);
