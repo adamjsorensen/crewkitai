@@ -1,72 +1,39 @@
 
-import React, { useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import React, { useEffect } from "react";
 
 interface NetworkStatusMonitorProps {
   onStatusChange: (status: 'online' | 'offline') => void;
 }
 
 const NetworkStatusMonitor: React.FC<NetworkStatusMonitorProps> = ({ onStatusChange }) => {
-  const { toast } = useToast();
-  const [hasShownOfflineToast, setHasShownOfflineToast] = useState(false);
-  const [hasShownOnlineToast, setHasShownOnlineToast] = useState(false);
-  
   useEffect(() => {
+    // Initial status
+    onStatusChange(navigator.onLine ? 'online' : 'offline');
+    
+    // Event handlers
     const handleOnline = () => {
-      console.log("Browser reported network is online");
+      console.log('[NetworkStatusMonitor] Connection is now online');
       onStatusChange('online');
-      if (hasShownOfflineToast && !hasShownOnlineToast) {
-        toast({
-          title: "You're back online",
-          description: "Reconnected to the server. You can retry loading the prompt.",
-        });
-        setHasShownOnlineToast(true);
-      }
     };
     
     const handleOffline = () => {
-      console.log("Browser reported network is offline");
+      console.log('[NetworkStatusMonitor] Connection is now offline');
       onStatusChange('offline');
-      if (!hasShownOfflineToast) {
-        toast({
-          title: "You're offline",
-          description: "Please check your internet connection.",
-          variant: "destructive"
-        });
-        setHasShownOfflineToast(true);
-        setHasShownOnlineToast(false);
-      }
     };
-    
-    // Regularly check the connection status
-    const checkOnlineStatus = () => {
-      const isOnline = navigator.onLine;
-      console.log("Checking online status:", isOnline);
-      if (isOnline) {
-        handleOnline();
-      } else {
-        handleOffline();
-      }
-    };
-    
-    // Initial check
-    checkOnlineStatus();
     
     // Add event listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Set up an interval to check the connection
-    const intervalId = setInterval(checkOnlineStatus, 5000);
-    
+    // Cleanup
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearInterval(intervalId);
     };
-  }, [onStatusChange, toast, hasShownOfflineToast, hasShownOnlineToast]);
+  }, [onStatusChange]);
   
-  return null; // This is a non-visual component
+  // This is a utility component with no visible UI
+  return null;
 };
 
 export default NetworkStatusMonitor;

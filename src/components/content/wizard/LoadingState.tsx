@@ -4,30 +4,33 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const LoadingState: React.FC = () => {
-  const mountCount = useRef(0);
-  const startTimeRef = useRef<number>(Date.now());
+interface LoadingStateProps {
+  message?: string;
+}
+
+const LoadingState: React.FC<LoadingStateProps> = ({ 
+  message = "Loading prompt..." 
+}) => {
+  const mountTimeRef = useRef<number>(Date.now());
   
   useEffect(() => {
-    mountCount.current += 1;
-    startTimeRef.current = Date.now();
-    console.log(`[LoadingState] Component mounted (count: ${mountCount.current})`);
+    console.log(`[LoadingState] Component mounted at ${new Date().toISOString()}`);
+    mountTimeRef.current = Date.now();
     
     return () => {
-      const duration = Date.now() - startTimeRef.current;
+      const duration = Date.now() - mountTimeRef.current;
       console.log(`[LoadingState] Component unmounted after ${duration}ms`);
-      
-      if (duration < 500) {
-        console.warn(`[LoadingState] Short-lived component! Only lived for ${duration}ms`);
-      }
     };
   }, []);
   
   return (
-    <div className="py-6 space-y-6 animate-in fade-in duration-500" data-testid="loading-state">
+    <div 
+      className="py-6 space-y-6 animate-in fade-in duration-700" 
+      data-testid="loading-state"
+    >
       <div className="flex justify-center items-center py-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2 text-muted-foreground font-medium">Loading prompt...</span>
+        <span className="ml-2 text-muted-foreground font-medium">{message}</span>
       </div>
       
       <Card className="bg-muted/40">
