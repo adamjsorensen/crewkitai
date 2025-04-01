@@ -22,6 +22,9 @@ export function useSimplifiedPromptWizard(
   // Use a ref to track loading state transitions for debugging
   const loadingTransitionsRef = useRef<string[]>([]);
   
+  // Track number of parameter loads
+  const parameterLoadCountRef = useRef(0);
+  
   // Check network status
   useEffect(() => {
     const handleNetworkChange = () => {
@@ -50,6 +53,15 @@ export function useSimplifiedPromptWizard(
     refetch: refetchPrompt 
   } = usePromptFetching(promptId, isOpen);
   
+  // Track when usePromptParameters is called
+  useEffect(() => {
+    if (promptId && isOpen) {
+      console.log(`[usePromptParameters] Triggering parameter fetch for promptId: ${promptId}`);
+      parameterLoadCountRef.current += 1;
+      console.log(`[usePromptParameters] Parameter load attempt #${parameterLoadCountRef.current}`);
+    }
+  }, [promptId, isOpen]);
+  
   // DIRECT PARAMETER FETCHING: Pass promptId directly to usePromptParameters
   // This enables parallel loading rather than waiting for prompt to load first
   const { 
@@ -59,12 +71,25 @@ export function useSimplifiedPromptWizard(
     retry: retryParameters
   } = usePromptParameters(promptId);
   
+  // Track specific parameter loading states with timestamps
+  useEffect(() => {
+    console.log(`[useSimplifiedPromptWizard] Parameter loading state changed: ${isParametersLoading} at ${new Date().toISOString()}`);
+    console.log(`[useSimplifiedPromptWizard] Parameters array: ${parameters ? 'exists' : 'null'}, length: ${parameters?.length || 0}`);
+    
+    if (!isParametersLoading && parameters) {
+      console.log(`[useSimplifiedPromptWizard] Parameters loaded successfully: ${parameters.length} items`);
+      if (parameters.length > 0) {
+        console.log(`[useSimplifiedPromptWizard] First parameter: ${parameters[0]?.name || 'unnamed'}, has tweaks: ${(parameters[0]?.tweaks?.length || 0) > 0}`);
+      }
+    }
+  }, [isParametersLoading, parameters]);
+  
   // Calculate the combined loading state - Simplified to avoid race conditions
   const isLoading = isPromptLoading || isParametersLoading;
   
   // Track loading state changes for debugging
   useEffect(() => {
-    const loadingState = `prompt:${isPromptLoading},params:${isParametersLoading}`;
+    const loadingState = `prompt:${isPromptLoading},params:${isParametersLoading},timestamp:${Date.now()}`;
     loadingTransitionsRef.current.push(loadingState);
     
     console.log(`[useSimplifiedPromptWizard] Loading states - prompt: ${isPromptLoading}, parameters: ${isParametersLoading}, combined: ${isLoading}`);
@@ -83,6 +108,7 @@ export function useSimplifiedPromptWizard(
       setSelectedTweaks({});
       setAdditionalContext("");
       loadingTransitionsRef.current = [];
+      parameterLoadCountRef.current = 0;
     }
   }, [isOpen, promptId]);
   
@@ -155,6 +181,7 @@ export function useSimplifiedPromptWizard(
     refetchPrompt();
     retryParameters();
     loadingTransitionsRef.current = [];
+    parameterLoadCountRef.current = 0;
     
     toast({
       title: "Retrying",
@@ -164,6 +191,9 @@ export function useSimplifiedPromptWizard(
   
   // VALIDATION: Validate the form
   const isFormValid = useCallback(() => {
+    // Add timestamps to trace performance
+    console.log(`[useSimplifiedPromptWizard] Form validity check started at: ${new Date().toISOString()}`);
+    
     // Validate that parameters are loaded correctly
     if (!parameters || !Array.isArray(parameters)) {
       console.error("[useSimplifiedPromptWizard] Parameters not available or not an array:", parameters);

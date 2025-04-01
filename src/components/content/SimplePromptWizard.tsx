@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -34,24 +33,23 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
   const [activeTab, setActiveTab] = useState("customize");
   const [isClosing, setIsClosing] = useState(false);
   
-  // Wrap the onClose function to add a transition delay
+  const renderCount = useRef(0);
+  const prevLoadingState = useRef<boolean | null>(null);
+  
   const handleClose = () => {
     setIsClosing(true);
-    // Short delay before actually closing the dialog
     setTimeout(() => {
       setIsClosing(false);
       onClose();
     }, 100);
   };
   
-  // Log promptId to debug
   useEffect(() => {
     if (isOpen) {
       console.log(`[SimplePromptWizard] Opening with promptId: ${promptId || 'undefined'}`);
     }
   }, [isOpen, promptId]);
   
-  // Use the enhanced wizard hook with direct parameter loading
   const {
     prompt,
     parameters,
@@ -68,7 +66,16 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     handleRetry
   } = useSimplifiedPromptWizard(promptId, isOpen, onClose);
   
-  // Debug log - Added explicitly to track what parameters we're getting
+  useEffect(() => {
+    renderCount.current += 1;
+    console.log(`[SimplePromptWizard] Render #${renderCount.current}, isLoading: ${isLoading}`);
+    
+    if (prevLoadingState.current !== isLoading) {
+      console.log(`[SimplePromptWizard] Loading state changed: ${prevLoadingState.current} -> ${isLoading}`);
+      prevLoadingState.current = isLoading;
+    }
+  });
+  
   useEffect(() => {
     console.log(`[SimplePromptWizard] Parameters received: count=${parameters?.length || 0}`);
     if (parameters?.length > 0) {
@@ -76,22 +83,18 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
         parameters.slice(0, 3).map(p => ({id: p.id, name: p.name, tweaks: p.tweaks?.length || 0}))
       );
       
-      // Verify parameter structure integrity
       const hasValidParameters = parameters.every(p => p && p.id && p.name);
       console.log(`[SimplePromptWizard] Parameters valid: ${hasValidParameters}`);
       
-      // Check if parameters have tweaks
       const parametersWithTweaks = parameters.filter(p => p.tweaks && p.tweaks.length > 0);
       console.log(`[SimplePromptWizard] Parameters with tweaks: ${parametersWithTweaks.length}`);
     }
   }, [parameters]);
   
-  // Track loading state changes
   useEffect(() => {
     console.log(`[SimplePromptWizard] Prompt ID: ${promptId}, isLoading: ${isLoading}, error: ${error ? 'yes' : 'no'}`);
   }, [promptId, isLoading, error]);
   
-  // Circuit breaker for infinite loading
   useEffect(() => {
     if (isLoading) {
       const timeoutId = setTimeout(() => {
@@ -111,7 +114,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
       ? `Customize Prompt: ${prompt.title}` 
       : "Customize Prompt";
   
-  // Force cast parameters to an array to prevent rendering issues
   const safeParameters = Array.isArray(parameters) ? parameters : [];
   const hasParameters = safeParameters.length > 0;
   
@@ -131,6 +133,12 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
         </DialogHeader>
         
         <NetworkStatusAlert networkStatus={networkStatus} />
+        
+        {isLoading && (
+          <div className="text-xs text-muted-foreground mb-2 p-2 border rounded bg-muted/30 hidden">
+            Loading State Debug: {String(isLoading)}, Render: {renderCount.current}
+          </div>
+        )}
         
         {isLoading ? (
           <LoadingState />
@@ -153,7 +161,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
           />
         ) : (
           <div className="min-h-[350px]">
-            {/* Debug information */}
             {process.env.NODE_ENV !== 'production' && (
               <div className="mb-4 p-2 bg-gray-100 text-xs rounded-md">
                 <details>

@@ -1,12 +1,45 @@
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const LoadingState: React.FC = () => {
+interface LoadingStateProps {
+  key?: string;
+}
+
+const LoadingState: React.FC<LoadingStateProps> = ({ key }) => {
+  // Add mount tracking to see if component is remounting
+  const mountCount = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
+  
+  useEffect(() => {
+    mountCount.current += 1;
+    console.log(`[LoadingState] Component mounted (count: ${mountCount.current})`);
+    
+    // Track animation frame requests
+    let frameCount = 0;
+    
+    const trackFrames = () => {
+      frameCount++;
+      if (frameCount % 60 === 0) { // Log every ~1 second (60 frames)
+        console.log(`[LoadingState] Animation frames: ${frameCount}`);
+      }
+      animationFrameRef.current = requestAnimationFrame(trackFrames);
+    };
+    
+    animationFrameRef.current = requestAnimationFrame(trackFrames);
+    
+    return () => {
+      console.log(`[LoadingState] Component unmounted after ${frameCount} frames`);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+  
   return (
-    <div className="py-6 space-y-6 animate-in fade-in duration-300">
+    <div className="py-6 space-y-6 animate-in fade-in duration-300" data-testid="loading-state">
       <div className="flex justify-center items-center py-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2 text-muted-foreground font-medium">Loading prompt...</span>
