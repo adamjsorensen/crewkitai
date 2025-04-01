@@ -4,8 +4,50 @@ import { supabase } from "@/integrations/supabase/client";
 import { ParameterWithTweaks } from "@/types/promptParameters";
 import { useToast } from "@/hooks/use-toast";
 
+// Logging levels control
+const LOG_LEVEL = {
+  ERROR: 0,
+  WARN: 1,
+  INFO: 2,
+  DEBUG: 3
+};
+
+// Set this to control logging verbosity
+const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.WARN;
+
+// Custom logger to control logging
+const logger = {
+  error: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.ERROR) console.error(`[usePromptParameters] ${message}`, ...args);
+  },
+  warn: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.WARN) console.warn(`[usePromptParameters] ${message}`, ...args);
+  },
+  info: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) console.log(`[usePromptParameters] ${message}`, ...args);
+  },
+  debug: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) console.log(`[usePromptParameters] ${message}`, ...args);
+  }
+};
+
+// Connection test throttling
+const MIN_TIME_BETWEEN_TESTS = 60000; // 1 minute
+let lastConnectionTest = 0;
+
 /**
- * Direct hook for fetching prompt parameters with their tweaks in a single operation
+ * Cache for storing fetched parameters by promptId
+ */
+const parametersCache = new Map<string, {
+  data: ParameterWithTweaks[],
+  timestamp: number
+}>();
+
+// Cache expiration time
+const CACHE_EXPIRY_TIME = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Hook for fetching prompt parameters with their tweaks with improved caching and performance
  */
 export function usePromptParameters(promptId: string | undefined) {
   const [parameters, setParameters] = useState<ParameterWithTweaks[]>([]);
@@ -16,30 +58,103 @@ export function usePromptParameters(promptId: string | undefined) {
   
   // Track when parameters were last successfully fetched
   const lastSuccessfulFetchRef = useRef<number | null>(null);
+  
   // Track fetch attempts
   const fetchAttemptCountRef = useRef<number>(0);
+  
+  // Track component mounted state
+  const isMountedRef = useRef(true);
+  
+  // Debounce fetch to prevent multiple concurrent calls
+  const fetchingRef = useRef(false);
+
+  // Use cached data if available and not expired
+  const useCachedData = useCallback((promptId: string | undefined) => {
+    if (!promptId) return null;
+    
+    const cachedEntry = parametersCache.get(promptId);
+    if (cachedEntry) {
+      const now = Date.now();
+      if (now - cachedEntry.timestamp < CACHE_EXPIRY_TIME) {
+        logger.debug(`Using cached parameters for prompt ID: ${promptId}`);
+        return cachedEntry.data;
+      } else {
+        // Cache expired, remove it
+        logger.debug(`Cache expired for prompt ID: ${promptId}`);
+        parametersCache.delete(promptId);
+      }
+    }
+    return null;
+  }, []);
+
+  // Database connection test with throttling
+  const testDatabaseConnection = useCallback(async () => {
+    const now = Date.now();
+    
+    // Skip test if one was done recently
+    if (now - lastConnectionTest < MIN_TIME_BETWEEN_TESTS) {
+      logger.debug("Skipping database connection test (throttled)");
+      return true;
+    }
+    
+    try {
+      logger.debug("Testing database connection...");
+      const { error: testError } = await supabase.from('prompts').select('count').limit(1);
+      
+      lastConnectionTest = now;
+      
+      if (testError) {
+        logger.error("Database connection test failed:", testError);
+        return false;
+      }
+      
+      logger.debug("Database connection test successful");
+      return true;
+    } catch (err) {
+      lastConnectionTest = now;
+      logger.error("Database connection test threw exception:", err);
+      return false;
+    }
+  }, []);
 
   const fetchParameters = useCallback(async () => {
     if (!promptId) {
-      console.log("[usePromptParameters] No promptId provided, skipping parameter fetch");
+      logger.debug("No promptId provided, skipping parameter fetch");
       setParameters([]);
       setIsLoading(false);
       return;
     }
+    
+    // Don't fetch if already fetching
+    if (fetchingRef.current) {
+      logger.debug("Already fetching parameters, skipping redundant fetch");
+      return;
+    }
+    
+    // Try to use cached data first
+    const cachedData = useCachedData(promptId);
+    if (cachedData) {
+      if (isMountedRef.current) {
+        setParameters(cachedData);
+        setIsLoading(false);
+        setError(null);
+      }
+      // Still fetch in the background to update the cache
+    }
 
+    // Set fetching flag to prevent duplicate requests
+    fetchingRef.current = true;
     const attemptNumber = ++fetchAttemptCountRef.current;
-    console.log(`[usePromptParameters] Fetching parameters for prompt ID: ${promptId} (Attempt: ${attemptNumber}, Retry: ${retryCount})`);
     
     try {
-      // First, verify database connection
-      console.log("Connection test started...");
-      const { data: testData, error: testError } = await supabase.from('prompts').select('count').limit(1);
+      logger.info(`Fetching parameters for prompt ID: ${promptId} (Attempt: ${attemptNumber}, Retry: ${retryCount})`);
       
-      if (testError) {
-        console.error("Database connection test failed:", testError);
-        throw new Error(`Database connection test failed: ${testError.message}`);
+      // Test connection first (throttled)
+      const connectionOk = await testDatabaseConnection();
+      
+      if (!connectionOk) {
+        throw new Error("Database connection test failed");
       }
-      console.log("Connection test successful, database is accessible");
       
       // SINGLE OPERATION: Fetch everything in a single operation with joins
       const { data: parametersWithRules, error: queryError } = await supabase
@@ -76,20 +191,31 @@ export function usePromptParameters(promptId: string | undefined) {
         .order('order');
       
       if (queryError) {
-        console.error("[usePromptParameters] Error in joined parameter query:", queryError);
+        logger.error("Error in joined parameter query:", queryError);
         throw new Error(`Database query failed: ${queryError.message}`);
       }
       
       if (!parametersWithRules || parametersWithRules.length === 0) {
-        console.log(`[usePromptParameters] No parameter rules found for prompt: ${promptId}`);
-        setParameters([]);
-        setIsLoading(false);
-        setError(null);
-        lastSuccessfulFetchRef.current = Date.now(); // Even empty results counts as successful
+        logger.info(`No parameter rules found for prompt: ${promptId}`);
+        
+        // Update cache with empty array
+        parametersCache.set(promptId, {
+          data: [],
+          timestamp: Date.now()
+        });
+        
+        if (isMountedRef.current) {
+          setParameters([]);
+          setIsLoading(false);
+          setError(null);
+        }
+        
+        lastSuccessfulFetchRef.current = Date.now();
+        fetchingRef.current = false;
         return;
       }
       
-      console.log(`[usePromptParameters] Found ${parametersWithRules.length} parameter rules with joined data`);
+      logger.debug(`Found ${parametersWithRules.length} parameter rules with joined data`);
       
       // Transform the nested data into our expected format
       const transformedParameters = parametersWithRules
@@ -98,7 +224,7 @@ export function usePromptParameters(promptId: string | undefined) {
           const parameter = rule.parameter;
           
           if (!parameter) {
-            console.warn(`[usePromptParameters] Rule ${rule.id} has no valid parameter data`);
+            logger.warn(`Rule ${rule.id} has no valid parameter data`);
             return null;
           }
           
@@ -122,60 +248,34 @@ export function usePromptParameters(promptId: string | undefined) {
         })
         .filter(Boolean) as ParameterWithTweaks[];
       
-      console.log(`[usePromptParameters] Transformed data into ${transformedParameters.length} parameters with tweaks`);
-      
-      // Debug the actual data structure
-      console.log("[usePromptParameters] Parameter data structure:", 
-        transformedParameters.map(p => ({
-          id: p.id,
-          name: p.name,
-          tweaksCount: p.tweaks?.length || 0,
-          ruleId: p.rule?.id
-        }))
-      );
-      
-      // Directly verify parameters and tweaks structure
-      let dataIsValid = true;
-      transformedParameters.forEach(param => {
-        if (!param.id) {
-          console.error(`[usePromptParameters] Parameter missing ID`);
-          dataIsValid = false;
-        }
-        if (!param.name) {
-          console.error(`[usePromptParameters] Parameter missing name`);
-          dataIsValid = false;
-        }
-        if (!param.tweaks) {
-          console.error(`[usePromptParameters] Parameter ${param.name} missing tweaks array`);
-          dataIsValid = false;
-        }
+      // Update the cache
+      parametersCache.set(promptId, {
+        data: transformedParameters,
+        timestamp: Date.now()
       });
       
-      if (!dataIsValid) {
-        console.error("[usePromptParameters] Data validation failed, will retry");
-        throw new Error("Parameters data failed validation");
+      if (isMountedRef.current) {
+        setParameters(transformedParameters);
+        setError(null);
+        setIsLoading(false);
       }
       
-      setParameters(transformedParameters);
-      setError(null);
-      setIsLoading(false);
       lastSuccessfulFetchRef.current = Date.now();
       
-      // Verify parameters were set correctly (for debugging)
-      setTimeout(() => {
-        console.log(`[usePromptParameters] Verify parameters were set correctly:`, {
-          inStateLength: transformedParameters.length,
-          currentStateLength: parameters.length
-        });
-      }, 100);
-      
     } catch (err: unknown) {
-      // Fixed TypeScript error with proper error handling
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error("[usePromptParameters] Error in usePromptParameters:", err);
-      setError(`Failed to load parameters: ${errorMessage}`);
-      setParameters([]);
-      setIsLoading(false);
+      logger.error("Error fetching parameters:", err);
+      
+      if (isMountedRef.current) {
+        setError(`Failed to load parameters: ${errorMessage}`);
+        
+        // Don't clear parameters if we already have cached data
+        if (!cachedData) {
+          setParameters([]);
+        }
+        
+        setIsLoading(false);
+      }
       
       // Only show toast for network or critical errors after multiple failures
       if (attemptNumber > 2 && (errorMessage.includes('network') || errorMessage.includes('connection'))) {
@@ -185,53 +285,46 @@ export function usePromptParameters(promptId: string | undefined) {
           variant: "destructive"
         });
       }
-      
-      // Auto-retry on certain errors if we haven't fetched successfully recently
-      const shouldAutoRetry = 
-        (errorMessage.includes('network') || 
-         errorMessage.includes('timeout') || 
-         errorMessage.includes('validation')) &&
-        (!lastSuccessfulFetchRef.current || 
-         Date.now() - lastSuccessfulFetchRef.current > 30000);
-      
-      if (shouldAutoRetry && attemptNumber <= 3) {
-        console.log(`[usePromptParameters] Scheduling auto-retry in 1 second (attempt ${attemptNumber})`);
-        setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-        }, 1000);
-      }
+    } finally {
+      fetchingRef.current = false;
     }
-  }, [promptId, toast, retryCount]);
+  }, [promptId, toast, retryCount, testDatabaseConnection, useCachedData]);
 
   // Fetch parameters when promptId changes or when retry is triggered
   useEffect(() => {
-    let isMounted = true;
+    // Skip effects if no prompt id or promptId is invalid UUID format
+    if (!promptId) return;
     
-    const fetchAndSetParams = async () => {
-      if (!promptId) return;
+    // Check for cached data first
+    const cachedData = useCachedData(promptId);
+    if (cachedData) {
+      setParameters(cachedData);
+      setIsLoading(false);
+      setError(null);
       
-      try {
-        setIsLoading(true);
-        await fetchParameters();
-      } catch (err) {
-        console.error("[usePromptParameters] Error in fetch effect:", err);
-        if (isMounted) {
-          setIsLoading(false);
-          setError("Error fetching parameters: " + String(err));
-        }
-      }
-    };
+      // Still fetch in background to refresh cache but don't show loading state
+      fetchParameters();
+      return;
+    }
     
-    fetchAndSetParams();
+    setIsLoading(true);
+    fetchParameters();
+    
+    return () => {};
+  }, [fetchParameters, promptId, useCachedData]);
+  
+  // Track component mounted state
+  useEffect(() => {
+    isMountedRef.current = true;
     
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
     };
-  }, [fetchParameters, promptId, retryCount]);
+  }, []);
 
   // Provide a retry mechanism
   const retry = useCallback(() => {
-    console.log("[usePromptParameters] Manually retrying parameter fetch");
+    logger.info("Manually retrying parameter fetch");
     setRetryCount(prev => prev + 1);
     fetchAttemptCountRef.current = 0; // Reset attempt counter on manual retry
   }, []);

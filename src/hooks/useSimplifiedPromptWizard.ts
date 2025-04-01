@@ -1,8 +1,36 @@
+
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePromptFetching } from "./prompt-wizard/usePromptFetching";
 import { usePromptParameters } from "./usePromptParameters";
 import { useToast } from "@/hooks/use-toast";
+
+// Logging levels control
+const LOG_LEVEL = {
+  ERROR: 0,
+  WARN: 1,
+  INFO: 2,
+  DEBUG: 3
+};
+
+// Set this to control logging verbosity
+const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.WARN;
+
+// Custom logger to control logging
+const logger = {
+  error: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.ERROR) console.error(`[useSimplifiedPromptWizard] ${message}`, ...args);
+  },
+  warn: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.WARN) console.warn(`[useSimplifiedPromptWizard] ${message}`, ...args);
+  },
+  info: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) console.log(`[useSimplifiedPromptWizard] ${message}`, ...args);
+  },
+  debug: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) console.log(`[useSimplifiedPromptWizard] ${message}`, ...args);
+  }
+};
 
 export function useSimplifiedPromptWizard(
   promptId: string | undefined, 
@@ -20,49 +48,63 @@ export function useSimplifiedPromptWizard(
   
   // Track if this is the first load
   const isFirstLoadRef = useRef(true);
+  const lastPromptIdRef = useRef<string | undefined>(promptId);
   
   // Maintain cache of parameters to prevent unnecessary re-renders
   const parametersCache = useRef<any[]>([]);
   
-  // Set up data consistency checking
-  const promptIdRef = useRef<string | undefined>(promptId);
-  const stableIsOpenRef = useRef(isOpen);
+  // Track rendering cycles
+  const renderCountRef = useRef(0);
   
-  // Check network status
+  // Log rendering but only on development and limited frequency
+  useEffect(() => {
+    renderCountRef.current += 1;
+    
+    if (process.env.NODE_ENV !== 'production' && renderCountRef.current % 5 === 0) {
+      logger.debug(`Hook rendered ${renderCountRef.current} times`);
+    }
+  });
+  
+  // Check network status - optimized with cleanup
   useEffect(() => {
     const handleNetworkChange = () => {
       const status = navigator.onLine ? 'online' : 'offline';
-      console.log(`[useSimplifiedPromptWizard] Network status changed to: ${status}`);
-      setNetworkStatus(status);
+      if (status !== networkStatus) {
+        logger.info(`Network status changed to: ${status}`);
+        setNetworkStatus(status);
+      }
     };
     
     window.addEventListener('online', handleNetworkChange);
     window.addEventListener('offline', handleNetworkChange);
     
-    // Initialize status
-    setNetworkStatus(navigator.onLine ? 'online' : 'offline');
+    // Initialize status only once
+    if (networkStatus !== (navigator.onLine ? 'online' : 'offline')) {
+      setNetworkStatus(navigator.onLine ? 'online' : 'offline');
+    }
     
     return () => {
       window.removeEventListener('online', handleNetworkChange);
       window.removeEventListener('offline', handleNetworkChange);
     };
-  }, []);
+  }, [networkStatus]);
   
-  // Update refs when props change - only update if really changed
+  // Effect to reset state when prompt changes - only run when necessary
   useEffect(() => {
-    if (promptIdRef.current !== promptId) {
-      console.log(`[useSimplifiedPromptWizard] Prompt ID changed from ${promptIdRef.current} to ${promptId}`);
-      promptIdRef.current = promptId;
+    if (promptId !== lastPromptIdRef.current) {
+      logger.info(`Prompt ID changed from ${lastPromptIdRef.current} to ${promptId}`);
+      lastPromptIdRef.current = promptId;
       isFirstLoadRef.current = true;
-    }
-    
-    if (stableIsOpenRef.current !== isOpen) {
-      console.log(`[useSimplifiedPromptWizard] isOpen changed from ${stableIsOpenRef.current} to ${isOpen}`);
-      stableIsOpenRef.current = isOpen;
+      
+      // Reset state when prompt changes
+      if (isOpen) {
+        setSelectedTweaks({});
+        setAdditionalContext("");
+      }
     }
   }, [promptId, isOpen]);
   
-  // IMPROVED: Fetch prompt details with retry capability and better caching
+  // IMPROVED: Fetch prompt details with optimized dependency array
   const { 
     prompt, 
     isLoading: isPromptLoading, 
@@ -70,7 +112,7 @@ export function useSimplifiedPromptWizard(
     refetch: refetchPrompt 
   } = usePromptFetching(promptId, isOpen);
   
-  // DIRECT PARAMETER FETCHING: Use stable references to prevent re-fetching
+  // IMPROVED: Parameter fetching with optimized caching
   const { 
     parameters, 
     isLoading: isParametersLoading, 
@@ -79,17 +121,17 @@ export function useSimplifiedPromptWizard(
     lastSuccessfulFetch
   } = usePromptParameters(promptId);
   
-  // Update parameters cache when new parameters are loaded - ONLY if they've changed
+  // Update parameters cache only when parameters change - with deep comparison
   useEffect(() => {
     if (parameters && 
         parameters.length > 0 && 
         JSON.stringify(parameters) !== JSON.stringify(parametersCache.current)) {
-      console.log(`[useSimplifiedPromptWizard] Updating parameters cache with ${parameters.length} items`);
+      logger.info(`Updating parameters cache with ${parameters.length} items`);
       parametersCache.current = [...parameters];
       
-      // Debug the parameters structure
-      if (parameters.length > 0) {
-        console.log('[useSimplifiedPromptWizard] First parameter structure:', {
+      // Log parameter structure only in development
+      if (process.env.NODE_ENV !== 'production' && parameters.length > 0) {
+        logger.debug('First parameter structure:', {
           id: parameters[0].id,
           name: parameters[0].name,
           hasTweaks: Array.isArray(parameters[0].tweaks) && parameters[0].tweaks.length > 0,
@@ -99,58 +141,73 @@ export function useSimplifiedPromptWizard(
     }
   }, [parameters]);
   
-  // Fixed loading state calculation to prevent flickering
+  // Optimize loading state to prevent flickering
   const isLoading = useMemo(() => {
-    // First, check if we've completed an initial successful load to avoid constant loading states
+    // If we've completed an initial successful load, prioritize cached data
     if (lastSuccessfulFetch && !isFirstLoadRef.current) {
       return false;
     }
     
-    // Otherwise, use standard loading indicators
     return isPromptLoading || isParametersLoading;
   }, [isPromptLoading, isParametersLoading, lastSuccessfulFetch]);
   
   // Update first load state once we have completed a load
   useEffect(() => {
     if (!isLoading && isFirstLoadRef.current) {
-      console.log('[useSimplifiedPromptWizard] First load complete, marking as not first load anymore');
+      logger.debug('First load complete, marking as not first load anymore');
       isFirstLoadRef.current = false;
     }
   }, [isLoading]);
   
-  // Reset form state when wizard opens with a new prompt - using stable references
-  useEffect(() => {
-    if (isOpen) {
-      console.log(`[useSimplifiedPromptWizard] Resetting form state for promptId: ${promptId}`);
-      setSelectedTweaks({});
-      setAdditionalContext("");
-    }
-  }, [isOpen, promptId]);
-  
-  // Handle tweak selection with stable callback
+  // Handle tweak selection with stable callback and reference equality
   const handleTweakChange = useCallback((parameterId: string, tweakId: string) => {
-    console.log(`[useSimplifiedPromptWizard] Selecting tweak ${tweakId} for parameter ${parameterId}`);
-    setSelectedTweaks(prev => ({
-      ...prev,
-      [parameterId]: tweakId,
-    }));
+    logger.debug(`Selecting tweak ${tweakId} for parameter ${parameterId}`);
+    setSelectedTweaks(prev => {
+      // Only update if value actually changes
+      if (prev[parameterId] === tweakId) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [parameterId]: tweakId,
+      };
+    });
   }, []);
   
-  // IMPROVED: Manual retry function for all data
+  // Manual retry function with debouncing
+  const handleRetryTimeoutRef = useRef<number | null>(null);
   const handleRetry = useCallback(() => {
-    console.log("[useSimplifiedPromptWizard] Manually retrying all data fetch");
-    refetchPrompt();
-    retryParameters();
+    // Clear any pending retry
+    if (handleRetryTimeoutRef.current) {
+      window.clearTimeout(handleRetryTimeoutRef.current);
+    }
     
-    toast({
-      title: "Retrying",
-      description: "Attempting to reload data...",
-    });
+    // Debounce retries to prevent multiple rapid retries
+    handleRetryTimeoutRef.current = window.setTimeout(() => {
+      logger.info("Manually retrying all data fetch");
+      refetchPrompt();
+      retryParameters();
+      
+      toast({
+        title: "Retrying",
+        description: "Attempting to reload data...",
+      });
+      handleRetryTimeoutRef.current = null;
+    }, 300);
   }, [refetchPrompt, retryParameters, toast]);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (handleRetryTimeoutRef.current) {
+        window.clearTimeout(handleRetryTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // VALIDATION: Validate the form with stable data references
   const isFormValid = useCallback(() => {
-    // Use cached parameters to validate
+    // Use cached parameters to validate if available
     const paramsToCheck = parameters && parameters.length > 0 ? parameters : parametersCache.current;
     
     // Validate that parameters are loaded correctly
@@ -165,10 +222,10 @@ export function useSimplifiedPromptWizard(
     return isValid;
   }, [parameters, selectedTweaks]);
   
-  // Generate content with improved error handling
+  // Generate content with improved error handling and stability
   const handleSave = useCallback(async () => {
     if (!prompt || !user?.id) {
-      console.error("[useSimplifiedPromptWizard] Missing prompt or user data:", { 
+      logger.error("Missing prompt or user data:", { 
         promptExists: !!prompt, 
         userIdExists: !!user?.id 
       });
@@ -181,7 +238,7 @@ export function useSimplifiedPromptWizard(
     }
     
     if (!isFormValid()) {
-      console.warn("[useSimplifiedPromptWizard] Form validation failed");
+      logger.warn("Form validation failed");
       toast({
         title: "Required Selections Missing",
         description: "Please complete all required customization options",
@@ -198,7 +255,7 @@ export function useSimplifiedPromptWizard(
       
       // Collect all selected tweaks with validation
       const tweakIds = Object.values(selectedTweaks).filter(Boolean);
-      console.log("[useSimplifiedPromptWizard] Selected tweak IDs:", tweakIds);
+      logger.debug("Selected tweak IDs:", tweakIds);
       
       if (tweakIds.length === 0 && paramsToUse.some(p => p.rule?.is_required)) {
         throw new Error("Required selections are missing");
@@ -209,19 +266,19 @@ export function useSimplifiedPromptWizard(
         .flatMap(param => param.tweaks || [])
         .filter(tweak => tweakIds.includes(tweak.id));
       
-      console.log("[useSimplifiedPromptWizard] Selected tweak details:", selectedTweakDetails);
+      logger.debug("Selected tweak details:", selectedTweakDetails);
       
       if (tweakIds.length > 0 && selectedTweakDetails.length === 0) {
-        console.error("[useSimplifiedPromptWizard] No tweak details found for selected IDs");
+        logger.error("No tweak details found for selected IDs");
         throw new Error("Selected options could not be found");
       }
       
       const tweakPrompts = selectedTweakDetails.map(tweak => tweak.sub_prompt).join("\n");
       
-      console.log("[useSimplifiedPromptWizard] Generating content with:", {
+      logger.info("Generating content with:", {
         basePrompt: prompt.prompt,
         selectedTweaks: selectedTweakDetails.map(t => t.name),
-        additionalContext
+        additionalContext: additionalContext ? "Provided" : "None"
       });
       
       // Call the Supabase Edge Function to generate content
@@ -244,7 +301,7 @@ export function useSimplifiedPromptWizard(
       }
       
       const result = await response.json();
-      console.log("[useSimplifiedPromptWizard] Generation result:", result);
+      logger.info("Generation successful");
       
       toast({
         title: "Content Generated",
@@ -256,7 +313,7 @@ export function useSimplifiedPromptWizard(
       
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error("[useSimplifiedPromptWizard] Error generating content:", error);
+      logger.error("Error generating content:", error);
       toast({
         title: "Error Generating Content",
         description: errorMessage || "An unexpected error occurred",

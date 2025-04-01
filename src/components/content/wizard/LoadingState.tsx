@@ -8,34 +8,70 @@ interface LoadingStateProps {
   message?: string;
 }
 
+// Logging levels control
+const LOG_LEVEL = {
+  ERROR: 0,
+  WARN: 1,
+  INFO: 2,
+  DEBUG: 3
+};
+
+// Set this to control logging verbosity
+const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.WARN;
+
+// Custom logger to control logging
+const logger = {
+  error: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.ERROR) console.error(`[LoadingState] ${message}`, ...args);
+  },
+  warn: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.WARN) console.warn(`[LoadingState] ${message}`, ...args);
+  },
+  info: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) console.log(`[LoadingState] ${message}`, ...args);
+  },
+  debug: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) console.log(`[LoadingState] ${message}`, ...args);
+  }
+};
+
 const LoadingState: React.FC<LoadingStateProps> = React.memo(({ 
   message = "Loading prompt..." 
 }) => {
   const mountTimeRef = useRef<number>(Date.now());
-  const updateInterval = useRef<number | null>(null);
+  const updateIntervalRef = useRef<number | null>(null);
   const [loadingTime, setLoadingTime] = React.useState<number>(0);
   
   useEffect(() => {
-    console.log(`[LoadingState] Component mounted at ${new Date().toISOString()}`);
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+      logger.debug(`Component mounted at ${new Date().toISOString()}`);
+    }
+    
     mountTimeRef.current = Date.now();
     
-    // Update loading time every second for debugging
-    updateInterval.current = window.setInterval(() => {
-      const currentDuration = Date.now() - mountTimeRef.current;
-      setLoadingTime(currentDuration);
-      
-      // Log every 2 seconds
-      if (currentDuration > 0 && currentDuration % 2000 < 100) {
-        console.log(`[LoadingState] Still loading after ${Math.floor(currentDuration / 1000)}s`);
-      }
-    }, 1000);
+    // Update loading time every second for debugging, but only in development
+    if (process.env.NODE_ENV !== 'production') {
+      updateIntervalRef.current = window.setInterval(() => {
+        const currentDuration = Date.now() - mountTimeRef.current;
+        setLoadingTime(currentDuration);
+        
+        // Log every 2 seconds
+        if (currentDuration > 0 && currentDuration % 2000 < 100 && CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) {
+          logger.info(`Still loading after ${Math.floor(currentDuration / 1000)}s`);
+        }
+      }, 1000);
+    }
     
     return () => {
       const duration = Date.now() - mountTimeRef.current;
-      console.log(`[LoadingState] Component unmounted after ${duration}ms`);
       
-      if (updateInterval.current) {
-        clearInterval(updateInterval.current);
+      if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+        logger.debug(`Component unmounted after ${duration}ms`);
+      }
+      
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current);
+        updateIntervalRef.current = null;
       }
     };
   }, []);

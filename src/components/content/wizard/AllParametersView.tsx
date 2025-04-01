@@ -2,7 +2,7 @@
 import React, { useMemo } from "react";
 import { ParameterWithTweaks } from "@/types/promptParameters";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,33 @@ interface AllParametersViewProps {
   selectedTweaks: Record<string, string>;
   onTweakChange: (parameterId: string, tweakId: string) => void;
 }
+
+// Logging levels control
+const LOG_LEVEL = {
+  ERROR: 0,
+  WARN: 1,
+  INFO: 2,
+  DEBUG: 3
+};
+
+// Set this to control logging verbosity
+const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.WARN;
+
+// Custom logger to control logging
+const logger = {
+  error: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.ERROR) console.error(`[AllParametersView] ${message}`, ...args);
+  },
+  warn: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.WARN) console.warn(`[AllParametersView] ${message}`, ...args);
+  },
+  info: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) console.log(`[AllParametersView] ${message}`, ...args);
+  },
+  debug: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) console.log(`[AllParametersView] ${message}`, ...args);
+  }
+};
 
 // Memoize the parameter option to prevent re-renders
 const ParameterOption = React.memo(({ 
@@ -67,8 +94,10 @@ const ParameterCard = React.memo(({
   onTweakChange: (parameterId: string, tweakId: string) => void;
   isLast: boolean;
 }) => {
-  // Debug logging for parameter rendering
-  console.log(`[ParameterCard] Rendering parameter ${param.name} with ${param.tweaks?.length || 0} tweaks`);
+  // Debug logging for parameter rendering conditionally
+  if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+    logger.debug(`Rendering parameter ${param.name} with ${param.tweaks?.length || 0} tweaks`);
+  }
   
   // Improved validation for tweaks array - memoized
   const hasTweaks = useMemo(() => {
@@ -101,7 +130,9 @@ const ParameterCard = React.memo(({
               {param.tweaks.map((tweak) => {
                 // Skip invalid tweaks
                 if (!tweak || !tweak.id) {
-                  console.log(`[ParameterCard] Skipping invalid tweak for parameter ${param.name}`);
+                  if (CURRENT_LOG_LEVEL >= LOG_LEVEL.WARN) {
+                    logger.warn(`Skipping invalid tweak for parameter ${param.name}`);
+                  }
                   return null;
                 }
                 
@@ -146,25 +177,34 @@ const AllParametersView = React.memo(({
   selectedTweaks,
   onTweakChange
 }: AllParametersViewProps) => {
-  console.log(`[AllParametersView] Rendering with ${parameters?.length || 0} parameters`);
+  // Log rendering only in development and not too frequently
+  if (CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) {
+    logger.info(`Rendering with ${parameters?.length || 0} parameters`);
+  }
   
   // Validate and create a safe copy of parameters with a memo
   const safeParameters = useMemo(() => {
     if (!Array.isArray(parameters)) {
-      console.warn("[AllParametersView] Received non-array parameters:", parameters);
+      logger.warn("Received non-array parameters:", parameters);
       return [];
     }
     
     // Filter out invalid parameters
     const filteredParams = parameters.filter(p => p && p.id && p.name);
-    console.log(`[AllParametersView] Filtered ${parameters.length} parameters to ${filteredParams.length} valid ones`);
+    
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+      logger.debug(`Filtered ${parameters.length} parameters to ${filteredParams.length} valid ones`);
+    }
     
     return filteredParams;
   }, [parameters]);
   
   // Handle empty parameters array
   if (safeParameters.length === 0) {
-    console.log("[AllParametersView] No valid parameters to render");
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) {
+      logger.info("No valid parameters to render");
+    }
+    
     return (
       <Alert className="mb-4">
         <Info className="h-4 w-4 text-blue-500" />

@@ -3,6 +3,42 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useCrewkitPrompts, Prompt } from "@/hooks/useCrewkitPrompts";
 import { useToast } from "@/hooks/use-toast";
 
+// Logging levels control
+const LOG_LEVEL = {
+  ERROR: 0,
+  WARN: 1,
+  INFO: 2,
+  DEBUG: 3
+};
+
+// Set this to control logging verbosity
+const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.WARN;
+
+// Custom logger to control logging
+const logger = {
+  error: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.ERROR) console.error(`[usePromptFetching] ${message}`, ...args);
+  },
+  warn: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.WARN) console.warn(`[usePromptFetching] ${message}`, ...args);
+  },
+  info: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) console.log(`[usePromptFetching] ${message}`, ...args);
+  },
+  debug: (message: string, ...args: any[]) => {
+    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) console.log(`[usePromptFetching] ${message}`, ...args);
+  }
+};
+
+// Cache for storing fetched prompts
+const promptCache = new Map<string, {
+  data: Prompt,
+  timestamp: number
+}>();
+
+// Cache expiration time
+const CACHE_EXPIRY_TIME = 5 * 60 * 1000; // 5 minutes
+
 export function usePromptFetching(promptId: string | undefined, isOpen: boolean, retryCount: number = 0) {
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -10,38 +46,87 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
   const { getPromptById } = useCrewkitPrompts();
   const { toast } = useToast();
   
-  // Use a ref to track if error toast was already shown
+  // Refs for tracking state and preventing memory leaks
   const errorToastShownRef = useRef<boolean>(false);
   const attemptCountRef = useRef<number>(0);
+  const isMountedRef = useRef<boolean>(true);
+  const fetchingRef = useRef<boolean>(false);
+  
+  // Use cached data if available and not expired
+  const useCachedData = useCallback((promptId: string | undefined) => {
+    if (!promptId) return null;
+    
+    const cachedEntry = promptCache.get(promptId);
+    if (cachedEntry) {
+      const now = Date.now();
+      if (now - cachedEntry.timestamp < CACHE_EXPIRY_TIME) {
+        logger.debug(`Using cached prompt for ID: ${promptId}`);
+        return cachedEntry.data;
+      } else {
+        // Cache expired, remove it
+        logger.debug(`Cache expired for prompt ID: ${promptId}`);
+        promptCache.delete(promptId);
+      }
+    }
+    return null;
+  }, []);
   
   const fetchPrompt = useCallback(async () => {
     if (!promptId || !isOpen) return;
     
+    // Check if we're already fetching
+    if (fetchingRef.current) {
+      logger.debug("Already fetching prompt, skipping redundant fetch");
+      return;
+    }
+    
+    // Check for cached data
+    const cachedData = useCachedData(promptId);
+    if (cachedData) {
+      if (isMountedRef.current) {
+        setPrompt(cachedData);
+        setIsLoading(false);
+        setError(null);
+      }
+      
+      // Still fetch in the background to update cache
+      // but no need to show loading state
+    }
+    
+    // Set fetching flag to prevent duplicate requests
+    fetchingRef.current = true;
+    attemptCountRef.current += 1;
+    
+    logger.info(`Fetching prompt with ID: ${promptId} (attempt: ${attemptCountRef.current})`);
+    
     try {
-      setIsLoading(true);
-      setError(null);
-      attemptCountRef.current += 1;
-      console.log(`Fetching prompt with ID: ${promptId} (attempt: ${attemptCountRef.current})`);
-      
-      // Add a timeout to detect slow network issues
-      const timeoutId = setTimeout(() => {
-        console.log("Fetch operation is taking longer than expected");
-      }, 5000);
-      
       const fetchedPrompt = await getPromptById(promptId);
       
-      // Clear timeout
-      clearTimeout(timeoutId);
+      // Update cache
+      if (fetchedPrompt) {
+        promptCache.set(promptId, {
+          data: fetchedPrompt,
+          timestamp: Date.now()
+        });
+      }
       
       // Reset error toast flag on successful fetch
       errorToastShownRef.current = false;
       
+      if (!isMountedRef.current) {
+        logger.debug("Component unmounted during fetch, not updating state");
+        fetchingRef.current = false;
+        return;
+      }
+      
       if (fetchedPrompt) {
-        console.log("Successfully fetched prompt:", fetchedPrompt.title, fetchedPrompt);
+        logger.info("Successfully fetched prompt:", fetchedPrompt.title);
         setPrompt(fetchedPrompt);
+        setError(null);
       } else {
-        console.error("No prompt returned from getPromptById for ID:", promptId);
+        logger.error("No prompt returned from getPromptById for ID:", promptId);
         setError("Prompt not found. It may have been deleted or you may not have access.");
+        setPrompt(null);
         
         if (!errorToastShownRef.current) {
           errorToastShownRef.current = true;
@@ -54,7 +139,13 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
       }
     } catch (error: any) {
       const errorMessage = error?.message || "An unknown error occurred";
-      console.error(`Error fetching prompt: ${errorMessage}`, error);
+      logger.error(`Error fetching prompt: ${errorMessage}`, error);
+      
+      if (!isMountedRef.current) {
+        logger.debug("Component unmounted during error handling, not updating state");
+        fetchingRef.current = false;
+        return;
+      }
       
       // Categorize error for better user messaging
       let userErrorMessage = "Failed to load prompt. ";
@@ -67,7 +158,6 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
       }
       
       setError(userErrorMessage);
-      setPrompt(null);
       
       // Only show toast if not already shown for this error session
       if (!errorToastShownRef.current) {
@@ -79,25 +169,54 @@ export function usePromptFetching(promptId: string | undefined, isOpen: boolean,
         });
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+      fetchingRef.current = false;
     }
-  }, [promptId, isOpen, getPromptById, toast]);
+  }, [promptId, isOpen, getPromptById, toast, useCachedData]);
   
+  // Track component mounted state
   useEffect(() => {
-    let isMounted = true;
-    
-    if (promptId && isOpen) {
-      fetchPrompt();
-    }
+    isMountedRef.current = true;
     
     return () => {
-      // Cleanup function
-      isMounted = false;
+      isMountedRef.current = false;
+    };
+  }, []);
+  
+  // Effect to fetch data when promptId/isOpen changes or retry is triggered
+  useEffect(() => {
+    if (!promptId || !isOpen) {
+      return;
+    }
+    
+    // Check for cached data first
+    const cachedData = useCachedData(promptId);
+    if (cachedData) {
+      setPrompt(cachedData);
+      setIsLoading(false);
+      setError(null);
+      
+      // Still fetch in background to refresh cache
+      fetchPrompt();
+      return;
+    }
+    
+    // If no cached data, show loading state and fetch
+    setIsLoading(true);
+    fetchPrompt();
+    
+  }, [promptId, isOpen, fetchPrompt, retryCount, useCachedData]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
       // Reset error toast flag on unmount
       errorToastShownRef.current = false;
       attemptCountRef.current = 0;
     };
-  }, [promptId, isOpen, fetchPrompt, retryCount]);
+  }, []);
   
   // Add a method to reset error toast flag
   const resetErrorFlag = useCallback(() => {
