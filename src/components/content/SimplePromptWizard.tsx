@@ -26,6 +26,53 @@ interface SimplePromptWizardProps {
   onClose: () => void;
 }
 
+// Create a separate memoized component for the tabs content
+const TabsContentSection = React.memo(({ 
+  activeTab, 
+  hasParameters, 
+  safeParameters, 
+  selectedTweaks, 
+  handleTweakChange, 
+  additionalContext, 
+  setAdditionalContext 
+}: { 
+  activeTab: string; 
+  hasParameters: boolean; 
+  safeParameters: any[]; 
+  selectedTweaks: Record<string, string>; 
+  handleTweakChange: (parameterId: string, tweakId: string) => void;
+  additionalContext: string;
+  setAdditionalContext: (value: string) => void;
+}) => {
+  return (
+    <>
+      <TabsContent value="customize" className="py-4 min-h-[300px]">
+        {hasParameters ? (
+          <AllParametersView 
+            parameters={safeParameters} 
+            selectedTweaks={selectedTweaks}
+            onTweakChange={handleTweakChange}
+          />
+        ) : (
+          <div className="py-8 text-center text-muted-foreground">
+            <p>No customization options available for this prompt.</p>
+            <p className="mt-2">You can add additional context in the next tab.</p>
+          </div>
+        )}
+      </TabsContent>
+      
+      <TabsContent value="context" className="py-4 min-h-[300px]">
+        <AdditionalContextStep 
+          additionalContext={additionalContext} 
+          setAdditionalContext={setAdditionalContext}
+        />
+      </TabsContent>
+    </>
+  );
+});
+
+TabsContentSection.displayName = "TabsContentSection";
+
 const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({ 
   promptId, 
   isOpen, 
@@ -172,32 +219,16 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
                 <TabsTrigger value="context" className="flex-1">Add Context</TabsTrigger>
               </TabsList>
               
-              {/* Wrap the content in a memo to prevent re-renders */}
-              <React.memo(() => (
-                <>
-                  <TabsContent value="customize" className="py-4 min-h-[300px]">
-                    {hasParameters ? (
-                      <AllParametersView 
-                        parameters={safeParameters} 
-                        selectedTweaks={selectedTweaks}
-                        onTweakChange={handleTweakChange}
-                      />
-                    ) : (
-                      <div className="py-8 text-center text-muted-foreground">
-                        <p>No customization options available for this prompt.</p>
-                        <p className="mt-2">You can add additional context in the next tab.</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="context" className="py-4 min-h-[300px]">
-                    <AdditionalContextStep 
-                      additionalContext={additionalContext} 
-                      setAdditionalContext={setAdditionalContext}
-                    />
-                  </TabsContent>
-                </>
-              ))}
+              {/* Use the memoized component for tabs content */}
+              <TabsContentSection
+                activeTab={activeTab}
+                hasParameters={hasParameters}
+                safeParameters={safeParameters}
+                selectedTweaks={selectedTweaks}
+                handleTweakChange={handleTweakChange}
+                additionalContext={additionalContext}
+                setAdditionalContext={setAdditionalContext}
+              />
             </Tabs>
           </div>
         )}
