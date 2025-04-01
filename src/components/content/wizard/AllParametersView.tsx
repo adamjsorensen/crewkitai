@@ -19,31 +19,47 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
   selectedTweaks,
   onTweakChange
 }) => {
-  // Enhanced validation and debug logging
+  // VALIDATION: Enhanced validation and debug logging
   useEffect(() => {
-    if (!parameters || parameters.length === 0) {
-      console.warn("AllParametersView: No parameters provided or empty array");
+    if (!parameters) {
+      console.warn("[AllParametersView] Parameters is undefined");
+      return;
+    }
+    
+    if (!Array.isArray(parameters)) {
+      console.error("[AllParametersView] Parameters is not an array:", parameters);
+      return;
+    }
+    
+    if (parameters.length === 0) {
+      console.log("[AllParametersView] No parameters provided or empty array");
       return;
     }
     
     // Validate parameter data
     parameters.forEach(param => {
-      if (!param.id) {
-        console.error("Parameter missing ID:", param);
+      if (!param) {
+        console.error("[AllParametersView] Null or undefined parameter in array");
+        return;
       }
       
-      console.log(`Parameter ${param.name || 'unnamed'} (${param.id}) has ${param.tweaks?.length || 0} tweaks`);
+      if (!param.id) {
+        console.error("[AllParametersView] Parameter missing ID:", param);
+      }
+      
+      console.log(`[AllParametersView] Parameter ${param.name || 'unnamed'} (${param.id}) has ${param.tweaks?.length || 0} tweaks`);
       
       if (!param.tweaks || param.tweaks.length === 0) {
-        console.warn(`Parameter ${param.name || 'unnamed'} has no tweaks`);
+        console.warn(`[AllParametersView] Parameter ${param.name || 'unnamed'} has no tweaks`);
       }
     });
   }, [parameters]);
 
+  // VALIDATION: Check for invalid parameters array
   if (!parameters || !Array.isArray(parameters)) {
-    console.error("Invalid parameters value:", parameters);
+    console.error("[AllParametersView] Invalid parameters value:", parameters);
     return (
-      <Alert className="mb-4">
+      <Alert className="mb-4 border-amber-500">
         <AlertTriangle className="h-4 w-4 text-amber-500" />
         <AlertDescription>
           Error loading parameters data. The data format is invalid.
@@ -52,6 +68,7 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
     );
   }
 
+  // VALIDATION: Handle empty parameters array
   if (parameters.length === 0) {
     return (
       <Alert className="mb-4">
@@ -68,14 +85,14 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
       <h3 className="text-lg font-medium">Customize Your Prompt</h3>
       
       {parameters.map((param, index) => {
-        // Skip invalid parameters
+        // VALIDATION: Skip invalid parameters
         if (!param || !param.id) {
-          console.error("Invalid parameter at index", index, param);
+          console.error("[AllParametersView] Invalid parameter at index", index, param);
           return null;
         }
         
         // Check if parameter has tweaks
-        const hasTweaks = param.tweaks && param.tweaks.length > 0;
+        const hasTweaks = param.tweaks && Array.isArray(param.tweaks) && param.tweaks.length > 0;
         
         return (
           <Card key={param.id} className="overflow-hidden">
@@ -90,20 +107,21 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
               <RadioGroup 
                 value={selectedTweaks[param.id] || ''} 
                 onValueChange={(value) => {
-                  console.log(`Tweak selected for parameter ${param.id}: ${value}`);
+                  console.log(`[AllParametersView] Tweak selected for parameter ${param.id}: ${value}`);
                   onTweakChange(param.id, value);
                 }}
               >
                 <div className="space-y-2">
                   {hasTweaks ? (
                     param.tweaks.map((tweak) => {
+                      // VALIDATION: Skip invalid tweaks
                       if (!tweak || !tweak.id) {
-                        console.error("Invalid tweak for parameter", param.name, tweak);
+                        console.error("[AllParametersView] Invalid tweak for parameter", param.name, tweak);
                         return null;
                       }
                       
                       return (
-                        <div key={tweak.id} className="flex items-start space-x-2 p-3 border rounded-md">
+                        <div key={tweak.id} className="flex items-start space-x-2 p-3 border rounded-md hover:bg-muted/30 transition-colors">
                           <RadioGroupItem id={`${param.id}-${tweak.id}`} value={tweak.id} />
                           <div className="flex-1">
                             <Label htmlFor={`${param.id}-${tweak.id}`} className="font-medium cursor-pointer">

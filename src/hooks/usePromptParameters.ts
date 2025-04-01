@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 
 /**
  * Improved hook for fetching prompt parameters and their tweaks
- * With better error handling and offline support
+ * With better error handling, parallel loading, and direct parameter fetching
  */
 export function usePromptParameters(promptId: string | undefined) {
   const [parameters, setParameters] = useState<ParameterWithTweaks[]>([]);
@@ -17,7 +17,7 @@ export function usePromptParameters(promptId: string | undefined) {
 
   const fetchParameters = useCallback(async () => {
     if (!promptId) {
-      console.log("No promptId provided, skipping parameter fetch");
+      console.log("[usePromptParameters] No promptId provided, skipping parameter fetch");
       setParameters([]);
       setIsLoading(false);
       return;
@@ -27,8 +27,9 @@ export function usePromptParameters(promptId: string | undefined) {
     setError(null);
 
     try {
-      console.log(`Fetching parameters for prompt ID: ${promptId} (Attempt: ${retryCount + 1})`);
+      console.log(`[usePromptParameters] Fetching parameters for prompt ID: ${promptId} (Attempt: ${retryCount + 1})`);
       
+      // OPTIMIZATION: Perform a direct query for parameters in one go
       // Step 1: Get parameter rules for this prompt
       const { data: ruleData, error: ruleError } = await supabase
         .from('prompt_parameter_rules')
@@ -38,21 +39,29 @@ export function usePromptParameters(promptId: string | undefined) {
         .order('order');
       
       if (ruleError) {
-        console.error("Error fetching parameter rules:", ruleError);
+        console.error("[usePromptParameters] Error fetching parameter rules:", ruleError);
         throw new Error(`Error fetching parameter rules: ${ruleError.message}`);
       }
       
       if (!ruleData || ruleData.length === 0) {
-        console.log(`No parameter rules found for prompt: ${promptId}`);
+        console.log(`[usePromptParameters] No parameter rules found for prompt: ${promptId}`);
         setParameters([]);
         setIsLoading(false);
         return;
       }
       
-      console.log(`Found ${ruleData.length} parameter rules`);
+      console.log(`[usePromptParameters] Found ${ruleData.length} parameter rules`);
       
       // Extract parameter IDs from rules
       const parameterIds = ruleData.map(rule => rule.parameter_id);
+      
+      // Validate parameter IDs
+      if (!parameterIds.length || parameterIds.some(id => !id)) {
+        console.error("[usePromptParameters] Invalid parameter IDs in rules:", parameterIds);
+        setParameters([]);
+        setIsLoading(false);
+        return;
+      }
       
       // Step 2: Get parameters by their IDs
       const { data: paramData, error: paramError } = await supabase
@@ -62,18 +71,18 @@ export function usePromptParameters(promptId: string | undefined) {
         .eq('active', true);
         
       if (paramError) {
-        console.error("Error fetching parameters:", paramError);
+        console.error("[usePromptParameters] Error fetching parameters:", paramError);
         throw new Error(`Error fetching parameters: ${paramError.message}`);
       }
       
       if (!paramData || paramData.length === 0) {
-        console.log("No active parameters found for the rules");
+        console.log("[usePromptParameters] No active parameters found for the rules");
         setParameters([]);
         setIsLoading(false);
         return;
       }
       
-      console.log(`Found ${paramData.length} parameters`);
+      console.log(`[usePromptParameters] Found ${paramData.length} parameters`);
       
       // Step 3: Get tweaks for all these parameters
       const { data: tweakData, error: tweakError } = await supabase
@@ -84,11 +93,11 @@ export function usePromptParameters(promptId: string | undefined) {
         .order('order');
         
       if (tweakError) {
-        console.error("Error fetching parameter tweaks:", tweakError);
+        console.error("[usePromptParameters] Error fetching parameter tweaks:", tweakError);
         throw new Error(`Error fetching parameter tweaks: ${tweakError.message}`);
       }
       
-      console.log(`Found ${tweakData?.length || 0} tweaks for parameters`);
+      console.log(`[usePromptParameters] Found ${tweakData?.length || 0} tweaks for parameters`);
       
       // Group tweaks by parameter ID
       const tweaksByParameter: Record<string, any[]> = {};
@@ -102,12 +111,18 @@ export function usePromptParameters(promptId: string | undefined) {
         }
       });
       
-      // Step 4: Combine the data into the expected format
+      // Step 4: Combine the data into the expected format with enhanced validation
       const parametersWithTweaks: ParameterWithTweaks[] = paramData.map(param => {
         // Find the rule for this parameter
         const rule = ruleData.find(r => r.parameter_id === param.id);
         // Get tweaks for this parameter
         const tweaks = tweaksByParameter[param.id] || [];
+        
+        // VALIDATION: Ensure we have a valid parameter with required fields
+        if (!param.id || !param.name) {
+          console.warn("[usePromptParameters] Invalid parameter data:", param);
+          return null;
+        }
         
         return {
           ...param,
@@ -123,9 +138,9 @@ export function usePromptParameters(promptId: string | undefined) {
             updated_at: param.updated_at
           } : undefined
         };
-      });
+      }).filter(Boolean) as ParameterWithTweaks[];
       
-      console.log("Final processed parameters:", parametersWithTweaks);
+      console.log("[usePromptParameters] Final processed parameters:", parametersWithTweaks);
       
       // Sort parameters by rule order
       parametersWithTweaks.sort((a, b) => {
@@ -135,7 +150,7 @@ export function usePromptParameters(promptId: string | undefined) {
       setParameters(parametersWithTweaks);
       setIsLoading(false);
     } catch (err: any) {
-      console.error("Error in usePromptParameters:", err);
+      console.error("[usePromptParameters] Error in usePromptParameters:", err);
       setError(`Failed to load parameters: ${err.message}`);
       setParameters([]);
       setIsLoading(false);
@@ -152,12 +167,20 @@ export function usePromptParameters(promptId: string | undefined) {
 
   // Fetch parameters when promptId changes or when retry is triggered
   useEffect(() => {
-    fetchParameters();
+    if (promptId) {
+      console.log(`[usePromptParameters] Triggering parameter fetch for promptId: ${promptId}`);
+      fetchParameters();
+    } else {
+      console.log("[usePromptParameters] No promptId available, resetting parameters state");
+      setParameters([]);
+      setIsLoading(false);
+      setError(null);
+    }
   }, [fetchParameters, promptId, retryCount]);
 
   // Provide a retry mechanism
   const retry = useCallback(() => {
-    console.log("Manually retrying parameter fetch");
+    console.log("[usePromptParameters] Manually retrying parameter fetch");
     setRetryCount(prev => prev + 1);
   }, []);
 

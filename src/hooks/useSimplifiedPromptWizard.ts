@@ -21,11 +21,14 @@ export function useSimplifiedPromptWizard(
   const [debouncedLoading, setDebouncedLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
+  const [paramFetchInitiated, setParamFetchInitiated] = useState(false);
   
   // Check network status
   useEffect(() => {
     const handleNetworkChange = () => {
-      setNetworkStatus(navigator.onLine ? 'online' : 'offline');
+      const status = navigator.onLine ? 'online' : 'offline';
+      console.log(`[useSimplifiedPromptWizard] Network status changed to: ${status}`);
+      setNetworkStatus(status);
     };
     
     window.addEventListener('online', handleNetworkChange);
@@ -40,7 +43,7 @@ export function useSimplifiedPromptWizard(
     };
   }, []);
   
-  // Fetch prompt details with retry capability
+  // IMPROVED: Fetch prompt details with retry capability
   const { 
     prompt, 
     isLoading: isPromptLoading, 
@@ -48,16 +51,29 @@ export function useSimplifiedPromptWizard(
     refetch: refetchPrompt 
   } = usePromptFetching(promptId, isOpen, retryCount);
   
-  // Fetch parameters with the improved hook
+  // DIRECT PARAMETER FETCHING: Pass promptId directly to usePromptParameters
+  // This enables parallel loading rather than waiting for prompt to load first
   const { 
     parameters, 
     isLoading: isParametersLoading, 
     error: parametersError,
     retry: retryParameters
-  } = usePromptParameters(prompt?.id);
+  } = usePromptParameters(promptId);
   
-  // Combine loading states
+  // Flag to track when parameter fetch has been initiated
+  useEffect(() => {
+    if (promptId && !paramFetchInitiated) {
+      console.log(`[useSimplifiedPromptWizard] Initiating parameter fetch for promptId: ${promptId}`);
+      setParamFetchInitiated(true);
+    }
+  }, [promptId, paramFetchInitiated]);
+  
+  // Combine loading states with logging
   const isLoading = isPromptLoading || isParametersLoading;
+  
+  useEffect(() => {
+    console.log(`[useSimplifiedPromptWizard] Loading states - prompt: ${isPromptLoading}, parameters: ${isParametersLoading}, combined: ${isLoading}`);
+  }, [isPromptLoading, isParametersLoading, isLoading]);
   
   // Add debounce to loading state changes to prevent flickering
   useEffect(() => {
@@ -77,53 +93,67 @@ export function useSimplifiedPromptWizard(
   // Reset form state when wizard opens with a new prompt
   useEffect(() => {
     if (isOpen) {
-      console.log("useSimplifiedPromptWizard - resetting form state");
+      console.log(`[useSimplifiedPromptWizard] Resetting form state for promptId: ${promptId}`);
       setSelectedTweaks({});
       setAdditionalContext("");
       setDebouncedLoading(true); // Ensure loading state is true when opening
+      setParamFetchInitiated(false);
     }
   }, [isOpen, promptId]);
   
-  // Debug logging for parameters
+  // VALIDATION: Debug logging for parameters with enhanced validation
   useEffect(() => {
     if (prompt && !isParametersLoading) {
-      console.log("Parameters loaded for prompt:", prompt.id);
-      console.log("Parameters count:", parameters?.length || 0);
+      console.log(`[useSimplifiedPromptWizard] Parameters loaded for prompt: ${prompt.id}`);
+      console.log(`[useSimplifiedPromptWizard] Parameters count: ${parameters?.length || 0}`);
       
-      if (parameters?.length === 0 && !parametersError) {
-        console.log("No parameters found for prompt - this may be expected for some prompts");
+      // Validate parameters data integrity
+      if (parameters && parameters.length > 0) {
+        const validParameters = parameters.every(p => p && p.id && p.name);
+        if (!validParameters) {
+          console.error("[useSimplifiedPromptWizard] Invalid parameters data detected:", 
+            parameters.filter(p => !p || !p.id || !p.name));
+        }
+      } else if (parameters?.length === 0 && !parametersError) {
+        console.log("[useSimplifiedPromptWizard] No parameters found for prompt - this may be expected for some prompts");
       } else if (parametersError) {
-        console.error("Error loading parameters:", parametersError);
+        console.error("[useSimplifiedPromptWizard] Error loading parameters:", parametersError);
       }
     }
   }, [prompt, parameters, isParametersLoading, parametersError]);
   
-  // Debug logging for prompts
+  // Debug logging for prompts with data validation
   useEffect(() => {
     if (!isPromptLoading) {
       if (prompt) {
-        console.log("Prompt loaded successfully:", prompt.title);
+        console.log("[useSimplifiedPromptWizard] Prompt loaded successfully:", prompt.title);
+        
+        // Validate prompt data integrity
+        if (!prompt.id || !prompt.title) {
+          console.error("[useSimplifiedPromptWizard] Invalid prompt data:", prompt);
+        }
       } else if (promptId) {
-        console.log("Failed to load prompt for ID:", promptId);
+        console.log("[useSimplifiedPromptWizard] Failed to load prompt for ID:", promptId);
       }
     }
   }, [prompt, promptId, isPromptLoading]);
   
   // Handle tweak selection
   const handleTweakChange = useCallback((parameterId: string, tweakId: string) => {
-    console.log(`useSimplifiedPromptWizard - tweak selected: ${tweakId} for parameter: ${parameterId}`);
+    console.log(`[useSimplifiedPromptWizard] Tweak selected: ${tweakId} for parameter: ${parameterId}`);
     setSelectedTweaks(prev => ({
       ...prev,
       [parameterId]: tweakId,
     }));
   }, []);
   
-  // Manual retry function for all data
+  // IMPROVED: Manual retry function for all data with better logging
   const handleRetry = useCallback(() => {
-    console.log("Manually retrying all data fetch");
+    console.log("[useSimplifiedPromptWizard] Manually retrying all data fetch");
     setRetryCount(prev => prev + 1);
     refetchPrompt();
     retryParameters();
+    setParamFetchInitiated(false);
     
     toast({
       title: "Retrying",
@@ -131,23 +161,32 @@ export function useSimplifiedPromptWizard(
     });
   }, [refetchPrompt, retryParameters, toast]);
   
-  // Validate the form
+  // VALIDATION: Validate the form with better logging
   const isFormValid = useCallback(() => {
+    // Validate that parameters are loaded correctly
+    if (!parameters || !Array.isArray(parameters)) {
+      console.error("[useSimplifiedPromptWizard] Parameters not available or not an array:", parameters);
+      return false;
+    }
+    
     // Check if all required parameters have a selection
-    const requiredParameters = parameters?.filter(param => param.rule?.is_required) || [];
+    const requiredParameters = parameters.filter(param => param && param.rule?.is_required) || [];
     const isValid = requiredParameters.every(param => selectedTweaks[param.id]);
-    console.log("useSimplifiedPromptWizard - form validity check:", { 
+    
+    console.log("[useSimplifiedPromptWizard] Form validity check:", { 
       isValid, 
       requiredParameters: requiredParameters.length,
-      selectedTweaks: Object.keys(selectedTweaks).length 
+      selectedTweaks: Object.keys(selectedTweaks).length,
+      parametersLoaded: parameters?.length
     });
+    
     return isValid;
   }, [parameters, selectedTweaks]);
   
-  // Generate content
+  // Generate content with improved error handling
   const handleSave = useCallback(async () => {
     if (!prompt || !user?.id) {
-      console.error("useSimplifiedPromptWizard - Missing prompt or user data:", { 
+      console.error("[useSimplifiedPromptWizard] Missing prompt or user data:", { 
         promptExists: !!prompt, 
         userIdExists: !!user?.id 
       });
@@ -160,7 +199,7 @@ export function useSimplifiedPromptWizard(
     }
     
     if (!isFormValid()) {
-      console.warn("useSimplifiedPromptWizard - Form validation failed");
+      console.warn("[useSimplifiedPromptWizard] Form validation failed");
       toast({
         title: "Required Selections Missing",
         description: "Please complete all required customization options",
@@ -172,20 +211,29 @@ export function useSimplifiedPromptWizard(
     try {
       setGenerating(true);
       
-      // Collect all selected tweaks
-      const tweakIds = Object.values(selectedTweaks);
-      console.log("useSimplifiedPromptWizard - selected tweak IDs:", tweakIds);
+      // VALIDATION: Collect all selected tweaks with validation
+      const tweakIds = Object.values(selectedTweaks).filter(Boolean);
+      console.log("[useSimplifiedPromptWizard] Selected tweak IDs:", tweakIds);
+      
+      if (tweakIds.length === 0 && parameters.some(p => p.rule?.is_required)) {
+        throw new Error("Required selections are missing");
+      }
       
       // Find the actual tweaks from the parameters
       const selectedTweakDetails = parameters
-        .flatMap(param => param.tweaks)
+        .flatMap(param => param.tweaks || [])
         .filter(tweak => tweakIds.includes(tweak.id));
       
-      console.log("useSimplifiedPromptWizard - selected tweak details:", selectedTweakDetails);
+      console.log("[useSimplifiedPromptWizard] Selected tweak details:", selectedTweakDetails);
+      
+      if (tweakIds.length > 0 && selectedTweakDetails.length === 0) {
+        console.error("[useSimplifiedPromptWizard] No tweak details found for selected IDs");
+        throw new Error("Selected options could not be found");
+      }
       
       const tweakPrompts = selectedTweakDetails.map(tweak => tweak.sub_prompt).join("\n");
       
-      console.log("Generating content with:", {
+      console.log("[useSimplifiedPromptWizard] Generating content with:", {
         basePrompt: prompt.prompt,
         selectedTweaks: selectedTweakDetails.map(t => t.name),
         additionalContext
@@ -211,7 +259,7 @@ export function useSimplifiedPromptWizard(
       }
       
       const result = await response.json();
-      console.log("useSimplifiedPromptWizard - generation result:", result);
+      console.log("[useSimplifiedPromptWizard] Generation result:", result);
       
       toast({
         title: "Content Generated",
@@ -222,7 +270,7 @@ export function useSimplifiedPromptWizard(
       onClose();
       
     } catch (error: any) {
-      console.error("Error generating content:", error);
+      console.error("[useSimplifiedPromptWizard] Error generating content:", error);
       toast({
         title: "Error Generating Content",
         description: error.message || "An unexpected error occurred",
@@ -233,9 +281,16 @@ export function useSimplifiedPromptWizard(
     }
   }, [prompt, user, parameters, selectedTweaks, additionalContext, isFormValid, toast, onClose]);
   
-  // Calculate loading and error states
+  // Calculate loading and error states with combined error messages
   const error = promptError || parametersError;
   
+  // Log error state changes
+  useEffect(() => {
+    if (error) {
+      console.error("[useSimplifiedPromptWizard] Error state:", { promptError, parametersError, combinedError: error });
+    }
+  }, [error, promptError, parametersError]);
+
   return {
     prompt,
     parameters,

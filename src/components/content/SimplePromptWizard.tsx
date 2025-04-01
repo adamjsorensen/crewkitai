@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Check, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { Loader2, Check, RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
 import { useSimplifiedPromptWizard } from "@/hooks/useSimplifiedPromptWizard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AllParametersView from "./wizard/AllParametersView";
@@ -18,7 +18,7 @@ import LoadingState from "./wizard/LoadingState";
 import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
 import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Info } from "lucide-react";
+import { Info } from "lucide-react";
 
 interface SimplePromptWizardProps {
   promptId?: string;
@@ -44,6 +44,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     }, 100);
   };
   
+  // IMPROVED: Use the enhanced wizard hook with parallel data loading
   const {
     prompt,
     parameters,
@@ -60,23 +61,34 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     handleRetry
   } = useSimplifiedPromptWizard(promptId, isOpen, onClose);
   
-  // Determine the error type for the error state component
+  // IMPROVED: Determine the error type for the error state component
   const getErrorType = () => {
     if (!error) return 'unknown';
     if (error.includes("not found") || error.includes("doesn't exist")) {
       return 'not-found';
-    } else if (error.includes("connection") || error.includes("network") || error.includes("Failed to fetch")) {
+    } else if (error.includes("connection") || error.includes("network") || error.includes("Failed to fetch") || error.includes("timeout")) {
       return 'connection';
     }
     return 'unknown';
   };
   
-  // Log connection issues
+  // IMPROVED: Log connection issues with better debug information
   useEffect(() => {
     if (networkStatus === 'offline') {
-      console.log("Network is offline - this will affect data loading");
+      console.log("[SimplePromptWizard] Network is offline - this will affect data loading");
     }
-  }, [networkStatus]);
+    
+    // Log prompt ID and loading state
+    console.log(`[SimplePromptWizard] Prompt ID: ${promptId}, isLoading: ${isLoading}, error: ${error ? 'yes' : 'no'}`);
+    
+  }, [networkStatus, promptId, isLoading, error]);
+  
+  // IMPROVED: Log when parameters change to debug rendering issues
+  useEffect(() => {
+    if (parameters) {
+      console.log(`[SimplePromptWizard] Parameters updated: ${parameters.length} items`);
+    }
+  }, [parameters]);
   
   if (!isOpen) return null;
   
@@ -86,7 +98,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
       ? `Customize Prompt: ${prompt.title}` 
       : "Customize Prompt";
   
-  const hasParameters = parameters && parameters.length > 0;
+  const hasParameters = parameters && Array.isArray(parameters) && parameters.length > 0;
   
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -95,6 +107,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
           <DialogTitle className="text-xl flex items-center gap-2">
             {networkStatus === 'offline' && <WifiOff className="h-5 w-5 text-red-500" />}
             {networkStatus === 'online' && !error && <Wifi className="h-5 w-5 text-green-500" />}
+            {error && <AlertCircle className="h-5 w-5 text-red-500" />}
             {dialogTitle}
           </DialogTitle>
           <DialogDescription>
