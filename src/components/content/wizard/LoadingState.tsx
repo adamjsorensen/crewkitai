@@ -8,7 +8,7 @@ interface LoadingStateProps {
   message?: string;
 }
 
-const LoadingState: React.FC<LoadingStateProps> = React.memo(({ 
+const LoadingState: React.FC<LoadingStateProps> = ({ 
   message = "Loading prompt..." 
 }) => {
   const mountTimeRef = useRef<number>(Date.now());
@@ -50,8 +50,6 @@ const LoadingState: React.FC<LoadingStateProps> = React.memo(({
       </div>
     </div>
   );
-});
-
-LoadingState.displayName = 'LoadingState';
+};
 
 export default LoadingState;

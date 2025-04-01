@@ -1,5 +1,5 @@
 
-import React, { useMemo } from "react";
+import React from "react";
 import ParameterCustomization from "./ParameterCustomization";
 import AdditionalContextStep from "./AdditionalContextStep";
 import ReviewStep from "./ReviewStep";
@@ -27,18 +27,13 @@ const WizardContent: React.FC<WizardContentProps> = ({
   setAdditionalContext,
   handleTweakChange
 }) => {
-  // Memoize log data to avoid unnecessary console logs
-  const logData = useMemo(() => ({
+  // Add more detailed logging to debug parameter rendering
+  console.log("WizardContent rendering with:", { 
     promptId: prompt?.id,
     parametersCount: parameters?.length || 0,
     currentStepIndex,
     hasSelectedTweaks: Object.keys(selectedTweaks || {}).length > 0
-  }), [prompt?.id, parameters?.length, currentStepIndex, selectedTweaks]);
-  
-  // Log only when the data actually changes
-  React.useEffect(() => {
-    console.log("WizardContent rendering with:", logData);
-  }, [logData]);
+  });
   
   if (!prompt) {
     return (
@@ -51,13 +46,8 @@ const WizardContent: React.FC<WizardContentProps> = ({
     );
   }
 
-  // Safely access parameters and memoize this check
-  const safeParameters = useMemo(() => 
-    Array.isArray(parameters) ? parameters : [], 
-    [parameters]
-  );
-  
-  if (safeParameters.length === 0) {
+  // Debug parameters availability
+  if (!parameters || parameters.length === 0) {
     console.log("No parameters available for prompt:", prompt.id);
     return (
       <NoParametersAlert 
@@ -68,8 +58,9 @@ const WizardContent: React.FC<WizardContentProps> = ({
   }
 
   // Parameter customization steps
-  if (currentStepIndex < safeParameters.length) {
-    const param = safeParameters[currentStepIndex];
+  if (currentStepIndex < parameters.length) {
+    const param = parameters[currentStepIndex];
+    console.log("Rendering parameter customization for:", param?.name || "unknown");
     
     if (!param) {
       console.error("Parameter at index", currentStepIndex, "is undefined");
@@ -93,7 +84,7 @@ const WizardContent: React.FC<WizardContentProps> = ({
   }
 
   // Additional context step
-  if (currentStepIndex === safeParameters.length) {
+  if (currentStepIndex === parameters.length) {
     return (
       <AdditionalContextStep 
         additionalContext={additionalContext} 
@@ -103,12 +94,12 @@ const WizardContent: React.FC<WizardContentProps> = ({
   }
 
   // Review step
-  if (currentStepIndex === safeParameters.length + 1) {
+  if (currentStepIndex === parameters.length + 1) {
     return (
       <ReviewStep 
         prompt={prompt} 
         selectedTweaks={selectedTweaks}
-        parameters={safeParameters}
+        parameters={parameters}
         additionalContext={additionalContext}
       />
     );
@@ -117,4 +108,4 @@ const WizardContent: React.FC<WizardContentProps> = ({
   return null;
 };
 
-export default React.memo(WizardContent);
+export default WizardContent;
