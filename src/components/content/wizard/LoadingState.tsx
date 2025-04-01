@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const LoadingState: React.FC = () => {
   return (
-    <div className="py-6 space-y-6">
+    <div className="py-6 space-y-6 animate-in fade-in duration-300">
       <div className="flex justify-center items-center py-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2 text-muted-foreground font-medium">Loading prompt...</span>

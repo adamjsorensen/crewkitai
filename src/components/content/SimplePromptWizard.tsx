@@ -33,13 +33,17 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
   const [activeTab, setActiveTab] = useState("customize");
   const [retryCount, setRetryCount] = useState(0);
+  const [isClosing, setIsClosing] = useState(false);
   
-  // Add component-level logging
-  useEffect(() => {
-    if (isOpen) {
-      console.log("SimplePromptWizard opened with promptId:", promptId);
-    }
-  }, [isOpen, promptId]);
+  // Wrap the onClose function to add a transition delay
+  const handleClose = () => {
+    setIsClosing(true);
+    // Short delay before actually closing the dialog
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 100);
+  };
   
   const {
     prompt,
@@ -55,27 +59,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     isFormValid,
     refetchPrompt
   } = useSimplifiedPromptWizard(promptId, isOpen, onClose);
-  
-  // Log when wizard state changes
-  useEffect(() => {
-    if (isOpen) {
-      console.log("SimplePromptWizard state update:", {
-        promptLoaded: !!prompt,
-        promptTitle: prompt?.title,
-        parametersCount: parameters?.length || 0,
-        parametersLoaded: !isLoading && parameters && parameters.length > 0,
-        isLoading,
-        hasError: !!error,
-        errorMessage: error,
-        networkStatus
-      });
-      
-      if (parameters && parameters.length > 0) {
-        console.log("Parameters received in SimplePromptWizard:", parameters);
-        console.log("Selected tweaks:", selectedTweaks);
-      }
-    }
-  }, [prompt, parameters, isLoading, error, isOpen, networkStatus, selectedTweaks]);
   
   // Handle retry
   const handleRetry = () => {
@@ -103,7 +86,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
       : "Customize Prompt";
   
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">{dialogTitle}</DialogTitle>
@@ -120,7 +103,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
         ) : error ? (
           <ErrorAndRetryState 
             error={error} 
-            onClose={onClose} 
+            onClose={handleClose} 
             onRetry={handleRetry} 
             networkStatus={networkStatus}
             errorType={getErrorType()}
@@ -128,7 +111,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
         ) : !prompt ? (
           <ErrorAndRetryState 
             error="Unable to load prompt details."
-            onClose={onClose} 
+            onClose={handleClose} 
             onRetry={handleRetry} 
             networkStatus={networkStatus}
             errorType="not-found"

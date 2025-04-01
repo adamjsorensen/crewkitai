@@ -18,6 +18,7 @@ export function useSimplifiedPromptWizard(
   const [selectedTweaks, setSelectedTweaks] = useState<Record<string, string>>({});
   const [additionalContext, setAdditionalContext] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [debouncedLoading, setDebouncedLoading] = useState(true);
   
   // Fetch prompt details
   const { 
@@ -34,31 +35,23 @@ export function useSimplifiedPromptWizard(
     error: parametersError 
   } = usePromptParameters(promptId);
   
-  // Add detailed logging
-  useEffect(() => {
-    console.log("useSimplifiedPromptWizard - promptId changed:", promptId);
-    console.log("useSimplifiedPromptWizard - isOpen:", isOpen);
-  }, [promptId, isOpen]);
+  // Combine loading states
+  const isLoading = isPromptLoading || isParametersLoading;
   
+  // Add debounce to loading state changes to prevent flickering
   useEffect(() => {
-    if (prompt) {
-      console.log("useSimplifiedPromptWizard - prompt loaded:", prompt.title, prompt.id);
+    if (isLoading) {
+      // When loading starts, set debounced loading immediately
+      setDebouncedLoading(true);
     } else {
-      console.log("useSimplifiedPromptWizard - prompt is null or undefined");
+      // When loading finishes, delay the state change to prevent flickering
+      const timer = setTimeout(() => {
+        setDebouncedLoading(false);
+      }, 300); // 300ms debounce
+      
+      return () => clearTimeout(timer);
     }
-  }, [prompt]);
-  
-  useEffect(() => {
-    console.log("useSimplifiedPromptWizard - parameters state:", {
-      count: parameters.length,
-      isLoading: isParametersLoading,
-      error: parametersError
-    });
-    
-    if (parameters.length > 0) {
-      console.log("useSimplifiedPromptWizard - parameters:", parameters);
-    }
-  }, [parameters, isParametersLoading, parametersError]);
+  }, [isLoading]);
   
   // Reset form state when wizard opens with a new prompt
   useEffect(() => {
@@ -66,6 +59,7 @@ export function useSimplifiedPromptWizard(
       console.log("useSimplifiedPromptWizard - resetting form state");
       setSelectedTweaks({});
       setAdditionalContext("");
+      setDebouncedLoading(true); // Ensure loading state is true when opening
     }
   }, [isOpen, promptId]);
   
@@ -181,13 +175,12 @@ export function useSimplifiedPromptWizard(
   };
   
   // Calculate loading and error states
-  const isLoading = isPromptLoading || isParametersLoading;
   const error = promptError || parametersError;
   
   return {
     prompt,
     parameters,
-    isLoading,
+    isLoading: debouncedLoading, // Use the debounced loading state instead
     error,
     generating,
     selectedTweaks,
