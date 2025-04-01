@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ParameterWithTweaks } from "@/types/promptParameters";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,11 @@ export function usePromptParameters(promptId: string | undefined) {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
+  
+  // Track when parameters were last successfully fetched
+  const lastSuccessfulFetchRef = useRef<number | null>(null);
+  // Track fetch attempts
+  const fetchAttemptCountRef = useRef<number>(0);
 
   const fetchParameters = useCallback(async () => {
     if (!promptId) {
@@ -22,7 +27,8 @@ export function usePromptParameters(promptId: string | undefined) {
       return;
     }
 
-    console.log(`[usePromptParameters] Fetching parameters for prompt ID: ${promptId} (Attempt: ${retryCount + 1})`);
+    const attemptNumber = ++fetchAttemptCountRef.current;
+    console.log(`[usePromptParameters] Fetching parameters for prompt ID: ${promptId} (Attempt: ${attemptNumber}, Retry: ${retryCount})`);
     
     try {
       // First, verify database connection
@@ -79,6 +85,7 @@ export function usePromptParameters(promptId: string | undefined) {
         setParameters([]);
         setIsLoading(false);
         setError(null);
+        lastSuccessfulFetchRef.current = Date.now(); // Even empty results counts as successful
         return;
       }
       
@@ -128,15 +135,40 @@ export function usePromptParameters(promptId: string | undefined) {
       );
       
       // Directly verify parameters and tweaks structure
+      let dataIsValid = true;
       transformedParameters.forEach(param => {
-        if (!param.id) console.error(`[usePromptParameters] Parameter missing ID`);
-        if (!param.name) console.error(`[usePromptParameters] Parameter missing name`);
-        if (!param.tweaks) console.error(`[usePromptParameters] Parameter ${param.name} missing tweaks array`);
+        if (!param.id) {
+          console.error(`[usePromptParameters] Parameter missing ID`);
+          dataIsValid = false;
+        }
+        if (!param.name) {
+          console.error(`[usePromptParameters] Parameter missing name`);
+          dataIsValid = false;
+        }
+        if (!param.tweaks) {
+          console.error(`[usePromptParameters] Parameter ${param.name} missing tweaks array`);
+          dataIsValid = false;
+        }
       });
+      
+      if (!dataIsValid) {
+        console.error("[usePromptParameters] Data validation failed, will retry");
+        throw new Error("Parameters data failed validation");
+      }
       
       setParameters(transformedParameters);
       setError(null);
       setIsLoading(false);
+      lastSuccessfulFetchRef.current = Date.now();
+      
+      // Verify parameters were set correctly (for debugging)
+      setTimeout(() => {
+        console.log(`[usePromptParameters] Verify parameters were set correctly:`, {
+          inStateLength: transformedParameters.length,
+          currentStateLength: parameters.length
+        });
+      }, 100);
+      
     } catch (err: unknown) {
       // Fixed TypeScript error with proper error handling
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -145,13 +177,28 @@ export function usePromptParameters(promptId: string | undefined) {
       setParameters([]);
       setIsLoading(false);
       
-      // Only show toast for network or critical errors
-      if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+      // Only show toast for network or critical errors after multiple failures
+      if (attemptNumber > 2 && (errorMessage.includes('network') || errorMessage.includes('connection'))) {
         toast({
           title: "Connection Error",
           description: "There was a problem with your network connection. Please try again.",
           variant: "destructive"
         });
+      }
+      
+      // Auto-retry on certain errors if we haven't fetched successfully recently
+      const shouldAutoRetry = 
+        (errorMessage.includes('network') || 
+         errorMessage.includes('timeout') || 
+         errorMessage.includes('validation')) &&
+        (!lastSuccessfulFetchRef.current || 
+         Date.now() - lastSuccessfulFetchRef.current > 30000);
+      
+      if (shouldAutoRetry && attemptNumber <= 3) {
+        console.log(`[usePromptParameters] Scheduling auto-retry in 1 second (attempt ${attemptNumber})`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+        }, 1000);
       }
     }
   }, [promptId, toast, retryCount]);
@@ -170,6 +217,7 @@ export function usePromptParameters(promptId: string | undefined) {
         console.error("[usePromptParameters] Error in fetch effect:", err);
         if (isMounted) {
           setIsLoading(false);
+          setError("Error fetching parameters: " + String(err));
         }
       }
     };
@@ -185,7 +233,14 @@ export function usePromptParameters(promptId: string | undefined) {
   const retry = useCallback(() => {
     console.log("[usePromptParameters] Manually retrying parameter fetch");
     setRetryCount(prev => prev + 1);
+    fetchAttemptCountRef.current = 0; // Reset attempt counter on manual retry
   }, []);
 
-  return { parameters, isLoading, error, retry };
+  return { 
+    parameters, 
+    isLoading, 
+    error, 
+    retry,
+    lastSuccessfulFetch: lastSuccessfulFetchRef.current 
+  };
 }

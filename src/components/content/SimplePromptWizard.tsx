@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Check, RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
+import { Loader2, Check, RefreshCw, Wifi, WifiOff, AlertCircle, Info } from "lucide-react";
 import { useSimplifiedPromptWizard } from "@/hooks/useSimplifiedPromptWizard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AllParametersView from "./wizard/AllParametersView";
@@ -18,7 +18,6 @@ import LoadingState from "./wizard/LoadingState";
 import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
 import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info } from "lucide-react";
 
 interface SimplePromptWizardProps {
   promptId?: string;
@@ -33,6 +32,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
 }) => {
   const [activeTab, setActiveTab] = useState("customize");
   const [showLoadingState, setShowLoadingState] = useState(false);
+  const [forceRender, setForceRender] = useState(0); // Added to force re-render when needed
   
   // Create a stable onClose function
   const handleClose = useCallback(() => {
@@ -55,6 +55,14 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
     isFormValid,
     handleRetry
   } = useSimplifiedPromptWizard(promptId, isOpen, handleClose);
+  
+  // Force a re-render when parameters load to ensure they display properly
+  useEffect(() => {
+    if (parameters && parameters.length > 0) {
+      console.log("[SimplePromptWizard] Parameters loaded, forcing re-render", parameters.length);
+      setForceRender(prev => prev + 1);
+    }
+  }, [parameters]);
   
   // Delayed loading state to prevent flashing with debounce
   useEffect(() => {
@@ -81,20 +89,31 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   
   // Effect to log component lifecycle
   useEffect(() => {
-    console.log(`[SimplePromptWizard] Mounted with promptId: ${promptId}, isOpen: ${isOpen}`);
+    console.log(`[SimplePromptWizard] Mounted with promptId: ${promptId}, isOpen: ${isOpen}, forceRender: ${forceRender}`);
     console.log(`[SimplePromptWizard] Loading state: ${isLoading}, Error: ${error ? 'yes' : 'no'}`);
     
     return () => {
       console.log(`[SimplePromptWizard] Unmounting with promptId: ${promptId}`);
     };
-  }, [promptId, isOpen, isLoading, error]);
+  }, [promptId, isOpen, isLoading, error, forceRender]);
   
   // Log parameters when they change
   useEffect(() => {
     if (parameters?.length > 0) {
       console.log(`[SimplePromptWizard] Parameters loaded: ${parameters.length}`);
+      // DEBUG: Log the actual parameter data to verify it's complete
+      parameters.forEach((param, index) => {
+        console.log(`Parameter ${index}:`, {
+          id: param.id,
+          name: param.name,
+          tweaks: param.tweaks?.length || 0,
+          required: param.rule?.is_required
+        });
+      });
+    } else {
+      console.log(`[SimplePromptWizard] No parameters loaded or parameters empty array`);
     }
-  }, [parameters]);
+  }, [parameters, forceRender]);
   
   if (!isOpen) return null;
   
@@ -128,7 +147,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
         <NetworkStatusAlert networkStatus={networkStatus} />
         
         {/* Show loading state */}
-        {showLoadingState && <LoadingState />}
+        {showLoadingState && <LoadingState message="Loading prompt customization options..." />}
         
         {/* Show error state */}
         {!showLoadingState && error && (
@@ -145,6 +164,16 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
         {/* Show content when not loading and no error */}
         {!showLoadingState && !error && prompt && (
           <div className="min-h-[350px]">
+            {/* Debug information */}
+            {process.env.NODE_ENV === 'development' && (
+              <Alert className="mb-2 bg-yellow-50 border-yellow-300">
+                <Info className="h-4 w-4 text-yellow-500" />
+                <AlertDescription className="text-xs text-yellow-800">
+                  Debug: Parameters count: {safeParameters.length}, ForceRender: {forceRender}
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {!hasParameters && (
               <Alert className="mb-4" variant="default">
                 <Info className="h-4 w-4" />
