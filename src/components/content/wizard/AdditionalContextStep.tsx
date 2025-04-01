@@ -7,10 +7,14 @@ interface AdditionalContextStepProps {
   setAdditionalContext: (value: string) => void;
 }
 
-const AdditionalContextStep = ({ 
+const AdditionalContextStep = React.memo(({ 
   additionalContext, 
   setAdditionalContext 
 }: AdditionalContextStepProps) => {
+  const handleChange = React.useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setAdditionalContext(e.target.value);
+  }, [setAdditionalContext]);
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Additional Context</h3>
@@ -21,10 +25,12 @@ const AdditionalContextStep = ({
         placeholder="Enter additional context here..."
         className="min-h-[150px]"
         value={additionalContext}
-        onChange={(e) => setAdditionalContext(e.target.value)}
+        onChange={handleChange}
       />
     </div>
   );
-};
+});
+
+AdditionalContextStep.displayName = "AdditionalContextStep";
 
 export default AdditionalContextStep;

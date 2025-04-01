@@ -12,7 +12,7 @@ interface ParameterCustomizationProps {
   onTweakChange: (parameterId: string, tweakId: string) => void;
 }
 
-const ParameterCustomization = ({ 
+const ParameterCustomization = React.memo(({ 
   parameter, 
   selectedTweakId, 
   onTweakChange 
@@ -37,6 +37,10 @@ const ParameterCustomization = ({
     );
   }
 
+  const handleTweakChange = React.useCallback((value: string) => {
+    onTweakChange(parameter.id, value);
+  }, [parameter.id, onTweakChange]);
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium">{parameter.name}</h3>
@@ -46,7 +50,7 @@ const ParameterCustomization = ({
       
       <RadioGroup 
         value={selectedTweakId || ''} 
-        onValueChange={(value) => onTweakChange(parameter.id, value)}
+        onValueChange={handleTweakChange}
       >
         <div className="space-y-2">
           {parameter.tweaks && parameter.tweaks.length > 0 ? (
@@ -75,6 +79,8 @@ const ParameterCustomization = ({
       )}
     </div>
   );
-};
+});
+
+ParameterCustomization.displayName = "ParameterCustomization";
 
 export default ParameterCustomization;

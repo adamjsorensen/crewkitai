@@ -18,7 +18,7 @@ interface WizardContentProps {
   handleTweakChange: (parameterId: string, tweakId: string) => void;
 }
 
-const WizardContent: React.FC<WizardContentProps> = ({
+const WizardContent = React.memo(({
   prompt,
   parameters,
   currentStepIndex,
@@ -26,7 +26,7 @@ const WizardContent: React.FC<WizardContentProps> = ({
   additionalContext,
   setAdditionalContext,
   handleTweakChange
-}) => {
+}: WizardContentProps) => {
   // Add more detailed logging to debug parameter rendering
   console.log("WizardContent rendering with:", { 
     promptId: prompt?.id,
@@ -106,6 +106,8 @@ const WizardContent: React.FC<WizardContentProps> = ({
   }
 
   return null;
-};
+});
+
+WizardContent.displayName = "WizardContent";
 
 export default WizardContent;

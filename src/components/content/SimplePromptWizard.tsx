@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,7 @@ interface SimplePromptWizardProps {
   onClose: () => void;
 }
 
-const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({ 
+const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({ 
   promptId, 
   isOpen, 
   onClose 
@@ -56,7 +56,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     handleRetry
   } = useSimplifiedPromptWizard(promptId, isOpen, handleClose);
   
-  // Delayed loading state to prevent flashing
+  // Delayed loading state to prevent flashing with debounce
   useEffect(() => {
     let timer: number | null = null;
     
@@ -64,9 +64,12 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
       // Show loading state after a small delay to prevent flashes
       timer = window.setTimeout(() => {
         setShowLoadingState(true);
-      }, 100);
+      }, 150); // Slightly longer delay to reduce flickering
     } else {
-      setShowLoadingState(false);
+      // Small delay before hiding loading state to prevent flickering
+      timer = window.setTimeout(() => {
+        setShowLoadingState(false);
+      }, 50);
     }
     
     return () => {
@@ -95,14 +98,16 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
   
   if (!isOpen) return null;
   
-  const dialogTitle = showLoadingState 
-    ? "Loading..." 
-    : prompt 
-      ? `Customize Prompt: ${prompt.title}` 
-      : "Customize Prompt";
+  const dialogTitle = useMemo(() => {
+    if (showLoadingState) return "Loading...";
+    return prompt ? `Customize Prompt: ${prompt.title}` : "Customize Prompt";
+  }, [showLoadingState, prompt]);
   
   // Safely access parameters
-  const safeParameters = Array.isArray(parameters) ? parameters : [];
+  const safeParameters = useMemo(() => {
+    return Array.isArray(parameters) ? parameters : [];
+  }, [parameters]);
+  
   const hasParameters = safeParameters.length > 0;
   
   return (
@@ -133,7 +138,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
             onRetry={handleRetry} 
             networkStatus={networkStatus}
             errorType={error.includes("not found") ? "not-found" : 
-                      error.includes("connection") ? "connection" : "unknown"}
+                     error.includes("connection") ? "connection" : "unknown"}
           />
         )}
         
@@ -158,7 +163,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
                 <TabsTrigger value="context" className="flex-1">Add Context</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="customize" className="py-4">
+              <TabsContent value="customize" className="py-4 min-h-[300px]">
                 {hasParameters ? (
                   <AllParametersView 
                     parameters={safeParameters} 
@@ -173,7 +178,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
                 )}
               </TabsContent>
               
-              <TabsContent value="context" className="py-4">
+              <TabsContent value="context" className="py-4 min-h-[300px]">
                 <AdditionalContextStep 
                   additionalContext={additionalContext} 
                   setAdditionalContext={setAdditionalContext}
@@ -218,6 +223,8 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+SimplePromptWizard.displayName = "SimplePromptWizard";
 
 export default SimplePromptWizard;
