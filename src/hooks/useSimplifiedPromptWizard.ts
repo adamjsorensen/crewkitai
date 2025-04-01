@@ -63,7 +63,6 @@ export function useSimplifiedPromptWizard(
   }, [promptId, isOpen]);
   
   // DIRECT PARAMETER FETCHING: Pass promptId directly to usePromptParameters
-  // This enables parallel loading rather than waiting for prompt to load first
   const { 
     parameters, 
     isLoading: isParametersLoading, 

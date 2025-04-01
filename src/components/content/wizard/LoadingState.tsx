@@ -4,58 +4,27 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface LoadingStateProps {
-  key?: string;
-}
-
-const LoadingState: React.FC<LoadingStateProps> = ({ key }) => {
-  // Add mount tracking to see if component is remounting
+const LoadingState: React.FC = () => {
   const mountCount = useRef(0);
-  const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(Date.now());
   
   useEffect(() => {
     mountCount.current += 1;
     startTimeRef.current = Date.now();
-    console.log(`[LoadingState] Component mounted (count: ${mountCount.current}, time: ${new Date().toISOString()})`);
-    
-    // Track animation frame requests
-    let frameCount = 0;
-    let lastLogTime = 0;
-    
-    const trackFrames = (timestamp: number) => {
-      frameCount++;
-      const now = Date.now();
-      
-      // Log every second or every 60 frames, whichever comes first
-      if (frameCount % 60 === 0 || now - lastLogTime > 1000) {
-        const elapsedMs = now - startTimeRef.current;
-        console.log(`[LoadingState] Animation frames: ${frameCount}, elapsed: ${elapsedMs}ms, avg FPS: ${(frameCount / (elapsedMs / 1000)).toFixed(1)}`);
-        lastLogTime = now;
-      }
-      
-      animationFrameRef.current = requestAnimationFrame(trackFrames);
-    };
-    
-    animationFrameRef.current = requestAnimationFrame(trackFrames);
+    console.log(`[LoadingState] Component mounted (count: ${mountCount.current})`);
     
     return () => {
-      const unmountTime = Date.now();
-      const duration = unmountTime - startTimeRef.current;
-      console.log(`[LoadingState] Component unmounted after ${frameCount} frames, duration: ${duration}ms`);
+      const duration = Date.now() - startTimeRef.current;
+      console.log(`[LoadingState] Component unmounted after ${duration}ms`);
       
       if (duration < 500) {
         console.warn(`[LoadingState] Short-lived component! Only lived for ${duration}ms`);
-      }
-      
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
       }
     };
   }, []);
   
   return (
-    <div className="py-6 space-y-6 animate-in fade-in duration-300" data-testid="loading-state">
+    <div className="py-6 space-y-6 animate-in fade-in duration-500" data-testid="loading-state">
       <div className="flex justify-center items-center py-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2 text-muted-foreground font-medium">Loading prompt...</span>
