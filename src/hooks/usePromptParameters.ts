@@ -5,7 +5,7 @@ import { ParameterWithTweaks } from "@/types/promptParameters";
 import { useToast } from "@/hooks/use-toast";
 
 /**
- * A simplified hook for fetching prompt parameters and their tweaks in a single query
+ * A simplified hook for fetching prompt parameters and their tweaks
  */
 export function usePromptParameters(promptId: string | undefined) {
   const [parameters, setParameters] = useState<ParameterWithTweaks[]>([]);
@@ -28,112 +28,103 @@ export function usePromptParameters(promptId: string | undefined) {
       try {
         console.log(`Fetching parameters for prompt: ${promptId}`);
         
-        // First, get the parameter rules for this prompt
-        const { data: rules, error: rulesError } = await supabase
+        // Simplified approach: single query with joins to get parameters with their tweaks
+        const { data, error: fetchError } = await supabase
           .from('prompt_parameter_rules')
-          .select('*')
+          .select(`
+            id,
+            is_active,
+            is_required, 
+            order,
+            parameter:parameter_id(
+              id, 
+              name, 
+              description, 
+              type, 
+              active,
+              created_at,
+              updated_at,
+              tweaks:parameter_tweaks(
+                id, 
+                parameter_id, 
+                name, 
+                sub_prompt, 
+                active, 
+                order, 
+                created_at, 
+                updated_at
+              )
+            )
+          `)
           .eq('prompt_id', promptId)
           .eq('is_active', true)
           .order('order', { ascending: true });
 
-        if (rulesError) {
-          console.error("Error fetching parameter rules:", rulesError);
-          setError(`Failed to load parameter rules: ${rulesError.message}`);
+        if (fetchError) {
+          console.error("Error fetching parameters:", fetchError);
+          setError(`Failed to load parameters: ${fetchError.message}`);
           setParameters([]);
+          setIsLoading(false);
           return;
         }
 
-        console.log(`Found ${rules?.length || 0} parameter rules for prompt ${promptId}`);
+        console.log(`Raw data from query:`, data);
         
-        if (!rules || rules.length === 0) {
+        if (!data || data.length === 0) {
           console.log("No parameter rules found for prompt:", promptId);
           setParameters([]);
           setIsLoading(false);
           return;
         }
 
-        // Get the parameter IDs from rules
-        const parameterIds = rules.map(rule => rule.parameter_id);
+        // Transform the nested data into the expected format
+        const transformedParameters: ParameterWithTweaks[] = data
+          .filter(rule => rule.parameter && rule.parameter.active)
+          .map(rule => {
+            const param = rule.parameter;
+            
+            if (!param) {
+              console.warn(`Parameter is null for rule ${rule.id}`);
+              return null;
+            }
+            
+            // Convert the type string to a valid parameter type with runtime check
+            const validTypes = ['tone_and_style', 'audience', 'length', 'focus', 'format', 'custom'];
+            const paramType = validTypes.includes(param.type) 
+              ? param.type as 'tone_and_style' | 'audience' | 'length' | 'focus' | 'format' | 'custom'
+              : 'custom';
+            
+            // Filter active tweaks
+            const activeTweaks = Array.isArray(param.tweaks) 
+              ? param.tweaks.filter(tweak => tweak.active)
+              : [];
+              
+            console.log(`Parameter ${param.name} has ${activeTweaks.length} active tweaks`);
+            
+            return {
+              id: param.id,
+              name: param.name,
+              description: param.description,
+              type: paramType,
+              active: param.active,
+              created_at: param.created_at,
+              updated_at: param.updated_at,
+              tweaks: activeTweaks,
+              rule: {
+                id: rule.id,
+                prompt_id: promptId,
+                parameter_id: param.id,
+                is_active: rule.is_active,
+                is_required: rule.is_required,
+                order: rule.order,
+                created_at: param.created_at, // Fallback to parameter dates
+                updated_at: param.updated_at
+              }
+            };
+          })
+          .filter(Boolean) as ParameterWithTweaks[]; // Filter out null items
         
-        // Fetch the actual parameters
-        const { data: parametersData, error: paramsError } = await supabase
-          .from('prompt_parameters')
-          .select('*')
-          .in('id', parameterIds)
-          .eq('active', true);
-          
-        if (paramsError) {
-          console.error("Error fetching parameters:", paramsError);
-          setError(`Failed to load parameters: ${paramsError.message}`);
-          setParameters([]);
-          return;
-        }
-
-        console.log(`Found ${parametersData?.length || 0} parameters`);
-        
-        if (!parametersData || parametersData.length === 0) {
-          console.log("No active parameters found for the given parameter IDs");
-          setParameters([]);
-          setIsLoading(false);
-          return;
-        }
-
-        // Fetch tweaks for these parameters
-        const { data: tweaksData, error: tweaksError } = await supabase
-          .from('parameter_tweaks')
-          .select('*')
-          .in('parameter_id', parameterIds)
-          .eq('active', true)
-          .order('order', { ascending: true });
-          
-        if (tweaksError) {
-          console.error("Error fetching parameter tweaks:", tweaksError);
-          setError(`Failed to load parameter tweaks: ${tweaksError.message}`);
-          setParameters([]);
-          return;
-        }
-
-        console.log(`Found ${tweaksData?.length || 0} tweaks for parameters`);
-
-        // Combine parameters with their tweaks and rules
-        const transformedParameters: ParameterWithTweaks[] = parametersData.map(parameter => {
-          const parameterTweaks = tweaksData ? tweaksData.filter(tweak => tweak.parameter_id === parameter.id) : [];
-          const rule = rules.find(rule => rule.parameter_id === parameter.id);
-          
-          // Convert the type string to a valid parameter type
-          const paramType = parameter.type as 'tone_and_style' | 'audience' | 'length' | 'focus' | 'format' | 'custom';
-          
-          return {
-            id: parameter.id,
-            name: parameter.name,
-            description: parameter.description,
-            type: paramType,
-            active: parameter.active,
-            created_at: parameter.created_at,
-            updated_at: parameter.updated_at,
-            tweaks: parameterTweaks,
-            rule: rule ? {
-              id: rule.id,
-              prompt_id: rule.prompt_id,
-              parameter_id: rule.parameter_id,
-              is_active: rule.is_active,
-              is_required: rule.is_required,
-              order: rule.order,
-              created_at: rule.created_at,
-              updated_at: rule.updated_at
-            } : undefined
-          };
-        });
-
-        // Sort by the order in rules
-        transformedParameters.sort((a, b) => {
-          const aRule = rules.find(rule => rule.parameter_id === a.id);
-          const bRule = rules.find(rule => rule.parameter_id === b.id);
-          
-          return (aRule?.order || 0) - (bRule?.order || 0);
-        });
-        
-        console.log(`Final transformed parameters (${transformedParameters.length}):`, transformedParameters);
+        console.log(`Transformed parameters:`, transformedParameters);
         setParameters(transformedParameters);
       } catch (err: any) {
         console.error("Unexpected error in usePromptParameters:", err);
