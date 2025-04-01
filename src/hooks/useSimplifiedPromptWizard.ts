@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePromptFetching } from "./prompt-wizard/usePromptFetching";
 import { usePromptParameters } from "./usePromptParameters";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 // Logging levels control
 const LOG_LEVEL = {
@@ -40,6 +42,7 @@ export function useSimplifiedPromptWizard(
 ) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // State for the form with stable references
   const [selectedTweaks, setSelectedTweaks] = useState<Record<string, string>>({});
@@ -280,80 +283,116 @@ export function useSimplifiedPromptWizard(
     
     try {
       setGenerating(true);
+      logger.info("Starting content generation process...");
       
-      // Use cached parameters for consistency
-      const paramsToUse = parameters && parameters.length > 0 ? parameters : parametersCache.current;
+      // 1. Create a custom prompt
+      const { data: customPrompt, error: customPromptError } = await supabase
+        .from('custom_prompts')
+        .insert({
+          base_prompt_id: prompt.id,
+          created_by: user.id,
+        })
+        .select()
+        .single();
       
-      // Collect all selected tweaks with validation
+      if (customPromptError) {
+        logger.error("Error creating custom prompt:", customPromptError);
+        throw new Error(`Failed to create custom prompt: ${customPromptError.message}`);
+      }
+      
+      logger.debug("Created custom prompt:", customPrompt.id);
+      
+      // 2. Save selected tweaks
       const tweakIds = Object.values(selectedTweaks).filter(Boolean);
       logger.debug("Selected tweak IDs:", tweakIds);
       
-      if (tweakIds.length === 0 && paramsToUse.some(p => p.rule?.is_required)) {
-        throw new Error("Required selections are missing");
+      if (tweakIds.length > 0) {
+        const customizations = tweakIds.map(tweakId => ({
+          custom_prompt_id: customPrompt.id,
+          parameter_tweak_id: tweakId,
+        }));
+        
+        logger.debug("Saving customizations:", customizations.length);
+        const { error: customizationsError } = await supabase
+          .from('prompt_customizations')
+          .insert(customizations);
+        
+        if (customizationsError) {
+          logger.error("Error saving customizations:", customizationsError);
+          throw new Error(`Failed to save customizations: ${customizationsError.message}`);
+        }
       }
       
-      // Find the actual tweaks from the parameters
-      const selectedTweakDetails = paramsToUse
-        .flatMap(param => param.tweaks || [])
-        .filter(tweak => tweakIds.includes(tweak.id));
-      
-      logger.debug("Selected tweak details:", selectedTweakDetails);
-      
-      if (tweakIds.length > 0 && selectedTweakDetails.length === 0) {
-        logger.error("No tweak details found for selected IDs");
-        throw new Error("Selected options could not be found");
+      // 3. Save additional context if provided
+      if (additionalContext.trim()) {
+        logger.debug("Saving additional context");
+        const { error: contextError } = await supabase
+          .from('prompt_additional_context')
+          .insert({
+            custom_prompt_id: customPrompt.id,
+            context_text: additionalContext,
+          });
+        
+        if (contextError) {
+          logger.error("Error saving additional context:", contextError);
+          throw new Error(`Failed to save additional context: ${contextError.message}`);
+        }
       }
       
-      const tweakPrompts = selectedTweakDetails.map(tweak => tweak.sub_prompt).join("\n");
+      // 4. Call the edge function to generate content
+      logger.debug("Calling Supabase edge function to generate content");
+      const { data: generationResult, error: generationError } = await supabase.functions.invoke(
+        'crewkit-generate-content',
+        {
+          body: { customPromptId: customPrompt.id },
+        }
+      );
       
-      logger.info("Generating content with:", {
-        basePrompt: prompt.prompt,
-        selectedTweaks: selectedTweakDetails.map(t => t.name),
-        additionalContext: additionalContext ? "Provided" : "None"
-      });
-      
-      // Call the Supabase Edge Function to generate content
-      const response = await fetch('/api/crewkit-generate-content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          basePromptId: prompt.id,
-          basePrompt: prompt.prompt,
-          tweakPrompts,
-          additionalContext,
-          userId: user.id
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Generation failed: ${response.statusText}`);
+      if (generationError) {
+        logger.error("Edge function error:", generationError);
+        throw new Error(`Content generation failed: ${generationError.message}`);
       }
       
-      const result = await response.json();
-      logger.info("Generation successful");
+      if (!generationResult) {
+        throw new Error("No content was generated");
+      }
       
+      logger.debug("Content generated successfully:", generationResult);
+      
+      // If successful, navigate to the generated content page
       toast({
         title: "Content Generated",
-        description: "Your customized content has been generated successfully",
+        description: "Your content was successfully generated",
       });
       
-      // Close the wizard
       onClose();
+      navigate(`/dashboard/generated/${generationResult.generationId}`);
       
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error("Error generating content:", error);
+    } catch (error: any) {
+      logger.error("Error in content generation process:", error);
+      
+      // More descriptive error message based on the error
+      let errorMessage = "An unexpected error occurred";
+      
+      if (error.message.includes("OPENAI_API_KEY")) {
+        errorMessage = "OpenAI API key is missing or invalid. Please contact the administrator.";
+      } else if (error.message.includes("network") || error.message.includes("fetch")) {
+        errorMessage = "Network error occurred. Please check your connection and try again.";
+      } else if (error.message.includes("customPromptId")) {
+        errorMessage = "Invalid prompt configuration. Please try a different prompt.";
+      } else {
+        errorMessage = error.message || "Content generation failed";
+      }
+      
       toast({
-        title: "Error Generating Content",
-        description: errorMessage || "An unexpected error occurred",
+        title: "Error generating content",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setGenerating(false);
     }
-  }, [prompt, user, parameters, selectedTweaks, additionalContext, isFormValid, toast, onClose]);
+  }, [prompt, user, selectedTweaks, additionalContext, isFormValid, toast, onClose, navigate]);
   
   // Calculate loading and error states with combined error messages
   const error = promptError || parametersError;
