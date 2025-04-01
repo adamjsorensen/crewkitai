@@ -19,71 +19,61 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
   selectedTweaks,
   onTweakChange
 }) => {
-  // VALIDATION: Enhanced validation and debug logging
+  // Enhanced validation and debug logging for parameters 
   useEffect(() => {
-    if (!parameters) {
-      console.warn("[AllParametersView] Parameters is undefined");
-      return;
-    }
+    console.log("[AllParametersView] Rendering with parameters:", {
+      count: parameters?.length || 0,
+      selectedTweaksCount: Object.keys(selectedTweaks || {}).length
+    });
     
-    if (!Array.isArray(parameters)) {
-      console.error("[AllParametersView] Parameters is not an array:", parameters);
-      return;
-    }
-    
-    if (parameters.length === 0) {
-      console.log("[AllParametersView] No parameters provided or empty array");
-      return;
-    }
-    
-    // Validate parameter data
-    parameters.forEach(param => {
-      if (!param) {
-        console.error("[AllParametersView] Null or undefined parameter in array");
-        return;
-      }
-      
-      if (!param.id) {
-        console.error("[AllParametersView] Parameter missing ID:", param);
-      }
-      
-      if (!param.name) {
-        console.error("[AllParametersView] Parameter missing name:", param);
-      }
-      
-      console.log(`[AllParametersView] Parameter ${param.name || 'unnamed'} (${param.id}) has ${param.tweaks?.length || 0} tweaks`);
-      
-      if (!param.tweaks || param.tweaks.length === 0) {
-        console.warn(`[AllParametersView] Parameter ${param.name || 'unnamed'} has no tweaks`);
+    // Verify parameter data integrity
+    if (parameters && parameters.length > 0) {
+      const validParams = parameters.every(p => p && p.id && p.name);
+      if (!validParams) {
+        console.error("[AllParametersView] INVALID PARAMETER DATA:", 
+          parameters.filter(p => !p || !p.id || !p.name)
+        );
       } else {
-        // Check tweaks validity
-        param.tweaks.forEach(tweak => {
-          if (!tweak.id) {
-            console.error(`[AllParametersView] Tweak missing ID for parameter ${param.name}:`, tweak);
+        console.log("[AllParametersView] Parameters data validation passed");
+        
+        // Check tweaks for each parameter
+        parameters.forEach(param => {
+          if (!param.tweaks || param.tweaks.length === 0) {
+            console.warn(`[AllParametersView] Parameter '${param.name}' has no tweaks`);
+          } else {
+            console.log(`[AllParametersView] Parameter '${param.name}' has ${param.tweaks.length} tweaks`);
+          }
+          
+          // Check selected tweak
+          if (selectedTweaks[param.id]) {
+            const tweakExists = param.tweaks?.some(t => t.id === selectedTweaks[param.id]);
+            if (!tweakExists) {
+              console.error(`[AllParametersView] Selected tweak ${selectedTweaks[param.id]} not found in parameter ${param.name}`);
+            }
           }
         });
       }
-    });
-    
-    // Log selected tweaks for debugging
-    console.log("[AllParametersView] Current selected tweaks:", selectedTweaks);
+    }
   }, [parameters, selectedTweaks]);
 
-  // VALIDATION: Check for invalid parameters array
-  if (!parameters || !Array.isArray(parameters)) {
-    console.error("[AllParametersView] Invalid parameters value:", parameters);
+  // Force cast to array to prevent runtime errors
+  const safeParameters = Array.isArray(parameters) ? parameters : [];
+  
+  // Basic validation - Check for invalid parameters array
+  if (!safeParameters) {
+    console.error("[AllParametersView] Parameters is null or undefined");
     return (
       <Alert className="mb-4 border-amber-500">
         <AlertTriangle className="h-4 w-4 text-amber-500" />
         <AlertDescription>
-          Error loading parameters data. The data format is invalid.
+          Error loading parameters data. The data is missing.
         </AlertDescription>
       </Alert>
     );
   }
 
-  // VALIDATION: Handle empty parameters array
-  if (parameters.length === 0) {
+  // Handle empty parameters array
+  if (safeParameters.length === 0) {
     return (
       <Alert className="mb-4">
         <Info className="h-4 w-4 text-blue-500" />
@@ -96,17 +86,17 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
 
   // Debug display of valid parameters before rendering
   console.log("[AllParametersView] Rendering parameters:", 
-    parameters.map(p => ({id: p.id, name: p.name, tweaksCount: p.tweaks?.length || 0}))
+    safeParameters.map(p => ({id: p.id, name: p.name, tweaksCount: p.tweaks?.length || 0}))
   );
 
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-medium">Customize Your Prompt</h3>
       
-      {parameters.map((param, index) => {
-        // VALIDATION: Skip invalid parameters
+      {safeParameters.map((param, index) => {
+        // Skip invalid parameters
         if (!param || !param.id) {
-          console.error("[AllParametersView] Invalid parameter at index", index, param);
+          console.error("[AllParametersView] Invalid parameter at index", index);
           return null;
         }
         
@@ -123,19 +113,19 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
                 <p className="text-sm text-muted-foreground mb-3">{param.description}</p>
               )}
               
-              <RadioGroup 
-                value={selectedTweaks[param.id] || ''} 
-                onValueChange={(value) => {
-                  console.log(`[AllParametersView] Tweak selected for parameter ${param.id}: ${value}`);
-                  onTweakChange(param.id, value);
-                }}
-              >
-                <div className="space-y-2">
-                  {hasTweaks ? (
-                    param.tweaks.map((tweak) => {
-                      // VALIDATION: Skip invalid tweaks
+              {hasTweaks ? (
+                <RadioGroup 
+                  value={selectedTweaks[param.id] || ''} 
+                  onValueChange={(value) => {
+                    console.log(`[AllParametersView] Tweak selected for parameter ${param.id}: ${value}`);
+                    onTweakChange(param.id, value);
+                  }}
+                >
+                  <div className="space-y-2">
+                    {param.tweaks.map((tweak) => {
+                      // Skip invalid tweaks
                       if (!tweak || !tweak.id) {
-                        console.error("[AllParametersView] Invalid tweak for parameter", param.name, tweak);
+                        console.error("[AllParametersView] Invalid tweak for parameter", param.name);
                         return null;
                       }
                       
@@ -149,14 +139,17 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
                           </div>
                         </div>
                       );
-                    })
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No options available for this parameter.
-                    </p>
-                  )}
-                </div>
-              </RadioGroup>
+                    })}
+                  </div>
+                </RadioGroup>
+              ) : (
+                <Alert className="bg-muted/30 border-muted">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                  <AlertDescription className="text-sm text-muted-foreground">
+                    No options available for this parameter.
+                  </AlertDescription>
+                </Alert>
+              )}
               
               {param.rule?.is_required && !selectedTweaks[param.id] && (
                 <p className="text-sm text-red-500 mt-2">
@@ -165,12 +158,12 @@ const AllParametersView: React.FC<AllParametersViewProps> = ({
               )}
             </CardContent>
             
-            {index < parameters.length - 1 && <Separator />}
+            {index < safeParameters.length - 1 && <Separator />}
           </Card>
         );
       })}
     </div>
   );
-}
+};
 
 export default AllParametersView;

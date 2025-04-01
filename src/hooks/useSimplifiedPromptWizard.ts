@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePromptFetching } from "./prompt-wizard/usePromptFetching";
 import { usePromptParameters } from "./usePromptParameters";
@@ -17,9 +17,10 @@ export function useSimplifiedPromptWizard(
   const [selectedTweaks, setSelectedTweaks] = useState<Record<string, string>>({});
   const [additionalContext, setAdditionalContext] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [debouncedLoading, setDebouncedLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
+  
+  // Use a ref to track loading state transitions for debugging
+  const loadingTransitionsRef = useRef<string[]>([]);
   
   // Check network status
   useEffect(() => {
@@ -47,7 +48,7 @@ export function useSimplifiedPromptWizard(
     isLoading: isPromptLoading, 
     error: promptError, 
     refetch: refetchPrompt 
-  } = usePromptFetching(promptId, isOpen, retryCount);
+  } = usePromptFetching(promptId, isOpen);
   
   // DIRECT PARAMETER FETCHING: Pass promptId directly to usePromptParameters
   // This enables parallel loading rather than waiting for prompt to load first
@@ -58,27 +59,22 @@ export function useSimplifiedPromptWizard(
     retry: retryParameters
   } = usePromptParameters(promptId);
   
-  // Combine loading states with logging
+  // Calculate the combined loading state - Simplified to avoid race conditions
   const isLoading = isPromptLoading || isParametersLoading;
   
+  // Track loading state changes for debugging
   useEffect(() => {
+    const loadingState = `prompt:${isPromptLoading},params:${isParametersLoading}`;
+    loadingTransitionsRef.current.push(loadingState);
+    
     console.log(`[useSimplifiedPromptWizard] Loading states - prompt: ${isPromptLoading}, parameters: ${isParametersLoading}, combined: ${isLoading}`);
-  }, [isPromptLoading, isParametersLoading, isLoading]);
-  
-  // Add debounce to loading state changes to prevent flickering
-  useEffect(() => {
-    if (isLoading) {
-      // When loading starts, set debounced loading immediately
-      setDebouncedLoading(true);
-    } else {
-      // When loading finishes, delay the state change to prevent flickering
-      const timer = setTimeout(() => {
-        setDebouncedLoading(false);
-      }, 300); // 300ms debounce
-      
-      return () => clearTimeout(timer);
+    
+    // Circuit breaker for loading state
+    if (loadingTransitionsRef.current.length > 20) {
+      console.warn("[useSimplifiedPromptWizard] Too many loading transitions, possible infinite loop");
+      console.log("Loading transitions:", loadingTransitionsRef.current);
     }
-  }, [isLoading]);
+  }, [isPromptLoading, isParametersLoading, isLoading]);
   
   // Reset form state when wizard opens with a new prompt
   useEffect(() => {
@@ -86,7 +82,7 @@ export function useSimplifiedPromptWizard(
       console.log(`[useSimplifiedPromptWizard] Resetting form state for promptId: ${promptId}`);
       setSelectedTweaks({});
       setAdditionalContext("");
-      setDebouncedLoading(true); // Ensure loading state is true when opening
+      loadingTransitionsRef.current = [];
     }
   }, [isOpen, promptId]);
   
@@ -104,6 +100,21 @@ export function useSimplifiedPromptWizard(
             parameters.filter(p => !p || !p.id || !p.name));
         } else {
           console.log("[useSimplifiedPromptWizard] Valid parameters data confirmed");
+          
+          // Check tweaks for each parameter
+          let tweakIssuesFound = false;
+          parameters.forEach(param => {
+            if (!param.tweaks || !Array.isArray(param.tweaks)) {
+              console.error(`[useSimplifiedPromptWizard] Parameter ${param.name} has invalid tweaks property:`, param.tweaks);
+              tweakIssuesFound = true;
+            } else if (param.tweaks.length === 0) {
+              console.warn(`[useSimplifiedPromptWizard] Parameter ${param.name} has no tweaks`);
+            }
+          });
+          
+          if (tweakIssuesFound) {
+            console.warn("[useSimplifiedPromptWizard] Some parameters have tweak data issues");
+          }
         }
       } else if (parameters?.length === 0 && !parametersError) {
         console.log("[useSimplifiedPromptWizard] No parameters found for prompt - this may be expected for some prompts");
@@ -141,9 +152,9 @@ export function useSimplifiedPromptWizard(
   // IMPROVED: Manual retry function for all data
   const handleRetry = useCallback(() => {
     console.log("[useSimplifiedPromptWizard] Manually retrying all data fetch");
-    setRetryCount(prev => prev + 1);
     refetchPrompt();
     retryParameters();
+    loadingTransitionsRef.current = [];
     
     toast({
       title: "Retrying",
@@ -259,11 +270,12 @@ export function useSimplifiedPromptWizard(
       // Close the wizard
       onClose();
       
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("[useSimplifiedPromptWizard] Error generating content:", error);
       toast({
         title: "Error Generating Content",
-        description: error.message || "An unexpected error occurred",
+        description: errorMessage || "An unexpected error occurred",
         variant: "destructive"
       });
     } finally {
@@ -284,7 +296,7 @@ export function useSimplifiedPromptWizard(
   return {
     prompt,
     parameters,
-    isLoading: debouncedLoading, 
+    isLoading, 
     error,
     generating,
     selectedTweaks,

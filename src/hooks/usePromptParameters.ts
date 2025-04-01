@@ -22,14 +22,20 @@ export function usePromptParameters(promptId: string | undefined) {
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-
+    console.log(`[usePromptParameters] Fetching parameters for prompt ID: ${promptId} (Attempt: ${retryCount + 1})`);
+    
     try {
-      console.log(`[usePromptParameters] Fetching parameters for prompt ID: ${promptId} (Attempt: ${retryCount + 1})`);
+      // First, verify database connection
+      console.log("Connection test started...");
+      const { data: testData, error: testError } = await supabase.from('prompts').select('count').limit(1);
+      
+      if (testError) {
+        console.error("Database connection test failed:", testError);
+        throw new Error(`Database connection test failed: ${testError.message}`);
+      }
+      console.log("Connection test successful, database is accessible");
       
       // SINGLE OPERATION: Fetch everything in a single operation with joins
-      // Step 1: Query the rules, parameters and tweaks in one go
       const { data: parametersWithRules, error: queryError } = await supabase
         .from('prompt_parameter_rules')
         .select(`
@@ -61,8 +67,7 @@ export function usePromptParameters(promptId: string | undefined) {
         `)
         .eq('prompt_id', promptId)
         .eq('is_active', true)
-        .order('order')
-        .throwOnError();
+        .order('order');
       
       if (queryError) {
         console.error("[usePromptParameters] Error in joined parameter query:", queryError);
@@ -73,6 +78,7 @@ export function usePromptParameters(promptId: string | undefined) {
         console.log(`[usePromptParameters] No parameter rules found for prompt: ${promptId}`);
         setParameters([]);
         setIsLoading(false);
+        setError(null);
         return;
       }
       
@@ -111,7 +117,7 @@ export function usePromptParameters(promptId: string | undefined) {
       
       console.log(`[usePromptParameters] Transformed data into ${transformedParameters.length} parameters with tweaks`);
       
-      // Debug the actual data we're setting for parameters
+      // Debug the actual data structure
       console.log("[usePromptParameters] Parameter data structure:", 
         transformedParameters.map(p => ({
           id: p.id,
@@ -121,33 +127,58 @@ export function usePromptParameters(promptId: string | undefined) {
         }))
       );
       
+      // Directly verify parameters and tweaks structure
+      transformedParameters.forEach(param => {
+        if (!param.id) console.error(`[usePromptParameters] Parameter missing ID`);
+        if (!param.name) console.error(`[usePromptParameters] Parameter missing name`);
+        if (!param.tweaks) console.error(`[usePromptParameters] Parameter ${param.name} missing tweaks array`);
+      });
+      
       setParameters(transformedParameters);
+      setError(null);
       setIsLoading(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      // Fixed TypeScript error with proper error handling
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("[usePromptParameters] Error in usePromptParameters:", err);
-      setError(`Failed to load parameters: ${err.message}`);
+      setError(`Failed to load parameters: ${errorMessage}`);
       setParameters([]);
       setIsLoading(false);
       
-      toast({
-        title: "Error Loading Parameters",
-        description: "There was a problem loading the customization options. We'll try again.",
-        variant: "destructive"
-      });
+      // Only show toast for network or critical errors
+      if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+        toast({
+          title: "Connection Error",
+          description: "There was a problem with your network connection. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   }, [promptId, toast, retryCount]);
 
   // Fetch parameters when promptId changes or when retry is triggered
   useEffect(() => {
-    if (promptId) {
-      console.log(`[usePromptParameters] Triggering parameter fetch for promptId: ${promptId}`);
-      fetchParameters();
-    } else {
-      console.log("[usePromptParameters] No promptId available, resetting parameters state");
-      setParameters([]);
-      setIsLoading(false);
-      setError(null);
-    }
+    let isMounted = true;
+    
+    const fetchAndSetParams = async () => {
+      if (!promptId) return;
+      
+      try {
+        setIsLoading(true);
+        await fetchParameters();
+      } catch (err) {
+        console.error("[usePromptParameters] Error in fetch effect:", err);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    fetchAndSetParams();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [fetchParameters, promptId, retryCount]);
 
   // Provide a retry mechanism

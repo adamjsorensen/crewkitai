@@ -68,37 +68,40 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
     handleRetry
   } = useSimplifiedPromptWizard(promptId, isOpen, onClose);
   
-  // Log the parameters received in the component
+  // Debug log - Added explicitly to track what parameters we're getting
   useEffect(() => {
     console.log(`[SimplePromptWizard] Parameters received: count=${parameters?.length || 0}`);
     if (parameters?.length > 0) {
       console.log("[SimplePromptWizard] First few parameters:", 
         parameters.slice(0, 3).map(p => ({id: p.id, name: p.name, tweaks: p.tweaks?.length || 0}))
       );
+      
+      // Verify parameter structure integrity
+      const hasValidParameters = parameters.every(p => p && p.id && p.name);
+      console.log(`[SimplePromptWizard] Parameters valid: ${hasValidParameters}`);
+      
+      // Check if parameters have tweaks
+      const parametersWithTweaks = parameters.filter(p => p.tweaks && p.tweaks.length > 0);
+      console.log(`[SimplePromptWizard] Parameters with tweaks: ${parametersWithTweaks.length}`);
     }
   }, [parameters]);
   
-  // Determine the error type for the error state component
-  const getErrorType = () => {
-    if (!error) return 'unknown';
-    if (error.includes("not found") || error.includes("doesn't exist")) {
-      return 'not-found';
-    } else if (error.includes("connection") || error.includes("network") || error.includes("Failed to fetch") || error.includes("timeout")) {
-      return 'connection';
-    }
-    return 'unknown';
-  };
-  
-  // Log connection issues with better debug information
+  // Track loading state changes
   useEffect(() => {
-    if (networkStatus === 'offline') {
-      console.log("[SimplePromptWizard] Network is offline - this will affect data loading");
-    }
-    
-    // Log prompt ID and loading state
     console.log(`[SimplePromptWizard] Prompt ID: ${promptId}, isLoading: ${isLoading}, error: ${error ? 'yes' : 'no'}`);
-    
-  }, [networkStatus, promptId, isLoading, error]);
+  }, [promptId, isLoading, error]);
+  
+  // Circuit breaker for infinite loading
+  useEffect(() => {
+    if (isLoading) {
+      const timeoutId = setTimeout(() => {
+        console.log('[SimplePromptWizard] Loading timeout triggered, forcing refresh');
+        if (handleRetry) handleRetry();
+      }, 10000); // 10 second timeout
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLoading, handleRetry]);
   
   if (!isOpen) return null;
   
@@ -108,7 +111,9 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
       ? `Customize Prompt: ${prompt.title}` 
       : "Customize Prompt";
   
-  const hasParameters = parameters && Array.isArray(parameters) && parameters.length > 0;
+  // Force cast parameters to an array to prevent rendering issues
+  const safeParameters = Array.isArray(parameters) ? parameters : [];
+  const hasParameters = safeParameters.length > 0;
   
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -135,7 +140,8 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
             onClose={handleClose} 
             onRetry={handleRetry} 
             networkStatus={networkStatus}
-            errorType={getErrorType()}
+            errorType={error.includes("not found") ? "not-found" : 
+                       error.includes("connection") ? "connection" : "unknown"}
           />
         ) : !prompt ? (
           <ErrorAndRetryState 
@@ -154,9 +160,9 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
                   <summary className="cursor-pointer font-medium">Debug Info</summary>
                   <div className="mt-2 space-y-1">
                     <p>Prompt ID: {prompt.id}</p>
-                    <p>Parameters count: {parameters?.length || 0}</p>
+                    <p>Parameters count: {safeParameters.length}</p>
                     <p>Has parameters: {hasParameters ? 'Yes' : 'No'}</p>
-                    <p>Parameters: {JSON.stringify(parameters?.map(p => p.name))}</p>
+                    <p>Parameters: {JSON.stringify(safeParameters.map(p => p.name))}</p>
                     <p>Selected tweaks: {Object.keys(selectedTweaks).length}</p>
                     <p>Network: {networkStatus}</p>
                   </div>
@@ -174,10 +180,10 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
               </Alert>
             )}
             
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="customize">
               <TabsList className="w-full">
                 <TabsTrigger value="customize" className="flex-1">
-                  Customize {hasParameters && <span className="ml-1 text-xs">({parameters.length})</span>}
+                  Customize {hasParameters && <span className="ml-1 text-xs">({safeParameters.length})</span>}
                 </TabsTrigger>
                 <TabsTrigger value="context" className="flex-1">Add Context</TabsTrigger>
               </TabsList>
@@ -185,7 +191,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = ({
               <TabsContent value="customize" className="py-4">
                 {hasParameters ? (
                   <AllParametersView 
-                    parameters={parameters} 
+                    parameters={safeParameters} 
                     selectedTweaks={selectedTweaks}
                     onTweakChange={handleTweakChange}
                   />
