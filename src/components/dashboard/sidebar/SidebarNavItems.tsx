@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -102,12 +103,7 @@ const SidebarNavItems = ({ isCollapsed = false }: SidebarNavItemsProps) => {
   
   const [accordionState, setAccordionState] = useAccordionState(['admin-section']);
 
-  useEffect(() => {
-    if (isInAdminRoute && !accordionState.includes('admin-section')) {
-      setAccordionState(prev => [...prev, 'admin-section']);
-    }
-  }, [isInAdminRoute, accordionState, setAccordionState]);
-
+  // Regular user navigation items
   const regularNavItems: NavItemType[] = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard", end: true },
     { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
@@ -116,6 +112,7 @@ const SidebarNavItems = ({ isCollapsed = false }: SidebarNavItemsProps) => {
     { name: "Settings", icon: GeneralSettingsIcon, path: "/dashboard/settings" },
   ];
 
+  // Admin navigation items
   const adminNavItems: NavItemType[] = [
     { name: "Admin Dashboard", icon: Shield, path: "/dashboard/admin", end: true },
     { name: "Users", icon: AdminUsersIcon, path: "/dashboard/admin/users" },
@@ -221,36 +218,15 @@ const SidebarNavItems = ({ isCollapsed = false }: SidebarNavItemsProps) => {
 
         {isAdmin && (
           <div className="mt-4 border-t pt-4 px-2"> 
-             <Accordion 
-               type="multiple" 
-               value={accordionState}
-               onValueChange={(value) => {
-                 if (isInAdminRoute) {
-                   if (!value.includes('admin-section')) {
-                     value = [...value, 'admin-section'];
-                   }
-                 }
-                 setAccordionState(value);
-               }}
-             >
-               <AccordionItem value="admin-section" className="border-b-0">
-                 <AccordionTrigger 
-                   className={cn(
-                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition-colors hover:bg-accent hover:text-accent-foreground hover:no-underline",
-                     location.pathname.startsWith('/dashboard/admin') ? "text-primary" : "text-muted-foreground",
-                     isCollapsed ? "justify-center" : ""
-                   )}
-                 >
-                   <Shield className={cn("h-5 w-5 shrink-0", location.pathname.startsWith('/dashboard/admin') && "text-primary")} />
-                   <span className={cn("transition-opacity duration-200 whitespace-nowrap overflow-hidden", isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto")}>
-                     Admin
-                   </span>
-                 </AccordionTrigger>
-                 <AccordionContent className={cn("overflow-hidden space-y-1", isCollapsed ? "pl-0 ml-0 border-none" : "pl-5 ml-3 border-l")}>
-                   {!isCollapsed && adminNavItems.map((item) => renderNavItem(item, 1))}
-                 </AccordionContent>
-               </AccordionItem>
-             </Accordion>
+            {/* Admin section header - simple label instead of accordion */}
+            <div className="px-3 py-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admin</p>
+            </div>
+            
+            {/* Admin navigation items */}
+            <div className="space-y-1 mt-1">
+              {adminNavItems.map((item) => renderNavItem(item))}
+            </div>
           </div>
         )}
       </div>
