@@ -28,9 +28,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CalendarIcon, Download, Search, X } from "lucide-react";
 import { format } from "date-fns";
 import { useActivityLogs, ActivityLog } from "@/hooks/useActivityLogs";
-import { ActivityLogListSkeleton } from "@/components/admin/logs/ActivityLogsSkeleton";
-import { ActivityLogDetails } from "@/components/admin/logs/ActivityLogDetails";
-import { ActivityLogRow } from "@/components/admin/logs/ActivityLogRow";
+import { ActivityLogListSkeleton } from "@/components/user-management/ActivityLogsSkeleton";
+import { ActivityLogDetails } from "@/components/user-management/ActivityLogDetails";
+import { ActivityLogRow } from "@/components/user-management/ActivityLogRow";
 import {
   Pagination,
   PaginationContent,
@@ -370,4 +370,4 @@ const ActivityLogsPage: React.FC = () => {
   );
 };
 
-export default ActivityLogsPage; 
+export default ActivityLogsPage;
