@@ -45,7 +45,7 @@ const AdminLayout = ({ children, title, description, activeTab }: AdminLayoutPro
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-4 max-w-full">
+      <div className="flex flex-col gap-4 max-w-full overflow-hidden">
         <BackToAdminButton />
         
         <div className="flex items-center gap-3">
@@ -61,7 +61,9 @@ const AdminLayout = ({ children, title, description, activeTab }: AdminLayoutPro
         <Separator className="my-0" />
         
         <Card className="p-4 md:p-6 w-full overflow-hidden">
-          {children}
+          <div className="max-w-full overflow-hidden">
+            {children}
+          </div>
         </Card>
       </div>
     </DashboardLayout>

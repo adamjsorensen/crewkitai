@@ -105,7 +105,7 @@ const AiSettingsForm = () => {
 
     return (
       <ScrollArea className="mb-6 w-full">
-        <div className="border-b flex no-wrap min-w-full overflow-x-auto hide-scrollbar pb-0.5">
+        <div className="border-b flex no-wrap overflow-x-auto hide-scrollbar pb-0.5">
           {currentSubtabs.map(subtab => (
             <button
               key={subtab.id}
@@ -128,7 +128,7 @@ const AiSettingsForm = () => {
     if (activeTab === "model-settings") {
       return (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-full overflow-hidden">
             {activeSubtab === "system-prompt" && <SystemPromptField form={form} />}
             
             {activeSubtab === "temperature" && <TemperatureField form={form} />}
@@ -194,7 +194,7 @@ const AiSettingsForm = () => {
         <h2 className="text-xl md:text-2xl font-semibold">AI Coach Settings</h2>
       </CardHeader>
       
-      <CardContent className="w-full">
+      <CardContent className="w-full overflow-hidden">
         <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
           <ScrollArea className="w-full mb-6" orientation="horizontal">
             <TabsList className="inline-flex w-auto min-w-max">

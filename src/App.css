@@ -67,3 +67,39 @@ textarea::-webkit-scrollbar-thumb:hover {
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* Overflow handling utilities */
+.overflow-x-scroll-container {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.content-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Ensure all tables have proper overflow handling */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Force word wrapping for all content containers */
+.force-wrap {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
