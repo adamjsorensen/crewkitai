@@ -414,12 +414,125 @@ serve(async (req) => {
       };
     }
     
+    // Get user's business profile for context - FIXED IMPLEMENTATION
+    let businessProfile = null;
+    
+    try {
+      if (userId) {
+        console.log("[pg-coach] Fetching user business profile data...", { userId });
+        
+        // First, get the basic profile data
+        const { data: profileData, error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle();
+        
+        if (profileError) {
+          console.error("[pg-coach] Error fetching profile data:", profileError);
+        } else {
+          console.log("[pg-coach] Profile data retrieved:", profileData ? 
+            "Successfully retrieved profile" : "No profile found");
+        }
+        
+        // Then, get compass-specific profile data
+        const { data: compassData, error: compassError } = await supabaseAdmin
+          .from("compass_user_profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle();
+        
+        if (compassError) {
+          console.error("[pg-coach] Error fetching compass profile data:", compassError);
+        } else {
+          console.log("[pg-coach] Compass profile data retrieved:", compassData ? 
+            "Successfully retrieved compass profile" : "No compass profile found");
+        }
+        
+        // Combine the data from both tables into a business profile
+        if (profileData || compassData) {
+          businessProfile = {
+            id: userId,
+            full_name: profileData?.full_name || "",
+            business_name: compassData?.business_name || profileData?.company_name || "",
+            company_description: profileData?.company_description || "",
+            business_address: profileData?.business_address || "",
+            website: profileData?.website || "",
+            crew_size: compassData?.crew_size || "",
+            specialties: compassData?.specialties || [],
+            workload: compassData?.workload || ""
+          };
+          
+          console.log("[pg-coach] Business profile assembled:", {
+            hasBusinessName: !!businessProfile.business_name,
+            hasDescription: !!businessProfile.company_description,
+            hasAddress: !!businessProfile.business_address,
+            hasWebsite: !!businessProfile.website,
+            hasCrewSize: !!businessProfile.crew_size,
+            specialtiesCount: businessProfile.specialties.length,
+            hasWorkload: !!businessProfile.workload
+          });
+        } else {
+          console.log("[pg-coach] No business profile data found for user", { userId });
+        }
+      }
+    } catch (profileError) {
+      console.error("[pg-coach] Unexpected error fetching business profile:", profileError);
+    }
+    
     console.log("[pg-coach] Calling OpenAI API:", {
       model,
       messageCount: messages.length,
       temperature: isThinkMode ? "N/A" : settings.temperature,
       maxCompletionTokens: settings.maxTokens,
+      hasBusinessProfile: !!businessProfile
     });
+    
+    // Add enhanced business context if available - properly formatted
+    if (businessProfile) {
+      // Construct a clear business context string
+      let businessContext = "\n\n### Business Context:\n";
+      
+      if (businessProfile.business_name) {
+        businessContext += `Business Name: ${businessProfile.business_name}\n`;
+      }
+      
+      if (businessProfile.company_description) {
+        businessContext += `Business Description: ${businessProfile.company_description}\n`;
+      }
+      
+      if (businessProfile.business_address) {
+        businessContext += `Business Address: ${businessProfile.business_address}\n`;
+      }
+      
+      if (businessProfile.website) {
+        businessContext += `Website: ${businessProfile.website}\n`;
+      }
+      
+      if (businessProfile.crew_size) {
+        businessContext += `Crew Size: ${businessProfile.crew_size}\n`;
+      }
+      
+      if (businessProfile.specialties && businessProfile.specialties.length > 0) {
+        businessContext += `Specialties: ${businessProfile.specialties.join(', ')}\n`;
+      }
+      
+      if (businessProfile.workload) {
+        businessContext += `Current Workload: ${businessProfile.workload}\n`;
+      }
+      
+      // Add business context to the system prompt
+      messages[0].content += businessContext;
+      
+      console.log("[pg-coach] Added business context to prompt:", {
+        contextLength: businessContext.length,
+        systemPromptLength: messages[0].content.length
+      });
+    } else {
+      // Inform the system that no business profile is available
+      messages[0].content += "\n\n### Business Context:\nNo business profile information available. Please provide generic advice.";
+      console.log("[pg-coach] No business profile available, added note to system prompt");
+    }
     
     // Prepare the OpenAI API request body - conditionally add temperature parameter
     const openAIRequestBody: any = {
@@ -449,7 +562,8 @@ serve(async (req) => {
         user_message: message,
         conversation_id: conversationId,
         is_think_mode: isThinkMode,
-        has_image: !!imageUrl
+        has_image: !!imageUrl,
+        business_profile_used: !!businessProfile
       }, 
       'conversation', 
       conversationId
@@ -572,7 +686,8 @@ serve(async (req) => {
         system_prompt: systemPrompt,
         conversation_id: actualConversationId,
         is_think_mode: isThinkMode,
-        has_image: !!imageUrl
+        has_image: !!imageUrl,
+        business_profile_used: !!businessProfile
       }, 
       'conversation', 
       actualConversationId
