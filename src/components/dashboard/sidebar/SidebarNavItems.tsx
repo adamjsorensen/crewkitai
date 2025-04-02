@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
@@ -27,15 +27,12 @@ import {
   FileText as AdminFileText
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useAccordionState } from "@/hooks/useAccordionState";
 
-// Helper to check if a menu item or its children are active
 const isNavItemActive = (path: string, location: { pathname: string }, isParent = false) => {
   if (isParent) {
-    // For parent items (like /admin), check if the current path starts with it
-    // but exclude the exact match if it's also a direct link (like /dashboard)
     return location.pathname.startsWith(path) && location.pathname !== path;
   }
-  // For exact links
   return location.pathname === path;
 };
 
@@ -58,23 +55,24 @@ interface NavAccordionItem {
 
 type NavItemType = NavLinkItem | NavAccordionItem;
 
-// Sidebar NavLink Component (minor change to use NavLink directly)
 const SidebarNavLink = ({ item, isCollapsed }: { item: NavLinkItem, isCollapsed?: boolean }) => {
   const location = useLocation();
+  const isActive = location.pathname === item.path || 
+                   (!item.end && location.pathname.startsWith(item.path));
   
   return (
     <NavLink
       key={item.path}
       to={item.path}
       end={item.end}
-      className={({ isActive }) => cn(
+      className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
         isActive
           ? "bg-primary/10 text-primary font-medium"
           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
       )}
     >
-      <item.icon className="h-5 w-5 shrink-0" />
+      <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
       <span className={cn(
         "transition-opacity duration-200 whitespace-nowrap overflow-hidden",
         isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
@@ -100,8 +98,16 @@ interface SidebarNavItemsProps {
 const SidebarNavItems = ({ isCollapsed = false }: SidebarNavItemsProps) => {
   const { signOut, isAdmin } = useAuth();
   const location = useLocation();
+  const isInAdminRoute = location.pathname.includes('/dashboard/admin');
+  
+  const [accordionState, setAccordionState] = useAccordionState(['admin-section']);
 
-  // Define Regular Navigation Items
+  useEffect(() => {
+    if (isInAdminRoute && !accordionState.includes('admin-section')) {
+      setAccordionState(prev => [...prev, 'admin-section']);
+    }
+  }, [isInAdminRoute, accordionState, setAccordionState]);
+
   const regularNavItems: NavItemType[] = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard", end: true },
     { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
@@ -110,7 +116,6 @@ const SidebarNavItems = ({ isCollapsed = false }: SidebarNavItemsProps) => {
     { name: "Settings", icon: GeneralSettingsIcon, path: "/dashboard/settings" },
   ];
 
-  // Define Admin Navigation Items (using hierarchical structure)
   const adminNavItems: NavItemType[] = [
     { name: "Admin Dashboard", icon: Shield, path: "/dashboard/admin", end: true },
     { name: "Users", icon: AdminUsersIcon, path: "/dashboard/admin/users" },
@@ -144,53 +149,90 @@ const SidebarNavItems = ({ isCollapsed = false }: SidebarNavItemsProps) => {
     },
   ];
 
-  // Helper to render nested items (Accordion or Link)
+  const isAccordionOpen = (id: string) => {
+    return accordionState.includes(id);
+  };
+
+  const toggleAccordion = (id: string) => {
+    setAccordionState(prev => 
+      prev.includes(id) 
+        ? prev.filter(item => item !== id) 
+        : [...prev, id]
+    );
+  };
+
   const renderNavItem = (item: NavItemType, level = 0): JSX.Element => {
     if ('children' in item) {
-      // Accordion Item
-      const isChildActive = item.children.some(child => location.pathname.startsWith(child.path));
+      const isChildActive = item.children.some(child => 
+        location.pathname === child.path || location.pathname.startsWith(child.path)
+      );
+      const accordionId = `accordion-${item.name.toLowerCase().replace(/\s+/g, '-')}`;
+      
+      useEffect(() => {
+        if (isChildActive && !accordionState.includes(accordionId)) {
+          setAccordionState(prev => [...prev, accordionId]);
+        }
+      }, [isChildActive]);
+
       return (
-        <Accordion key={item.name} type="single" collapsible defaultValue={isChildActive ? item.name : undefined}>
-          <AccordionItem value={item.name} className="border-b-0">
+        <Accordion 
+          key={item.name} 
+          type="multiple" 
+          value={accordionState}
+          onValueChange={(value) => {
+            if (value.includes(accordionId) && !accordionState.includes(accordionId)) {
+              toggleAccordion(accordionId);
+            } else if (!value.includes(accordionId) && accordionState.includes(accordionId)) {
+              toggleAccordion(accordionId);
+            }
+          }}
+        >
+          <AccordionItem value={accordionId} className="border-b-0">
             <AccordionTrigger 
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground hover:no-underline",
                 isChildActive ? "text-primary font-medium" : "text-muted-foreground",
                 isCollapsed ? "justify-center" : "",
-                level > 0 ? "font-normal" : "font-semibold" // Adjust font weight based on level
+                level > 0 ? "font-normal" : "font-semibold"
               )}
             >
-              <item.icon className="h-5 w-5 shrink-0" />
+              <item.icon className={cn("h-5 w-5 shrink-0", isChildActive && "text-primary")} />
               <span className={cn("transition-opacity duration-200 whitespace-nowrap overflow-hidden", isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto")}>
                 {item.name}
               </span>
             </AccordionTrigger>
             <AccordionContent className={cn("overflow-hidden space-y-1", isCollapsed ? "pl-0 ml-0 border-none" : "pl-5 ml-3 border-l")}>
-              {/* Render children recursively */}
               {!isCollapsed && item.children.map(child => renderNavItem(child, level + 1))}
             </AccordionContent>
           </AccordionItem>
         </Accordion>
       );
     } else {
-      // NavLink Item
       return <SidebarNavLink key={item.path} item={item} isCollapsed={isCollapsed} />;
     }
   };
 
   return (
     <>
-      {/* Main Navigation */}
       <div className="flex-1 overflow-auto py-2">
         <nav className="grid gap-1 px-2">
           {regularNavItems.map((item) => renderNavItem(item))}
         </nav>
 
-        {/* Admin section */}
         {isAdmin && (
-          <div className="mt-4 border-t pt-4 px-2"> {/* Add px-2 to match nav */} 
-             {/* Render the top-level Admin Accordion */} 
-             <Accordion type="single" collapsible className="w-full">
+          <div className="mt-4 border-t pt-4 px-2"> 
+             <Accordion 
+               type="multiple" 
+               value={accordionState}
+               onValueChange={(value) => {
+                 if (isInAdminRoute) {
+                   if (!value.includes('admin-section')) {
+                     value = [...value, 'admin-section'];
+                   }
+                 }
+                 setAccordionState(value);
+               }}
+             >
                <AccordionItem value="admin-section" className="border-b-0">
                  <AccordionTrigger 
                    className={cn(
@@ -199,14 +241,13 @@ const SidebarNavItems = ({ isCollapsed = false }: SidebarNavItemsProps) => {
                      isCollapsed ? "justify-center" : ""
                    )}
                  >
-                   <Shield className="h-5 w-5 shrink-0" />
+                   <Shield className={cn("h-5 w-5 shrink-0", location.pathname.startsWith('/dashboard/admin') && "text-primary")} />
                    <span className={cn("transition-opacity duration-200 whitespace-nowrap overflow-hidden", isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto")}>
                      Admin
                    </span>
                  </AccordionTrigger>
                  <AccordionContent className={cn("overflow-hidden space-y-1", isCollapsed ? "pl-0 ml-0 border-none" : "pl-5 ml-3 border-l")}>
-                   {/* Map over adminNavItems and call renderNavItem for each */}
-                   {!isCollapsed && adminNavItems.map((item) => renderNavItem(item, 1))} {/* Start level at 1 */}
+                   {!isCollapsed && adminNavItems.map((item) => renderNavItem(item, 1))}
                  </AccordionContent>
                </AccordionItem>
              </Accordion>
@@ -214,7 +255,6 @@ const SidebarNavItems = ({ isCollapsed = false }: SidebarNavItemsProps) => {
         )}
       </div>
 
-      {/* Footer with Sign Out */}
       <div className="border-t p-4 mt-auto">
         <Button
           variant="ghost"

@@ -1,5 +1,6 @@
+
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, 
@@ -19,6 +20,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useAccordionState } from "@/hooks/useAccordionState";
+import { cn } from "@/lib/utils";
 
 // Define navigation items
 const navItems = [
@@ -55,21 +58,44 @@ const navItems = [
 ];
 
 // Helper component for NavLink styling
-const SidebarNavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => (
-  <NavLink
-    to={href}
-    end
-    className={({ isActive }) =>
-      `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-muted hover:text-primary ${isActive ? "bg-muted text-primary font-semibold" : "text-muted-foreground"}`
-    }
-  >
-    <Icon className="h-4 w-4" />
-    {label}
-  </NavLink>
-);
+const SidebarNavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => {
+  const location = useLocation();
+  const isActive = location.pathname === href || location.pathname.startsWith(href);
+  
+  return (
+    <NavLink
+      to={href}
+      end
+      className={({ isActive }) =>
+        `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-muted hover:text-primary ${isActive ? "bg-muted text-primary font-semibold" : "text-muted-foreground"}`
+      }
+    >
+      <Icon className={cn("h-4 w-4", isActive && "text-primary")} />
+      {label}
+    </NavLink>
+  );
+};
 
 // Desktop Sidebar Component
 const AdminDesktopSidebar = () => {
+  const location = useLocation();
+  const [accordionState, setAccordionState] = useAccordionState([], "admin-sidebar-state");
+  
+  // Check which section should be auto-opened based on current path
+  React.useEffect(() => {
+    const currentPath = location.pathname;
+    navItems.forEach(item => {
+      if ('children' in item) {
+        const shouldBeOpen = item.children.some(child => currentPath === child.href || currentPath.startsWith(child.href));
+        const accordionId = item.label;
+        
+        if (shouldBeOpen && !accordionState.includes(accordionId)) {
+          setAccordionState(prev => [...prev, accordionId]);
+        }
+      }
+    });
+  }, [location.pathname, accordionState, setAccordionState]);
+
   return (
     <nav className="hidden lg:flex flex-col h-full w-64 border-r bg-background p-4 flex-shrink-0 gap-2">
       <h2 className="text-lg font-semibold mb-2 px-3">Admin Menu</h2>
@@ -77,10 +103,33 @@ const AdminDesktopSidebar = () => {
         <div className="space-y-1 pr-2">
           {navItems.map((item) => (
             item.children ? (
-              <Accordion key={item.label} type="single" collapsible className="w-full">
+              <Accordion 
+                key={item.label} 
+                type="multiple" 
+                value={accordionState}
+                onValueChange={(value) => {
+                  // Toggle the current item
+                  if (value.includes(item.label) && !accordionState.includes(item.label)) {
+                    setAccordionState([...accordionState, item.label]);
+                  } else if (!value.includes(item.label) && accordionState.includes(item.label)) {
+                    setAccordionState(accordionState.filter(id => id !== item.label));
+                  }
+                }}
+              >
                 <AccordionItem value={item.label} className="border-b-0">
-                  <AccordionTrigger className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-primary hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                    <item.icon className="h-4 w-4" />
+                  <AccordionTrigger 
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-primary hover:no-underline [&[data-state=open]>svg]:rotate-180",
+                      item.children.some(child => 
+                        location.pathname === child.href || location.pathname.startsWith(child.href)
+                      ) && "text-primary font-medium"
+                    )}
+                  >
+                    <item.icon className={cn("h-4 w-4", 
+                      item.children.some(child => 
+                        location.pathname === child.href || location.pathname.startsWith(child.href)
+                      ) && "text-primary"
+                    )} />
                     <span>{item.label}</span>
                   </AccordionTrigger>
                   <AccordionContent className="pl-4 space-y-1 border-l ml-5">
@@ -102,6 +151,24 @@ const AdminDesktopSidebar = () => {
 
 // Mobile Top Bar / Sheet Trigger Component
 const AdminMobileTopBar = () => {
+  const location = useLocation();
+  const [accordionState, setAccordionState] = useAccordionState([], "admin-sidebar-mobile-state");
+  
+  // Check which section should be auto-opened based on current path
+  React.useEffect(() => {
+    const currentPath = location.pathname;
+    navItems.forEach(item => {
+      if ('children' in item) {
+        const shouldBeOpen = item.children.some(child => currentPath === child.href || currentPath.startsWith(child.href));
+        const accordionId = item.label;
+        
+        if (shouldBeOpen && !accordionState.includes(accordionId)) {
+          setAccordionState(prev => [...prev, accordionId]);
+        }
+      }
+    });
+  }, [location.pathname, accordionState, setAccordionState]);
+  
   return (
     <div className="lg:hidden border-b bg-background p-2 sticky top-0 z-40">
       <Sheet>
@@ -118,10 +185,33 @@ const AdminMobileTopBar = () => {
               <div className="space-y-1 pr-2">
                 {navItems.map((item) => (
                   item.children ? (
-                    <Accordion key={item.label} type="single" collapsible className="w-full">
+                    <Accordion 
+                      key={item.label} 
+                      type="multiple" 
+                      value={accordionState}
+                      onValueChange={(value) => {
+                        // Toggle the current item
+                        if (value.includes(item.label) && !accordionState.includes(item.label)) {
+                          setAccordionState([...accordionState, item.label]);
+                        } else if (!value.includes(item.label) && accordionState.includes(item.label)) {
+                          setAccordionState(accordionState.filter(id => id !== item.label));
+                        }
+                      }}
+                    >
                       <AccordionItem value={item.label} className="border-b-0">
-                        <AccordionTrigger className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-primary hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                          <item.icon className="h-4 w-4" />
+                        <AccordionTrigger 
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-muted hover:text-primary hover:no-underline [&[data-state=open]>svg]:rotate-180",
+                            item.children.some(child => 
+                              location.pathname === child.href || location.pathname.startsWith(child.href)
+                            ) && "text-primary font-medium"
+                          )}
+                        >
+                          <item.icon className={cn("h-4 w-4", 
+                            item.children.some(child => 
+                              location.pathname === child.href || location.pathname.startsWith(child.href)
+                            ) && "text-primary"
+                          )} />
                           <span>{item.label}</span>
                         </AccordionTrigger>
                         <AccordionContent className="pl-4 space-y-1 border-l ml-5">

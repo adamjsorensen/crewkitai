@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import CollapsibleSidebar from "./CollapsibleSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSidebarCollapseState } from "@/hooks/useSidebarCollapseState";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -11,7 +12,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { profile } = useAuth();
   const isMobile = useIsMobile();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapseState(false);
 
   // Listen for sidebar collapse state changes
   useEffect(() => {
@@ -22,7 +23,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         if (mutation.attributeName === 'class') {
           const sidebar = document.querySelector('aside');
           if (sidebar) {
-            setSidebarCollapsed(sidebar.classList.contains('w-[4.5rem]'));
+            const isCollapsed = sidebar.classList.contains('w-[4.5rem]');
+            setSidebarCollapsed(isCollapsed);
           }
         }
       });
@@ -36,7 +38,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     }
 
     return () => observer.disconnect();
-  }, [isMobile]);
+  }, [isMobile, setSidebarCollapsed]);
 
   return (
     <div className="flex min-h-screen h-screen w-full overflow-hidden">
