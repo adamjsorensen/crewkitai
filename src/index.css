@@ -216,6 +216,11 @@
     -webkit-user-select: none;
     user-select: none;
   }
+  
+  /* Mobile header spacing */
+  .pt-mobile-header {
+    @apply pt-16;
+  }
 }
 
 @layer utilities {

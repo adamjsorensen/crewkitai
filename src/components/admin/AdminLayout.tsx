@@ -47,7 +47,7 @@ const AdminLayout = ({ children, title, description, activeTab }: AdminLayoutPro
 
   return (
     <DashboardLayout>
-      <div className={`flex flex-col gap-4 max-w-full overflow-hidden ${isMobile ? 'pt-16' : ''}`}>
+      <div className="flex flex-col gap-4 max-w-full overflow-hidden">
         <BackToAdminButton />
         
         <div className="flex items-center gap-3">

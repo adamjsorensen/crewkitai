@@ -46,7 +46,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           !isMobile ? (sidebarCollapsed ? "ml-[4.5rem]" : "ml-[16rem]") : ""
         }`}
       >
-        <main className="flex-1 p-4 bg-background overflow-y-auto overflow-x-hidden h-full w-full max-w-full">
+        <main className={`flex-1 p-4 bg-background overflow-y-auto overflow-x-hidden h-full w-full max-w-full ${isMobile ? 'pt-16' : ''}`}>
           <div className="w-full max-w-full mx-auto overflow-hidden">
             {children}
           </div>

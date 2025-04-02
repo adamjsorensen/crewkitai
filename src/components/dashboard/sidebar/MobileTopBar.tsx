@@ -8,7 +8,7 @@ import SidebarNavItems from "./SidebarNavItems";
 const MobileTopBar = () => {
   return (
     <>
-      <div className="fixed top-0 left-0 z-40 w-full bg-background/95 backdrop-blur-sm border-b flex items-center p-3">
+      <div className="fixed top-0 left-0 z-50 w-full bg-background/95 backdrop-blur-sm border-b flex items-center p-3">
         {/* Hamburger Menu - Left Side */}
         <div className="flex-none">
           <Sheet>
