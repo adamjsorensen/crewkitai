@@ -30,7 +30,11 @@ const PromptsPage = () => {
   };
 
   return (
-    <AdminLayout activeTab="prompts">
+    <AdminLayout 
+      title="Prompts Management"
+      description="Manage prompt categories, base prompts, and their parameters"
+      activeTab="prompts"
+    >
       <PageHeader 
         title="Prompts Management" 
         description="Manage prompt categories, base prompts, and their parameters"

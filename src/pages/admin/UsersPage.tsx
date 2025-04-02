@@ -99,7 +99,11 @@ const UsersPage = () => {
   };
 
   return (
-    <AdminLayout activeTab="users">
+    <AdminLayout 
+      title="User Management"
+      description="Manage users and their roles"
+      activeTab="users"
+    >
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <div className="relative w-full max-w-sm">

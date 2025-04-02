@@ -135,7 +135,10 @@ const GenerationsLogPage = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout
+      title="Content Generations Log"
+      description="View all AI-generated content across the platform"
+    >
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

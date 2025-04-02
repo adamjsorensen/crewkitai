@@ -23,7 +23,11 @@ const ParametersPage = () => {
   } = useCrewkitPromptParameters();
 
   return (
-    <AdminLayout activeTab="parameters">
+    <AdminLayout 
+      title="Parameter Management"
+      description="Create and manage parameters and tweaks for prompts"
+      activeTab="parameters"
+    >
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Parameter Management</h2>

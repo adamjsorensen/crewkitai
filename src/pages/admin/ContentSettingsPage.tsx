@@ -75,7 +75,11 @@ const ContentSettingsPage = () => {
   
   if (isLoading) {
     return (
-      <AdminLayout activeTab="content-settings">
+      <AdminLayout 
+        title="Content Settings"
+        description="Configure AI Content Generation"
+        activeTab="content-settings"
+      >
         <div className="flex justify-center items-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -84,7 +88,11 @@ const ContentSettingsPage = () => {
   }
   
   return (
-    <AdminLayout activeTab="content-settings">
+    <AdminLayout 
+      title="Content Settings"
+      description="Configure AI settings for content generation"
+      activeTab="content-settings"
+    >
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Content Generation Settings</h2>
         <p className="text-muted-foreground">
