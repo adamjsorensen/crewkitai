@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,10 +30,9 @@ const isActive = (path: string, location: { pathname: string }) => {
     return location.pathname.startsWith("/dashboard/user-management");
   }
   
-  // For AI settings and other admin paths
-  if (path === "/dashboard/admin/ai-settings") {
-    return location.pathname.startsWith("/dashboard/admin/") && 
-           !location.pathname.startsWith("/dashboard/admin/users");
+  // For admin section 
+  if (path === "/dashboard/admin") {
+    return location.pathname.startsWith("/dashboard/admin");
   }
   
   // For other paths, check if the current path starts with the item path
@@ -120,7 +118,7 @@ const SidebarNavItems = ({ isCollapsed = false }: SidebarNavItemsProps) => {
 
   // Admin console section with User Management
   const adminItems = [
-    { name: "Admin Console", icon: Shield, path: "/dashboard/admin/ai-settings" },
+    { name: "Admin Console", icon: Shield, path: "/dashboard/admin" },
     { name: "User Management", icon: Users, path: "/dashboard/user-management/user-list" },
   ];
 

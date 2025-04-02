@@ -81,13 +81,13 @@ const AdminDashboard = () => {
       title: "User Management",
       description: "Manage users and activity",
       icon: <Users className="h-6 w-6 text-primary" />,
-      path: "/dashboard/admin/users"
+      path: "/dashboard/user-management/user-list"
     },
     {
       title: "Activity Logs",
       description: "View user activity logs",
       icon: <Activity className="h-6 w-6 text-primary" />,
-      path: "/dashboard/admin/activity-logs"
+      path: "/dashboard/user-management/activity-logs"
     },
     {
       title: "App Settings",
