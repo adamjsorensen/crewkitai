@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
@@ -156,6 +157,9 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [forceRefreshCount, setForceRefreshCount] = useState(0);
   
+  // Default to disabled in all environments, only enable via keyboard shortcut
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  
   const handleClose = useCallback(() => {
     if (loadingTimeout) {
       clearTimeout(loadingTimeout);
@@ -293,11 +297,6 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
       }
     };
   }, []);
-  
-  const [isDebugMode, setIsDebugMode] = useState(() => {
-    if (process.env.NODE_ENV !== 'production') return true;
-    return localStorage.getItem('crewkit_debug_mode') === 'true';
-  });
   
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
