@@ -1,48 +1,18 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Loader2, Check, RefreshCw, Wifi, WifiOff, AlertCircle, Info } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useSimplifiedPromptWizard } from "@/hooks/useSimplifiedPromptWizard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AllParametersView from "./wizard/AllParametersView";
-import AdditionalContextStep from "./wizard/AdditionalContextStep";
 import LoadingState from "./wizard/LoadingState";
 import ErrorAndRetryState from "./wizard/ErrorAndRetryState";
 import NetworkStatusAlert from "./wizard/NetworkStatusAlert";
 import DebugModePanel from "./wizard/DebugModePanel";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { createLogger } from "./wizard/WizardLogger";
+import { useRenderTracker } from "./wizard/RenderTrackingUtil";
+import SimpleWizardHeader from "./wizard/SimpleWizardHeader";
+import SimpleWizardContent from "./wizard/SimpleWizardContent";
+import SimpleWizardFooter from "./wizard/SimpleWizardFooter";
 
-const LOG_LEVEL = {
-  ERROR: 0,
-  WARN: 1,
-  INFO: 2,
-  DEBUG: 3
-};
-
-const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVEL.ERROR : LOG_LEVEL.DEBUG;
-
-const logger = {
-  error: (message: string, ...args: any[]) => {
-    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.ERROR) console.error(`[SimplePromptWizard] ${message}`, ...args);
-  },
-  warn: (message: string, ...args: any[]) => {
-    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.WARN) console.warn(`[SimplePromptWizard] ${message}`, ...args);
-  },
-  info: (message: string, ...args: any[]) => {
-    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.INFO) console.log(`[SimplePromptWizard] ${message}`, ...args);
-  },
-  debug: (message: string, ...args: any[]) => {
-    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) console.log(`[SimplePromptWizard] ${message}`, ...args);
-  }
-};
+const logger = createLogger("SimplePromptWizard");
 
 interface SimplePromptWizardProps {
   promptId?: string;
@@ -50,101 +20,12 @@ interface SimplePromptWizardProps {
   onClose: () => void;
 }
 
-const TabsContentSection = React.memo(({ 
-  activeTab, 
-  hasParameters, 
-  safeParameters, 
-  selectedTweaks, 
-  handleTweakChange, 
-  additionalContext, 
-  setAdditionalContext,
-  onForceRefresh 
-}: { 
-  activeTab: string; 
-  hasParameters: boolean; 
-  safeParameters: any[]; 
-  selectedTweaks: Record<string, string>; 
-  handleTweakChange: (parameterId: string, tweakId: string) => void;
-  additionalContext: string;
-  setAdditionalContext: (value: string) => void;
-  onForceRefresh?: () => void;
-}) => {
-  if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
-    logger.debug(`TabsContentSection rendering with ${safeParameters.length} parameters`);
-  }
-  
-  return (
-    <>
-      <TabsContent value="customize" className="py-4 min-h-[300px]">
-        {hasParameters ? (
-          <AllParametersView 
-            parameters={safeParameters} 
-            selectedTweaks={selectedTweaks}
-            onTweakChange={handleTweakChange}
-            onForceRefresh={onForceRefresh}
-          />
-        ) : (
-          <div className="py-8 text-center text-muted-foreground">
-            <p>No customization options available for this prompt.</p>
-            <p className="mt-2">You can add additional context in the next tab.</p>
-            
-            {process.env.NODE_ENV !== 'production' && onForceRefresh && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onForceRefresh} 
-                className="mt-4"
-              >
-                <RefreshCw className="h-3 w-3 mr-2" />
-                Force Refresh
-              </Button>
-            )}
-          </div>
-        )}
-      </TabsContent>
-      
-      <TabsContent value="context" className="py-4 min-h-[300px]">
-        <AdditionalContextStep 
-          additionalContext={additionalContext} 
-          setAdditionalContext={setAdditionalContext}
-        />
-      </TabsContent>
-    </>
-  );
-});
-
-TabsContentSection.displayName = "TabsContentSection";
-
-class RenderTracker {
-  private lastRender: number = 0;
-  private renderCount: number = 0;
-  private componentName: string;
-  
-  constructor(componentName: string) {
-    this.componentName = componentName;
-  }
-  
-  trackRender() {
-    if (CURRENT_LOG_LEVEL < LOG_LEVEL.DEBUG) return;
-    
-    this.renderCount++;
-    const now = Date.now();
-    const timeSinceLastRender = now - this.lastRender;
-    
-    if (this.renderCount % 5 === 0 || (timeSinceLastRender < 100 && this.lastRender !== 0)) {
-      logger.debug(`${this.componentName} rendered ${this.renderCount} times. Time since last render: ${timeSinceLastRender}ms`);
-    }
-    
-    this.lastRender = now;
-  }
-}
-
 const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({ 
   promptId, 
   isOpen, 
   onClose 
 }) => {
-  const renderTracker = useMemo(() => new RenderTracker('SimplePromptWizard'), []);
+  const renderTracker = useRenderTracker('SimplePromptWizard');
   
   if (process.env.NODE_ENV !== 'production') {
     renderTracker.trackRender();
@@ -239,7 +120,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   }, [isLoading, showLoadingState, initialLoadComplete]);
   
   useEffect(() => {
-    if (parameters?.length > 0 && CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+    if (parameters?.length > 0 && process.env.NODE_ENV !== 'production') {
       logger.debug(`Parameters updated: count=${parameters.length}`);
       
       if (parameters.length > 0) {
@@ -258,7 +139,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   const safeParameters = useMemo(() => {
     const result = Array.isArray(parameters) ? parameters : [];
     
-    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+    if (process.env.NODE_ENV !== 'production') {
       logger.debug(`Creating safeParameters with ${result.length} items, updating UI`);
     }
     
@@ -272,7 +153,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   const shouldShowContent = useMemo(() => {
     const shouldShow = !showLoadingState && !error && prompt && (initialLoadComplete || !isLoading);
     
-    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+    if (process.env.NODE_ENV !== 'production') {
       logger.debug(`Should show content: ${shouldShow} (showLoadingState=${showLoadingState}, error=${!!error}, prompt=${!!prompt}, initialLoadComplete=${initialLoadComplete})`);
     }
     
@@ -285,7 +166,7 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   }, [showLoadingState, prompt]);
   
   useEffect(() => {
-    if (CURRENT_LOG_LEVEL >= LOG_LEVEL.DEBUG) {
+    if (process.env.NODE_ENV !== 'production') {
       logger.debug(`Parameters state: count=${safeParameters.length}, hasParameters=${hasParameters}, shouldShowContent=${shouldShowContent}`);
     }
   }, [safeParameters, hasParameters, shouldShowContent]);
@@ -320,17 +201,11 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
   return (
     <Dialog open={stableOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl flex items-center gap-2">
-            {networkStatus === 'offline' && <WifiOff className="h-5 w-5 text-red-500" />}
-            {networkStatus === 'online' && !error && <Wifi className="h-5 w-5 text-green-500" />}
-            {error && <AlertCircle className="h-5 w-5 text-red-500" />}
-            {dialogTitle}
-          </DialogTitle>
-          <DialogDescription>
-            Customize this prompt to generate content tailored to your needs
-          </DialogDescription>
-        </DialogHeader>
+        <SimpleWizardHeader 
+          dialogTitle={dialogTitle}
+          networkStatus={networkStatus}
+          error={error}
+        />
         
         <NetworkStatusAlert networkStatus={networkStatus} />
         
@@ -360,84 +235,32 @@ const SimplePromptWizard: React.FC<SimplePromptWizardProps> = React.memo(({
           />
         )}
         
-        {shouldShowContent && (
-          <div className="min-h-[350px]">
-            {!hasParameters && safeParameters.length === 0 && (
-              <Alert className="mb-4" variant="default">
-                <Info className="h-4 w-4" />
-                <AlertTitle>No Customization Options</AlertTitle>
-                <AlertDescription>
-                  This prompt doesn't have any customization parameters. You can add context in the next tab.
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="customize">
-              <TabsList className="w-full">
-                <TabsTrigger value="customize" className="flex-1">
-                  Customize {hasParameters && <span className="ml-1 text-xs">({safeParameters.length})</span>}
-                </TabsTrigger>
-                <TabsTrigger value="context" className="flex-1">Add Context</TabsTrigger>
-              </TabsList>
-              
-              <TabsContentSection
-                activeTab={activeTab}
-                hasParameters={hasParameters}
-                safeParameters={safeParameters}
-                selectedTweaks={selectedTweaks}
-                handleTweakChange={handleTweakChange}
-                additionalContext={additionalContext}
-                setAdditionalContext={setAdditionalContext}
-                onForceRefresh={handleForceRefresh}
-              />
-            </Tabs>
-          </div>
-        )}
+        <SimpleWizardContent
+          shouldShowContent={shouldShowContent}
+          showLoadingState={showLoadingState}
+          error={error}
+          hasParameters={hasParameters}
+          safeParameters={safeParameters}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          selectedTweaks={selectedTweaks}
+          handleTweakChange={handleTweakChange}
+          additionalContext={additionalContext}
+          setAdditionalContext={setAdditionalContext}
+          onForceRefresh={handleForceRefresh}
+        />
         
-        <DialogFooter>
-          {error && !showLoadingState && (
-            <Button 
-              variant="outline" 
-              onClick={handleRetry} 
-              className="mr-auto"
-              disabled={networkStatus === 'offline'}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
-          )}
-          
-          {isDebugMode && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={handleForceRefresh} 
-              className="mr-auto text-xs"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Force Refresh
-            </Button>
-          )}
-          
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={!isFormValid() || generating || showLoadingState || error !== null || networkStatus === 'offline'}
-            className="gap-1"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4" />
-                Generate Content
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+        <SimpleWizardFooter
+          error={error}
+          showLoadingState={showLoadingState}
+          generating={generating}
+          isFormValid={isFormValid}
+          networkStatus={networkStatus}
+          isDebugMode={isDebugMode}
+          handleSave={handleSave}
+          handleRetry={handleRetry}
+          handleForceRefresh={handleForceRefresh}
+        />
       </DialogContent>
     </Dialog>
   );
