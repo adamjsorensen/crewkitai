@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useSaveContent } from "@/hooks/useSaveContent";
 import { useCrewkitContentGeneration } from "@/hooks/useCrewkitContentGeneration";
 import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const GeneratedContentPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,7 +33,6 @@ const GeneratedContentPage = () => {
   const [saveTitle, setSaveTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch the generation data
   const { isLoading, isError } = useQuery({
     queryKey: ['generation', id],
     queryFn: async () => {
@@ -87,7 +87,6 @@ const GeneratedContentPage = () => {
           description: "Your content has been saved successfully"
         });
         setIsSaveDialogOpen(false);
-        // Navigate to the saved content detail page
         navigate(`/dashboard/saved-content/${result.slug}`);
       } else {
         throw new Error(result.error);
@@ -128,7 +127,6 @@ const GeneratedContentPage = () => {
         description: "Your content has been modified successfully"
       });
     } catch (error) {
-      // Error already handled in mutation
       console.error("Modification error:", error);
     } finally {
       setIsModifying(false);
@@ -239,8 +237,10 @@ const GeneratedContentPage = () => {
         
         <Card>
           <CardContent className="p-6">
-            <div className="whitespace-pre-wrap">
-              {content}
+            <div className="prose prose-gray max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {content}
+              </ReactMarkdown>
             </div>
           </CardContent>
         </Card>
