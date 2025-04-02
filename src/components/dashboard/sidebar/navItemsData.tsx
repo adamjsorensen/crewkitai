@@ -14,10 +14,7 @@ import {
   SlidersHorizontal,
   Settings as AdminSettingsIcon,
   Bot,
-  Flag,
   ClipboardList,
-  Database as AdminDatabaseIcon,
-  FileText as AdminFileText
 } from "lucide-react";
 import { NavItemType } from "./types";
 
@@ -32,7 +29,7 @@ export const regularNavItems: NavItemType[] = [
   { name: "Settings", icon: GeneralSettingsIcon, path: "/dashboard/settings" },
 ];
 
-// Admin navigation items
+// Admin navigation items - restructured according to requirements
 export const adminNavItems: NavItemType[] = [
   { name: "Admin Dashboard", icon: Shield, path: "/dashboard/admin", end: true },
   { name: "Users", icon: AdminUsersIcon, path: "/dashboard/admin/users" },
@@ -45,23 +42,8 @@ export const adminNavItems: NavItemType[] = [
       { name: "Content Settings", icon: AdminSettingsIcon, path: "/dashboard/admin/content-settings" },
     ],
   },
-  {
-    name: "Settings",
-    icon: AdminSettingsIcon,
-    children: [
-      { name: "AI Settings", icon: Bot, path: "/dashboard/admin/ai-settings" },
-      { name: "App Settings", icon: AdminSettingsIcon, path: "/dashboard/admin/app-settings" },
-      { name: "Compass Settings", icon: Compass, path: "/dashboard/admin/compass-settings" },
-      { name: "Feature Flags", icon: Flag, path: "/dashboard/admin/feature-flags" },
-    ],
-  },
-  {
-    name: "Monitoring & Logs",
-    icon: RegularBarChart3,
-    children: [
-      { name: "Generations Log", icon: AdminFileText, path: "/dashboard/admin/generations" },
-      { name: "Activity Logs", icon: ClipboardList, path: "/dashboard/admin/activity-logs" },
-      { name: "Database Info", icon: AdminDatabaseIcon, path: "/dashboard/admin/database" },
-    ],
-  },
+  { name: "AI Settings", icon: Bot, path: "/dashboard/admin/ai-settings" },
+  { name: "Compass Settings", icon: Compass, path: "/dashboard/admin/compass-settings" },
+  { name: "App Settings", icon: AdminSettingsIcon, path: "/dashboard/admin/app-settings" },
+  { name: "Activity Logs", icon: ClipboardList, path: "/dashboard/admin/activity-logs" },
 ];
