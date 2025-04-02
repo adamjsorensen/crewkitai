@@ -5,15 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const AppSettingsPage = () => {
   return (
-    <AdminLayout activeTab="app-settings">
+    <AdminLayout 
+      title="Application Settings"
+      description="Configure general application settings"
+    >
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Application Settings</h2>
-          <p className="text-muted-foreground">
-            Configure general application settings
-          </p>
-        </div>
-        
         <Card>
           <CardHeader>
             <CardTitle>General Settings</CardTitle>

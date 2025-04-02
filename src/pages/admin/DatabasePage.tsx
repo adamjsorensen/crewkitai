@@ -7,15 +7,11 @@ import { Database } from "lucide-react";
 
 const DatabasePage = () => {
   return (
-    <AdminLayout activeTab="database">
+    <AdminLayout 
+      title="Database Management"
+      description="Monitor and manage database operations"
+    >
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Database Management</h2>
-          <p className="text-muted-foreground">
-            Monitor and manage database operations
-          </p>
-        </div>
-        
         <Alert className="mb-6">
           <Database className="h-4 w-4 mr-2" />
           <AlertDescription>

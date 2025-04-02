@@ -5,7 +5,10 @@ import CompassSettings from "@/components/compass/CompassSettings";
 
 const CompassSettingsPage = () => {
   return (
-    <AdminLayout activeTab="compass-settings">
+    <AdminLayout 
+      title="Compass Settings"
+      description="Configure task management system"
+    >
       <CompassSettings />
     </AdminLayout>
   );

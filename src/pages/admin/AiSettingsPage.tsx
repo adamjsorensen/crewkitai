@@ -5,7 +5,10 @@ import AiSettingsForm from "@/components/admin/AiSettingsForm";
 
 const AiSettingsPage = () => {
   return (
-    <AdminLayout activeTab="ai-settings">
+    <AdminLayout 
+      title="AI Settings" 
+      description="Configure AI coach behavior and responses"
+    >
       <div className="w-full max-w-full overflow-hidden">
         <AiSettingsForm />
       </div>
