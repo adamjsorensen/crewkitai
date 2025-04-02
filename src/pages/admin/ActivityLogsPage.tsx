@@ -283,7 +283,7 @@ const ActivityLogsPage: React.FC = () => {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <ActivityLogListSkeleton rows={pagination.pageSize} /> 
+                  <ActivityLogListSkeleton /> 
                 ) : logs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
