@@ -271,22 +271,49 @@ serve(async (req: Request) => {
     logDebug("AI settings", settings);
 
     // 3. Get user's business profile for context
-    let profile = null;
+    let businessProfile = null;
     
     if (userId) {
-      logDebug("Fetching user profile", { userId });
+      logDebug("Fetching user business profile", { userId });
       
-      const { data: profileData, error: profileError } = await supabase
+      // Updated query to fetch data from both profiles and compass_user_profiles tables
+      const { data: mergedProfileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, full_name, business_name, business_type, painter_type, years_in_business")
+        .select(`
+          id, 
+          full_name, 
+          company_name, 
+          company_description,
+          business_address,
+          website,
+          compass_user_profiles:id(
+            business_name,
+            crew_size,
+            specialties,
+            workload
+          )
+        `)
         .eq("id", userId)
         .maybeSingle();
 
       if (profileError) {
         logWarn("Error fetching user profile", { error: profileError });
-      } else if (profileData) {
-        profile = profileData;
-        logDebug("User profile fetched", { profile });
+      } else if (mergedProfileData) {
+        // Combine the data from both tables for a complete business profile
+        businessProfile = {
+          id: mergedProfileData.id,
+          full_name: mergedProfileData.full_name,
+          // Prioritize compass_user_profiles business name if available
+          business_name: mergedProfileData.compass_user_profiles?.business_name || mergedProfileData.company_name,
+          company_description: mergedProfileData.company_description,
+          business_address: mergedProfileData.business_address,
+          website: mergedProfileData.website,
+          crew_size: mergedProfileData.compass_user_profiles?.crew_size,
+          specialties: mergedProfileData.compass_user_profiles?.specialties,
+          workload: mergedProfileData.compass_user_profiles?.workload
+        };
+        
+        logDebug("User business profile fetched", { businessProfile });
       } else {
         logInfo("No user profile found", { userId });
       }
@@ -310,13 +337,39 @@ serve(async (req: Request) => {
         customPromptData.prompt_additional_context[0].context_text;
     }
 
-    // Add business context if available
-    if (profile) {
-      basePrompt += "\n\n### Business Context:\n" +
-        `Business Name: ${profile.business_name || "Not specified"}\n` +
-        `Business Type: ${profile.business_type || "Not specified"}\n` +
-        `Painter Type: ${profile.painter_type || "Not specified"}\n` +
-        `Years in Business: ${profile.years_in_business || "Not specified"}`;
+    // Add enhanced business context if available
+    if (businessProfile) {
+      basePrompt += "\n\n### Business Context:\n";
+
+      if (businessProfile.business_name) {
+        basePrompt += `Business Name: ${businessProfile.business_name}\n`;
+      }
+      
+      if (businessProfile.company_description) {
+        basePrompt += `Business Description: ${businessProfile.company_description}\n`;
+      }
+      
+      if (businessProfile.business_address) {
+        basePrompt += `Business Address: ${businessProfile.business_address}\n`;
+      }
+      
+      if (businessProfile.website) {
+        basePrompt += `Website: ${businessProfile.website}\n`;
+      }
+      
+      if (businessProfile.crew_size) {
+        basePrompt += `Crew Size: ${businessProfile.crew_size}\n`;
+      }
+      
+      if (businessProfile.specialties && businessProfile.specialties.length > 0) {
+        basePrompt += `Specialties: ${businessProfile.specialties.join(', ')}\n`;
+      }
+      
+      if (businessProfile.workload) {
+        basePrompt += `Current Workload: ${businessProfile.workload}\n`;
+      }
+    } else {
+      basePrompt += "\n\n### Business Context:\nNo business profile information available. Please create generic content.";
     }
 
     // Store the full assembled prompt for logging
@@ -453,7 +506,8 @@ serve(async (req: Request) => {
               generation_id: generationData?.id,
               full_prompt: fullAssembledPrompt,
               system_prompt: settings.systemPrompt,
-              model: settings.model
+              model: settings.model,
+              business_profile_used: !!businessProfile
             }
           });
 
