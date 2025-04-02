@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,6 +12,8 @@ import PgCoachPage from "@/pages/PgCoachPage";
 import ContentPage from "@/pages/content/ContentPage";
 import FinancialPage from "@/pages/financial/FinancialDashboard";
 import ProfilePage from "@/pages/profile/ProfilePage";
+import BusinessProfilePage from "@/pages/profile/BusinessProfilePage";
+import PersonalProfilePage from "@/pages/profile/PersonalProfilePage";
 import SettingsPage from "@/pages/profile/SettingsPage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
 import AISettingsPage from "@/pages/admin/AiSettingsPage";
@@ -67,6 +70,8 @@ function App() {
               <Route path="/dashboard/content" element={<ContentPage />} />
               <Route path="/dashboard/financial" element={<FinancialPage />} />
               <Route path="/dashboard/profile" element={<ProfilePage />} />
+              <Route path="/dashboard/profile/business" element={<BusinessProfilePage />} />
+              <Route path="/dashboard/profile/personal" element={<PersonalProfilePage />} />
               <Route path="/dashboard/settings" element={<SettingsPage />} />
               
               <Route path="/dashboard/prompt-library" element={<Navigate to="/dashboard/content" replace />} />
