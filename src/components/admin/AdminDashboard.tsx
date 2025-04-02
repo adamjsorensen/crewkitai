@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -79,15 +78,15 @@ const AdminDashboard = () => {
     },
     {
       title: "User Management",
-      description: "Manage users and activity",
+      description: "Manage users and roles",
       icon: <Users className="h-6 w-6 text-primary" />,
-      path: "/dashboard/user-management/user-list"
+      path: "/dashboard/admin/users"
     },
     {
       title: "Activity Logs",
-      description: "View user activity logs",
+      description: "View user and system activity",
       icon: <Activity className="h-6 w-6 text-primary" />,
-      path: "/dashboard/user-management/activity-logs"
+      path: "/dashboard/admin/activity-logs"
     },
     {
       title: "App Settings",

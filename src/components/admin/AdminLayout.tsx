@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Shield } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import BackToAdminButton from "@/components/admin/BackToAdminButton";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -21,7 +19,6 @@ const AdminLayout = ({ children, title, description, activeTab }: AdminLayoutPro
   const { isAdmin, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   // Redirect if not admin
   React.useEffect(() => {
@@ -45,9 +42,14 @@ const AdminLayout = ({ children, title, description, activeTab }: AdminLayoutPro
     );
   }
 
+  // If not admin (and not loading), we technically already navigated, but render null just in case.
+  if (!isAdmin) {
+    return null;
+  }
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-4 max-w-full overflow-hidden">
+      <div className="p-4 md:p-6 flex flex-col gap-4 max-w-full">
         <BackToAdminButton />
         
         <div className="flex items-center gap-3">
@@ -62,11 +64,9 @@ const AdminLayout = ({ children, title, description, activeTab }: AdminLayoutPro
         
         <Separator className="my-0" />
         
-        <Card className="p-4 md:p-6 w-full overflow-hidden">
-          <div className="max-w-full overflow-hidden">
-            {children}
-          </div>
-        </Card>
+        <div className="max-w-full">
+          {children}
+        </div>
       </div>
     </DashboardLayout>
   );

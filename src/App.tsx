@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -23,11 +22,9 @@ import DatabasePage from "@/pages/admin/DatabasePage";
 import PromptsPage from "@/pages/admin/PromptsPage";
 import ParametersPage from "@/pages/admin/ParametersPage";
 import GenerationsLogPage from "@/pages/admin/GenerationsLogPage";
-import UserManagementPage from "@/pages/user-management/UserManagementPage";
-import UserListPage from "@/pages/user-management/UserListPage";
-import AddUserPage from "@/pages/user-management/AddUserPage";
-import ActivityLogsPage from "@/pages/user-management/ActivityLogsPage";
-import UserDetailsPage from "@/pages/user-management/UserDetailsPage";
+import UsersPage from "@/pages/admin/UsersPage";
+import AdminUserDetailsPage from "@/pages/admin/users/AdminUserDetailsPage";
+import AdminActivityLogsPage from "@/pages/admin/ActivityLogsPage";
 import GeneratedContentPage from "@/pages/content/GeneratedContentPage";
 import SavedContentPage from "@/pages/content/SavedContentPage";
 import SavedContentDetailPage from "@/pages/content/SavedContentDetailPage";
@@ -77,7 +74,6 @@ function App() {
               <Route path="/dashboard/saved-content" element={<SavedContentPage />} />
               <Route path="/dashboard/saved-content/:slug" element={<SavedContentDetailPage />} />
               
-              {/* Admin routes */}
               <Route path="/dashboard/admin" element={<AdminDashboardPage />} />
               <Route path="/dashboard/admin/ai-settings" element={<AISettingsPage />} />
               <Route path="/dashboard/admin/compass-settings" element={<CompassSettingsPage />} />
@@ -88,13 +84,9 @@ function App() {
               <Route path="/dashboard/admin/feature-flags" element={<FeatureFlagsPage />} />
               <Route path="/dashboard/admin/app-settings" element={<AppSettingsPage />} />
               <Route path="/dashboard/admin/database" element={<DatabasePage />} />
-              
-              <Route path="/dashboard/user-management" element={<UserManagementPage />}>
-                <Route path="user-list" element={<UserListPage />} />
-                <Route path="add-user" element={<AddUserPage />} />
-                <Route path="activity-logs" element={<ActivityLogsPage />} />
-                <Route path="user-details/:userId" element={<UserDetailsPage />} />
-              </Route>
+              <Route path="/dashboard/admin/users" element={<UsersPage />} />
+              <Route path="/dashboard/admin/users/:userId" element={<AdminUserDetailsPage />} />
+              <Route path="/dashboard/admin/activity-logs" element={<AdminActivityLogsPage />} />
               
               <Route path="/dashboard/ai-coach" element={<Navigate to="/dashboard/pg-coach" replace />} />
             </Routes>

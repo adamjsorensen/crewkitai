@@ -1,6 +1,6 @@
-
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import UserForm from "@/components/admin/users/UserForm";
 import DeleteUserDialog from "@/components/admin/users/DeleteUserDialog";
 import { User } from "@/types/user";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const UsersPage = () => {
@@ -27,6 +27,7 @@ const UsersPage = () => {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch users with roles
   const { data: users = [], isLoading } = useQuery({
@@ -98,6 +99,11 @@ const UsersPage = () => {
     setUserToDelete(user);
   };
 
+  // Handle navigate to user details
+  const handleViewDetails = (userId: string) => {
+    navigate(`/dashboard/admin/users/${userId}`);
+  };
+
   return (
     <AdminLayout 
       title="User Management"
@@ -105,8 +111,8 @@ const UsersPage = () => {
       activeTab="users"
     >
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="relative w-full max-w-sm">
+        <div className="flex justify-between items-center flex-wrap gap-2">
+          <div className="relative w-full sm:w-auto sm:max-w-sm flex-grow sm:flex-grow-0">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search users..."
@@ -147,23 +153,41 @@ const UsersPage = () => {
                 ) : (
                   filteredUsers.map((user: User) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.full_name}</TableCell>
+                      <TableCell 
+                        className="font-medium hover:underline cursor-pointer"
+                        onClick={() => handleViewDetails(user.id)}
+                      >
+                        {user.full_name}
+                      </TableCell>
                       <TableCell>{user.company_name}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell className="capitalize">{user.role || 'user'}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
+                          size="icon"
+                          className="mr-1 h-8 w-8"
+                          onClick={() => handleViewDetails(user.id)}
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span className="sr-only">View Details</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
                           size="sm"
+                          className="h-8"
                           onClick={() => handleEditUser(user)}
+                          title="Edit User"
                         >
                           Edit
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive h-8"
                           onClick={() => handleDeleteClick(user)}
+                          title="Delete User"
                         >
                           Delete
                         </Button>
