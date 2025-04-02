@@ -73,20 +73,60 @@ export function usePromptMutations() {
     },
   });
 
-  // Delete prompt
+  // Delete prompt - Updated to handle related parameter rules
   const deletePrompt = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('prompts')
-        .delete()
-        .eq('id', id);
-      
-      if (error) {
-        console.error('Error deleting prompt:', error);
-        throw new Error(`Failed to delete prompt: ${error.message}`);
+      try {
+        console.log(`Starting deletion process for prompt: ${id}`);
+        
+        // Step 1: Find all parameter rules associated with this prompt
+        const { data: rules, error: rulesError } = await supabase
+          .from('prompt_parameter_rules')
+          .select('id')
+          .eq('prompt_id', id);
+        
+        if (rulesError) {
+          console.error('Error fetching prompt parameter rules:', rulesError);
+          throw new Error(`Failed to fetch parameter rules: ${rulesError.message}`);
+        }
+        
+        console.log(`Found ${rules?.length || 0} parameter rules to delete`);
+        
+        // Step 2: Delete the associated parameter rules if any exist
+        if (rules && rules.length > 0) {
+          const ruleIds = rules.map(rule => rule.id);
+          
+          const { error: deleteRulesError } = await supabase
+            .from('prompt_parameter_rules')
+            .delete()
+            .in('id', ruleIds);
+          
+          if (deleteRulesError) {
+            console.error('Error deleting parameter rules:', deleteRulesError);
+            throw new Error(`Failed to delete parameter rules: ${deleteRulesError.message}`);
+          }
+          
+          console.log(`Successfully deleted ${rules.length} parameter rules`);
+        }
+        
+        // Step 3: Delete the prompt
+        const { error: deletePromptError } = await supabase
+          .from('prompts')
+          .delete()
+          .eq('id', id);
+        
+        if (deletePromptError) {
+          console.error('Error deleting prompt:', deletePromptError);
+          throw new Error(`Failed to delete prompt: ${deletePromptError.message}`);
+        }
+        
+        console.log(`Successfully deleted prompt with ID: ${id}`);
+        
+        return id;
+      } catch (error: any) {
+        console.error('Error in deletePrompt mutation:', error);
+        throw error;
       }
-      
-      return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
