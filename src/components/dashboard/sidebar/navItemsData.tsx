@@ -26,6 +26,8 @@ export const regularNavItems: NavItemType[] = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard", end: true },
   { name: "Strategic Compass", icon: Compass, path: "/dashboard/compass" },
   { name: "PainterGrowth AI", icon: Brush, path: "/dashboard/pg-coach" },
+  { name: "Content Creation", icon: RegularFileText, path: "/dashboard/content" },
+  { name: "Financial Tools", icon: RegularBarChart3, path: "/dashboard/financial" },
   { name: "Profile", icon: RegularUser, path: "/dashboard/profile" },
   { name: "Settings", icon: GeneralSettingsIcon, path: "/dashboard/settings" },
 ];
