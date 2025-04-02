@@ -1,18 +1,22 @@
 
 import React from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 const AppSettingsPage = () => {
   return (
     <AdminLayout 
       title="Application Settings"
       description="Configure general application settings"
+      activeTab="app-settings"
     >
       <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>General Settings</CardTitle>
+            <CardDescription>
+              Configure application-wide settings and behaviors
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">

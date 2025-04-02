@@ -4,7 +4,7 @@ import { useFeatureFlags } from '@/contexts/FeatureFlagsContext';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Settings2 } from 'lucide-react';
 
 const FeatureFlagsPanel = () => {
   const { flags, updateFlag, isAdmin, refreshFlags } = useFeatureFlags();
@@ -15,14 +15,15 @@ const FeatureFlagsPanel = () => {
   
   if (!isAdmin) {
     return (
-      <Card className="mx-auto max-w-2xl mt-8">
-        <CardHeader>
-          <CardTitle>Access Denied</CardTitle>
-          <CardDescription>
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription>
             You don't have permission to access the feature flags management panel.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
@@ -41,41 +42,60 @@ const FeatureFlagsPanel = () => {
   };
   
   return (
-    <div className="container py-4 md:py-8 px-2 md:px-4">
-      <Card className="mx-auto max-w-full md:max-w-2xl">
+    <div className="space-y-6">
+      {updateStatus.success && (
+        <Alert className="bg-green-50 border-green-200">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertTitle>Success</AlertTitle>
+          <AlertDescription>{updateStatus.success}</AlertDescription>
+        </Alert>
+      )}
+      
+      {updateStatus.error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{updateStatus.error}</AlertDescription>
+        </Alert>
+      )}
+      
+      <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl md:text-2xl font-bold">Feature Flags</CardTitle>
-          <CardDescription className="text-sm">
+          <div className="flex items-center gap-2">
+            <Settings2 className="h-5 w-5 text-primary" />
+            <CardTitle>Feature Flags</CardTitle>
+          </div>
+          <CardDescription>
             Toggle features on and off without redeploying your application
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {updateStatus.success && (
-            <Alert className="bg-green-50 border-green-200">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertTitle>Success</AlertTitle>
-              <AlertDescription>{updateStatus.success}</AlertDescription>
-            </Alert>
-          )}
-          
-          {updateStatus.error && (
-            <Alert className="bg-red-50 border-red-200">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{updateStatus.error}</AlertDescription>
-            </Alert>
-          )}
-          
+        <CardContent>
           <div className="space-y-4">
             {/* Feature flags will be added here when needed */}
-            {Object.keys(flags).length === 0 && (
-              <p className="text-center text-gray-500 py-4">
-                No feature flags are currently defined.
-              </p>
+            {Object.keys(flags).length === 0 ? (
+              <div className="bg-muted/50 rounded-md p-4 text-center text-muted-foreground">
+                <p>No feature flags are currently defined.</p>
+                <p className="text-sm mt-1">Feature flags will appear here when they are added to the system.</p>
+              </div>
+            ) : (
+              Object.entries(flags).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div>
+                    <p className="font-medium">{key}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {value ? 'Enabled' : 'Disabled'}
+                    </p>
+                  </div>
+                  <Switch 
+                    checked={value} 
+                    onCheckedChange={(checked) => handleToggleFlag(key as keyof typeof flags, checked)} 
+                  />
+                </div>
+              ))
             )}
           </div>
           
-          <div className="mt-6 text-xs md:text-sm text-gray-500">
+          <div className="mt-6 bg-muted/30 rounded-md p-4 text-sm text-muted-foreground">
             <p>
               Feature flags allow you to control the availability of features in your application.
               Toggle a flag to enable or disable a feature for all users.

@@ -8,6 +8,7 @@ const FeatureFlagsPage = () => {
     <AdminLayout 
       title="Feature Flags"
       description="Toggle application features"
+      activeTab="feature-flags"
     >
       <FeatureFlagsPanel />
     </AdminLayout>

@@ -13,9 +13,10 @@ interface AdminLayoutProps {
   children: React.ReactNode;
   title: string;
   description?: string;
+  activeTab?: string;
 }
 
-const AdminLayout = ({ children, title, description }: AdminLayoutProps) => {
+const AdminLayout = ({ children, title, description, activeTab }: AdminLayoutProps) => {
   const { isAdmin, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();

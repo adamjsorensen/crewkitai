@@ -8,6 +8,7 @@ const AiSettingsPage = () => {
     <AdminLayout 
       title="AI Settings" 
       description="Configure AI coach behavior and responses"
+      activeTab="ai-settings"
     >
       <div className="w-full max-w-full overflow-hidden">
         <AiSettingsForm />

@@ -81,13 +81,13 @@ const AdminDashboard = () => {
       title: "User Management",
       description: "Manage users and activity",
       icon: <Users className="h-6 w-6 text-primary" />,
-      path: "/dashboard/user-management/user-list"
+      path: "/dashboard/admin/users"
     },
     {
       title: "Activity Logs",
       description: "View user activity logs",
       icon: <Activity className="h-6 w-6 text-primary" />,
-      path: "/dashboard/user-management/activity-logs"
+      path: "/dashboard/admin/activity-logs"
     },
     {
       title: "App Settings",
@@ -104,17 +104,10 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage and configure your application</p>
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {tiles.map((tile, index) => (
-          <AdminTile key={index} {...tile} />
-        ))}
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {tiles.map((tile, index) => (
+        <AdminTile key={index} {...tile} />
+      ))}
     </div>
   );
 };

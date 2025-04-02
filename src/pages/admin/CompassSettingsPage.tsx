@@ -8,6 +8,7 @@ const CompassSettingsPage = () => {
     <AdminLayout 
       title="Compass Settings"
       description="Configure task management system"
+      activeTab="compass-settings"
     >
       <CompassSettings />
     </AdminLayout>

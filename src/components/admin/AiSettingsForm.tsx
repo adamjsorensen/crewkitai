@@ -67,6 +67,10 @@ const AiSettingsForm = () => {
     console.log("Form submitted with values:", values);
     const success = await saveSettings(values);
     if (success) {
+      toast({
+        title: "Settings Saved",
+        description: "Your AI settings have been updated successfully",
+      });
       // Refetch settings to update the form with saved values
       refetchSettings();
     }

@@ -15,7 +15,7 @@ const BackToAdminButton = () => {
     <Button 
       variant="outline" 
       size="sm" 
-      className="mb-4 flex items-center gap-1" 
+      className="mb-4 flex items-center gap-1 hover:bg-primary/5" 
       onClick={handleClick}
     >
       <ChevronLeft className="h-4 w-4" />
