@@ -29,6 +29,8 @@ export const ActivityLogDetails: React.FC<ActivityLogDetailsProps> = ({ log }) =
         return "bg-purple-100 text-purple-800";
       case "content_generated":
         return "bg-amber-100 text-amber-800";
+      case "content_generation_prompt":
+        return "bg-indigo-100 text-indigo-800";
       case "login":
       case "logout":
         return "bg-gray-100 text-gray-800";
@@ -132,6 +134,47 @@ export const ActivityLogDetails: React.FC<ActivityLogDetailsProps> = ({ log }) =
         </div>
       )}
 
+      {log.action_type === "content_generation_prompt" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold mb-2">Full Prompt</h3>
+            <Card className="bg-indigo-50 dark:bg-indigo-950">
+              <CardContent className="p-4 whitespace-pre-wrap">
+                {log.action_details?.full_prompt || "No prompt content"}
+              </CardContent>
+            </Card>
+          </div>
+          
+          {log.action_details?.system_prompt && (
+            <div>
+              <h3 className="font-semibold mb-2">System Prompt</h3>
+              <Card className="bg-purple-50 dark:bg-purple-950">
+                <CardContent className="p-4 whitespace-pre-wrap font-mono text-sm">
+                  {log.action_details.system_prompt}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="font-semibold mb-2">Prompt Title</h3>
+              <p>{log.action_details?.prompt_title || "Untitled Prompt"}</p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">AI Model</h3>
+              <p>{log.action_details?.model || "Unknown model"}</p>
+            </div>
+          </div>
+          
+          {log.action_details?.generation_id && (
+            <p className="text-sm text-muted-foreground">
+              Generation ID: {log.action_details.generation_id}
+            </p>
+          )}
+        </div>
+      )}
+
       {log.action_type === "compass_analyze" && (
         <div className="space-y-4">
           <div>
@@ -203,7 +246,7 @@ export const ActivityLogDetails: React.FC<ActivityLogDetailsProps> = ({ log }) =
         </div>
       )}
 
-      {!["chat_message", "chat_response", "compass_analyze", "content_generated"].includes(log.action_type) && (
+      {!["chat_message", "chat_response", "compass_analyze", "content_generated", "content_generation_prompt"].includes(log.action_type) && (
         <div>
           <h3 className="font-semibold mb-2">Details</h3>
           {Object.keys(log.action_details || {}).length > 0 ? (

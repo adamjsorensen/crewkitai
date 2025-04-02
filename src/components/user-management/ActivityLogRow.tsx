@@ -30,6 +30,8 @@ export const ActivityLogRow: React.FC<ActivityLogRowProps> = ({ log, onClick }) 
         return "bg-purple-100 text-purple-800";
       case "content_generated":
         return "bg-amber-100 text-amber-800";
+      case "content_generation_prompt":
+        return "bg-indigo-100 text-indigo-800";
       case "login":
       case "logout":
         return "bg-gray-100 text-gray-800";
@@ -122,6 +124,14 @@ export const ActivityLogRow: React.FC<ActivityLogRowProps> = ({ log, onClick }) 
             <br />
             <span className="font-medium">Tasks:</span>{" "}
             {log.action_details?.tasks ? `${log.action_details.tasks.length} tasks generated` : "No tasks found"}
+          </div>
+        ) : log.action_type === "content_generation_prompt" ? (
+          <div className="text-sm">
+            <span className="font-medium">Prompt:</span>{" "}
+            {truncateContent(log.action_details?.full_prompt || "No prompt found")}
+            <br />
+            <span className="font-medium">Title:</span>{" "}
+            {log.action_details?.prompt_title || "Untitled Prompt"}
           </div>
         ) : log.action_type === "content_generated" ? (
           <div className="text-sm">

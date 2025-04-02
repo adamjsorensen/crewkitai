@@ -16,7 +16,7 @@ interface ModifyContentParams {
 
 export function useCrewkitContentGeneration() {
   const { toast } = useToast();
-  const { logActivity } = useLogActivity();
+  const { logActivity, logContentGenerationPrompt } = useLogActivity();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isModifying, setIsModifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,8 @@ export function useCrewkitContentGeneration() {
           throw new Error(error.message);
         }
         
-        // Log the activity
+        // Log the activity - we don't need to call logContentGenerationPrompt here
+        // as the edge function will log this automatically with the full assembled prompt
         await logActivity({
           actionType: 'content_generated',
           actionDetails: {

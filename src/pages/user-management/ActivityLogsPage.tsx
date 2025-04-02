@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Table, 
@@ -59,6 +58,7 @@ const ACTION_TYPES = [
   { value: "chat_response", label: "AI Responses" },
   { value: "compass_analyze", label: "Compass Analysis" },
   { value: "content_generated", label: "Generated Content" },
+  { value: "content_generation_prompt", label: "Content Generation Prompts" },
   { value: "login", label: "Login" },
   { value: "logout", label: "Logout" },
   { value: "profile_update", label: "Profile Update" },
@@ -90,8 +90,6 @@ const ActivityLogsPage: React.FC = () => {
   });
 
   const handleSearch = () => {
-    // Use search term to filter logs
-    // This would typically be implemented in the backend
     console.log("Searching for:", searchTerm);
   };
 
@@ -107,7 +105,6 @@ const ActivityLogsPage: React.FC = () => {
   };
 
   const handleExport = () => {
-    // Export would be implemented here
     console.log(`Exporting as ${exportFormat}`);
     setShowExportOptions(false);
   };

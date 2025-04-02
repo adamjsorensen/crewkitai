@@ -151,12 +151,28 @@ export function useLogActivity() {
       },
     });
   };
+  
+  const logContentGenerationPrompt = async (fullPrompt: string, systemPrompt: string, promptTitle: string, model: string, generationId?: string) => {
+    return logActivity({
+      actionType: 'content_generation_prompt',
+      actionDetails: {
+        full_prompt: fullPrompt,
+        system_prompt: systemPrompt,
+        prompt_title: promptTitle,
+        model: model,
+        generation_id: generationId,
+      },
+      affectedResourceType: 'content_generation',
+      affectedResourceId: generationId,
+    });
+  };
 
   return { 
     logActivity,
     logChatMessage,
     logChatResponse,
     logCompassAnalysis,
-    logContentGeneration
+    logContentGeneration,
+    logContentGenerationPrompt
   };
 }

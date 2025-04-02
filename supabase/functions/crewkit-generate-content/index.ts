@@ -319,6 +319,9 @@ serve(async (req: Request) => {
         `Years in Business: ${profile.years_in_business || "Not specified"}`;
     }
 
+    // Store the full assembled prompt for logging
+    const fullAssembledPrompt = basePrompt;
+
     // Log the assembled prompt (truncated for logs)
     const truncatedPrompt = basePrompt.length > 200 
       ? basePrompt.substring(0, 200) + "..." 
@@ -440,14 +443,17 @@ serve(async (req: Request) => {
         logDebug("Logging user activity");
         
         const { error: logError } = await supabase
-          .from("activity_logs")
+          .from("user_activity_logs")
           .insert({
             user_id: userId,
-            action_type: "content_generated",
-            details: {
+            action_type: "content_generation_prompt",
+            action_details: {
               prompt_id: customPromptData.prompts?.id,
               prompt_title: customPromptData.prompts?.title,
-              generation_id: generationData?.id
+              generation_id: generationData?.id,
+              full_prompt: fullAssembledPrompt,
+              system_prompt: settings.systemPrompt,
+              model: settings.model
             }
           });
 
