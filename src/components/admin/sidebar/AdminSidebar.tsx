@@ -196,7 +196,7 @@ const AdminMobileTopBar = () => {
                       href={item.path} 
                       icon={item.icon} 
                       label={item.name}
-                      isActive={location.pathname === item.path || location.pathname.startsWith(child.path)}
+                      isActive={location.pathname === item.path || location.pathname.startsWith(item.path)}
                     />
                   )
                 ))}
