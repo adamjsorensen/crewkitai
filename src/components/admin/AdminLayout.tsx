@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Shield } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import BackToAdminButton from "@/components/admin/BackToAdminButton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ const AdminLayout = ({ children, title, description, activeTab }: AdminLayoutPro
   const { isAdmin, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Redirect if not admin
   React.useEffect(() => {
@@ -45,7 +47,7 @@ const AdminLayout = ({ children, title, description, activeTab }: AdminLayoutPro
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-4 max-w-full overflow-hidden">
+      <div className={`flex flex-col gap-4 max-w-full overflow-hidden ${isMobile ? 'pt-16' : ''}`}>
         <BackToAdminButton />
         
         <div className="flex items-center gap-3">
