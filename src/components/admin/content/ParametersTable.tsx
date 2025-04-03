@@ -17,6 +17,16 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EditParameterDialog from "./EditParameterDialog";
 
+// Add this at the top level of the file to access it from useParameterMutations.ts
+declare global {
+  var globalCacheVersion: number;
+}
+
+// Initialize if not already defined
+if (typeof globalCacheVersion === 'undefined') {
+  globalThis.globalCacheVersion = 1;
+}
+
 type ParametersTableProps = {
   parameters: PromptParameter[];
   isLoading: boolean;
@@ -44,16 +54,29 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
     setDeleteConfirm({ open: true, parameter });
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteConfirm.parameter) {
-      deleteParameter.mutate(deleteConfirm.parameter.id, {
-        onSuccess: () => {
-          toast({
-            title: "Parameter deleted",
-            description: `Parameter "${deleteConfirm.parameter?.name}" has been deleted.`,
-          });
-        },
-      });
+      try {
+        await deleteParameter.mutateAsync(deleteConfirm.parameter.id, {
+          onSuccess: () => {
+            // Increment global cache version to force refresh
+            globalCacheVersion++;
+            
+            toast({
+              title: "Parameter deleted",
+              description: `Parameter "${deleteConfirm.parameter?.name}" has been deleted.`,
+            });
+          },
+        });
+        
+        // Force a page reload after a short delay
+        // This ensures all components will re-fetch with the latest data
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } catch (error) {
+        console.error("Error deleting parameter:", error);
+      }
     }
     setDeleteConfirm({ open: false, parameter: null });
   };
@@ -144,7 +167,7 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will delete the parameter "{deleteConfirm.parameter?.name}". This action cannot be undone,
-              and all associated tweaks will also be deleted.
+              and all associated tweaks and rules will also be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

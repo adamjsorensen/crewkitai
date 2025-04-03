@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ParameterWithTweaks } from "@/types/promptParameters";
@@ -46,7 +45,16 @@ const parametersCache = new Map<string, {
 
 // Cache control
 const CACHE_EXPIRY_TIME = 5 * 60 * 1000; // 5 minutes
-let globalCacheVersion = 1; // Used to force cache refreshes when needed
+
+// Define globalCacheVersion if not already defined
+declare global {
+  var globalCacheVersion: number;
+}
+
+// Initialize global cache version
+if (typeof globalCacheVersion === 'undefined') {
+  globalThis.globalCacheVersion = 1;
+}
 
 /**
  * Hook for fetching prompt parameters with their tweaks with improved caching and performance
@@ -76,11 +84,25 @@ export function usePromptParameters(promptId: string | undefined) {
     if (promptId) {
       logger.info(`Forcing cache refresh for promptId ${promptId}`);
       parametersCache.delete(promptId);
-      globalCacheVersion++;
       setCacheVersion(globalCacheVersion);
       setRetryCount(prev => prev + 1);
     }
   }, [promptId]);
+
+  // Check for global cache version changes
+  useEffect(() => {
+    // Update component's cache version if global version changes
+    if (globalCacheVersion !== cacheVersion) {
+      logger.info(`Global cache version changed (${cacheVersion} → ${globalCacheVersion}), refreshing data`);
+      setCacheVersion(globalCacheVersion);
+      
+      // Clear all cached parameters when global version changes
+      parametersCache.clear();
+      
+      // Trigger a retry to force refetch
+      setRetryCount(prev => prev + 1);
+    }
+  }, [globalCacheVersion, cacheVersion]);
 
   // Use cached data if available and not expired
   const useCachedData = useCallback((promptId: string | undefined) => {
