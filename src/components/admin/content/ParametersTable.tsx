@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableHeader,
@@ -32,13 +32,14 @@ type ParametersTableProps = {
   isLoading: boolean;
 };
 
-const parameterTypeLabels: Record<string, { label: string; variant: "default" | "outline" | "secondary" }> = {
-  tone_and_style: { label: "Tone & Style", variant: "default" },
-  audience: { label: "Audience", variant: "secondary" },
-  length: { label: "Length", variant: "outline" },
-  focus: { label: "Focus", variant: "secondary" },
-  format: { label: "Format", variant: "default" },
-  custom: { label: "Custom", variant: "outline" },
+// Memoized parameter type definitions for better performance
+const parameterTypeLabels = {
+  tone_and_style: { label: "Tone & Style", variant: "default" as const },
+  audience: { label: "Audience", variant: "secondary" as const },
+  length: { label: "Length", variant: "outline" as const },
+  focus: { label: "Focus", variant: "secondary" as const },
+  format: { label: "Format", variant: "default" as const },
+  custom: { label: "Custom", variant: "outline" as const },
 };
 
 const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
@@ -49,6 +50,11 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
     parameter: null,
   });
   const [editParameter, setEditParameter] = useState<PromptParameter | null>(null);
+
+  // Memoize sorted parameters to prevent unnecessary renders
+  const sortedParameters = useMemo(() => {
+    return [...parameters].sort((a, b) => a.name.localeCompare(b.name));
+  }, [parameters]);
 
   const handleDeleteClick = (parameter: PromptParameter) => {
     setDeleteConfirm({ open: true, parameter });
@@ -64,16 +70,10 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
             
             toast({
               title: "Parameter deleted",
-              description: `Parameter "${deleteConfirm.parameter?.name}" has been deleted.`,
+              description: `Parameter "${deleteConfirm.parameter?.name}" has been deleted along with all related tweaks and rules.`,
             });
           },
         });
-        
-        // Force a page reload after a short delay
-        // This ensures all components will re-fetch with the latest data
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
       } catch (error) {
         console.error("Error deleting parameter:", error);
       }
@@ -117,14 +117,14 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {parameters.map((parameter) => (
+            {sortedParameters.map((parameter) => (
               <TableRow key={parameter.id}>
                 <TableCell className="font-medium">{parameter.name}</TableCell>
                 <TableCell>{parameter.description || "—"}</TableCell>
                 <TableCell>
                   {parameter.type in parameterTypeLabels ? (
-                    <Badge variant={parameterTypeLabels[parameter.type].variant}>
-                      {parameterTypeLabels[parameter.type].label}
+                    <Badge variant={parameterTypeLabels[parameter.type as keyof typeof parameterTypeLabels].variant}>
+                      {parameterTypeLabels[parameter.type as keyof typeof parameterTypeLabels].label}
                     </Badge>
                   ) : (
                     parameter.type
@@ -166,8 +166,8 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete the parameter "{deleteConfirm.parameter?.name}". This action cannot be undone,
-              and all associated tweaks and rules will also be deleted.
+              This will permanently delete the parameter "{deleteConfirm.parameter?.name}" and all associated tweaks and rules. 
+              This action cannot be undone, and all prompts using this parameter will be affected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -190,4 +190,4 @@ const ParametersTable = ({ parameters, isLoading }: ParametersTableProps) => {
   );
 };
 
-export default ParametersTable;
+export default React.memo(ParametersTable);
