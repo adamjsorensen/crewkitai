@@ -210,14 +210,14 @@ const EditPromptDialog = ({
               is_required: param.isRequired,
               order: param.order,
             }, { 
-              meta: { silent: true } 
+              onSettled: () => {
+                // Increment counter
+                setOperationCounts(prev => ({
+                  ...prev,
+                  updated: prev.updated + 1
+                }));
+              }
             });
-            
-            // Increment counter
-            setOperationCounts(prev => ({
-              ...prev,
-              updated: prev.updated + 1
-            }));
             
             // Remove from existingRuleIds to track what needs to be deleted
             if (existingRuleIds.has(param.ruleId)) {
@@ -233,14 +233,14 @@ const EditPromptDialog = ({
               is_required: param.isRequired,
               order: param.order,
             }, {
-              meta: { silent: true }
+              onSettled: () => {
+                // Increment counter
+                setOperationCounts(prev => ({
+                  ...prev,
+                  created: prev.created + 1
+                }));
+              }
             });
-            
-            // Increment counter
-            setOperationCounts(prev => ({
-              ...prev,
-              created: prev.created + 1
-            }));
           }
         }
         
@@ -249,14 +249,14 @@ const EditPromptDialog = ({
         for (const ruleId of existingRuleIds) {
           console.log("EditPromptDialog: Deleting rule:", ruleId);
           await deleteParameterRule.mutateAsync(ruleId, {
-            meta: { silent: true }
+            onSettled: () => {
+              // Increment counter
+              setOperationCounts(prev => ({
+                ...prev,
+                deleted: prev.deleted + 1
+              }));
+            }
           });
-          
-          // Increment counter
-          setOperationCounts(prev => ({
-            ...prev,
-            deleted: prev.deleted + 1
-          }));
         }
       }
       
