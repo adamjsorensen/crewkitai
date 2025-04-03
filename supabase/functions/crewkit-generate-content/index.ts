@@ -45,38 +45,21 @@ const logWarn = (message, data = {}) => logEvent(LOG_LEVELS.WARN, message, data)
 // Log errors
 const logError = (message, data = {}) => logEvent(LOG_LEVELS.ERROR, message, data);
 
-// Format error response
-const errorResponse = (status, message, details = null) => {
-  const body = { 
-    error: message,
-    details: details,
-    timestamp: new Date().toISOString(),
-    requestId: crypto.randomUUID()
-  };
-  
-  logError(message, { status, details, body });
-  
-  return new Response(
-    JSON.stringify(body),
-    { status, headers: corsHeaders }
-  );
-};
-
 // Enhanced validation for business profile data
 const validateBusinessProfile = (profile) => {
   if (!profile) {
     logWarn("Profile is null or undefined");
-    return false;
+    return { isValid: false, details: { reason: "Profile is null or undefined" } };
   }
   
   // Log the entire profile for debugging
   logDebug("Validating business profile", { 
-    profileData: JSON.stringify(profile, null, 2) 
+    profileDataKeys: Object.keys(profile)
   });
   
   // Required fields for meaningful business context
   const requiredFields = [
-    { key: 'business_name', fallback: 'company_name' },
+    { key: 'business_name', fallback: 'company_name', required: true },
     { key: 'company_description', required: false },
     { key: 'crew_size', required: false },
     { key: 'specialties', required: false, isArray: true }
@@ -143,7 +126,11 @@ const validateBusinessProfile = (profile) => {
     profileId: profile.id
   });
   
-  return isValid;
+  return { 
+    isValid, 
+    details: validationDetails,
+    meaningfulFieldCount
+  };
 };
 
 serve(async (req: Request) => {
@@ -366,7 +353,7 @@ serve(async (req: Request) => {
 
     logDebug("AI settings", settings);
 
-    // 3. Get user's business profile for context
+    // 3. Get user's business profile data - FIXED IMPLEMENTATION
     let businessProfile = null;
     let profileFetchStartTime = Date.now();
     let hasProfileData = false;
@@ -374,61 +361,96 @@ serve(async (req: Request) => {
     if (userId) {
       logDebug("Fetching user business profile", { userId });
       
-      // Updated query to fetch data from both profiles and compass_user_profiles tables
-      const { data: mergedProfileData, error: profileError } = await supabase
-        .from("profiles")
-        .select(`
-          id, 
-          full_name, 
-          company_name, 
-          company_description,
-          business_address,
-          website,
-          compass_user_profiles:id(
+      // FIXED APPROACH: Fetch data from both tables separately
+      try {
+        // First, fetch basic profile data
+        const { data: basicProfileData, error: basicProfileError } = await supabase
+          .from("profiles")
+          .select(`
+            id, 
+            full_name, 
+            company_name, 
+            company_description,
+            business_address,
+            website
+          `)
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (basicProfileError) {
+          logWarn("Error fetching basic profile data", { error: basicProfileError });
+        } else {
+          logDebug("Basic profile data fetched successfully", { 
+            hasData: !!basicProfileData,
+            profileKeys: basicProfileData ? Object.keys(basicProfileData) : []
+          });
+        }
+        
+        // Next, fetch compass user profile data
+        const { data: compassProfileData, error: compassProfileError } = await supabase
+          .from("compass_user_profiles")
+          .select(`
             business_name,
             crew_size,
             specialties,
             workload
-          )
-        `)
-        .eq("id", userId)
-        .maybeSingle();
-
-      const profileFetchTime = Date.now() - profileFetchStartTime;
-      
-      if (profileError) {
-        logWarn("Error fetching user profile", { 
-          error: profileError,
-          fetchTimeMs: profileFetchTime
-        });
-      } else if (!mergedProfileData) {
-        logWarn("No user profile found in database", { 
-          userId,
-          fetchTimeMs: profileFetchTime
-        });
-      } else {
-        logDebug("Raw profile data fetched successfully", { 
-          mergedProfileData,
-          fetchTimeMs: profileFetchTime
-        });
+          `)
+          .eq("id", userId)
+          .maybeSingle();
+          
+        if (compassProfileError) {
+          logWarn("Error fetching compass profile data", { error: compassProfileError });
+        } else {
+          logDebug("Compass profile data fetched successfully", { 
+            hasData: !!compassProfileData,
+            profileKeys: compassProfileData ? Object.keys(compassProfileData) : []
+          });
+        }
         
-        // Combine the data from both tables for a complete business profile
-        businessProfile = {
-          id: mergedProfileData.id,
-          full_name: mergedProfileData.full_name,
-          // Prioritize compass_user_profiles business name if available
-          business_name: mergedProfileData.compass_user_profiles?.business_name || mergedProfileData.company_name,
-          company_name: mergedProfileData.company_name,
-          company_description: mergedProfileData.company_description,
-          business_address: mergedProfileData.business_address,
-          website: mergedProfileData.website,
-          crew_size: mergedProfileData.compass_user_profiles?.crew_size,
-          specialties: mergedProfileData.compass_user_profiles?.specialties,
-          workload: mergedProfileData.compass_user_profiles?.workload
-        };
+        const profileFetchTime = Date.now() - profileFetchStartTime;
         
-        // Validate if we have enough meaningful data
-        hasProfileData = validateBusinessProfile(businessProfile);
+        // Now combine the data from both sources into a complete business profile
+        if (basicProfileData || compassProfileData) {
+          businessProfile = {
+            id: userId,
+            full_name: basicProfileData?.full_name || '',
+            // Prioritize compass_user_profiles business name if available
+            business_name: compassProfileData?.business_name || basicProfileData?.company_name || '',
+            company_name: basicProfileData?.company_name || '',
+            company_description: basicProfileData?.company_description || '',
+            business_address: basicProfileData?.business_address || '',
+            website: basicProfileData?.website || '',
+            crew_size: compassProfileData?.crew_size || '',
+            specialties: compassProfileData?.specialties || [],
+            workload: compassProfileData?.workload || ''
+          };
+          
+          logInfo("Successfully merged profile data", {
+            fetchTimeMs: profileFetchTime,
+            hasBasicProfile: !!basicProfileData,
+            hasCompassProfile: !!compassProfileData,
+            mergedProfileKeys: Object.keys(businessProfile)
+          });
+          
+          // Validate if we have enough meaningful data using the enhanced validator
+          const validation = validateBusinessProfile(businessProfile);
+          hasProfileData = validation.isValid;
+          
+          logInfo(`Profile validation complete: ${hasProfileData ? 'VALID' : 'INVALID'}`, {
+            validationDetails: validation.details,
+            meaningfulFieldCount: validation.meaningfulFieldCount
+          });
+        } else {
+          logWarn("No profile data found for user", { 
+            userId,
+            fetchTimeMs: profileFetchTime
+          });
+        }
+      } catch (profileError) {
+        logError("Unexpected error fetching profile data", {
+          error: profileError.message,
+          stack: profileError.stack
+        });
       }
     } else {
       logWarn("No user ID available to fetch business profile", {
@@ -690,3 +712,20 @@ serve(async (req: Request) => {
       error.message || "An unexpected error occurred in the edge function");
   }
 });
+
+// Format error response
+const errorResponse = (status, message, details = null) => {
+  const body = { 
+    error: message,
+    details: details,
+    timestamp: new Date().toISOString(),
+    requestId: crypto.randomUUID()
+  };
+  
+  logError(message, { status, details, body });
+  
+  return new Response(
+    JSON.stringify(body),
+    { status, headers: corsHeaders }
+  );
+};
