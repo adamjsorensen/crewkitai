@@ -76,6 +76,35 @@ export function useParameterMutations() {
   // Delete parameter
   const deleteParameter = useMutation({
     mutationFn: async (id: string) => {
+      console.log(`Deleting parameter with ID: ${id}`);
+      
+      // First, delete related parameter tweaks
+      const { error: tweaksError } = await supabase
+        .from('parameter_tweaks')
+        .delete()
+        .eq('parameter_id', id);
+      
+      if (tweaksError) {
+        console.error('Error deleting parameter tweaks:', tweaksError);
+        throw new Error(`Failed to delete parameter tweaks: ${tweaksError.message}`);
+      }
+      
+      console.log(`Successfully deleted tweaks for parameter ID: ${id}`);
+      
+      // Next, delete related parameter rules
+      const { error: rulesError } = await supabase
+        .from('prompt_parameter_rules')
+        .delete()
+        .eq('parameter_id', id);
+      
+      if (rulesError) {
+        console.error('Error deleting parameter rules:', rulesError);
+        throw new Error(`Failed to delete parameter rules: ${rulesError.message}`);
+      }
+      
+      console.log(`Successfully deleted rules for parameter ID: ${id}`);
+      
+      // Finally, delete the parameter itself
       const { error } = await supabase
         .from('prompt_parameters')
         .delete()
@@ -86,13 +115,19 @@ export function useParameterMutations() {
         throw new Error(`Failed to delete parameter: ${error.message}`);
       }
       
+      console.log(`Successfully deleted parameter ID: ${id}`);
+      
       return id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
+      // Invalidate multiple queries to ensure all related data is refreshed
       queryClient.invalidateQueries({ queryKey: ['prompt-parameters'] });
+      queryClient.invalidateQueries({ queryKey: ['parameter-tweaks'] });
+      queryClient.invalidateQueries({ queryKey: ['prompt-parameter-rules'] });
+      
       toast({
         title: 'Parameter deleted',
-        description: 'The parameter was deleted successfully',
+        description: 'The parameter and all related data were deleted successfully',
       });
     },
     onError: (error) => {
