@@ -4,3 +4,6 @@ project_id = "cicnpivviiqycyudgxxg"
 [functions.crewkit-generate-content]
 verify_jwt = false
 
+[functions.pg-coach-logger]
+verify_jwt = false
+

@@ -62,6 +62,34 @@ const errorResponse = (status, message, details = null) => {
   );
 };
 
+// Validate business profile data
+const validateBusinessProfile = (profile) => {
+  if (!profile) return false;
+  
+  // Check if we have at least some meaningful data
+  // Count the number of meaningful fields
+  let meaningfulFieldCount = 0;
+  
+  if (profile.business_name || profile.company_name) meaningfulFieldCount++;
+  if (profile.company_description) meaningfulFieldCount++;
+  if (profile.business_address) meaningfulFieldCount++;
+  if (profile.website) meaningfulFieldCount++;
+  if (profile.crew_size) meaningfulFieldCount++;
+  if (profile.specialties && profile.specialties.length > 0) meaningfulFieldCount++;
+  if (profile.workload) meaningfulFieldCount++;
+  
+  logDebug("Business profile validation", { 
+    meaningfulFieldCount,
+    hasBusinessName: !!profile.business_name,
+    hasCompanyName: !!profile.company_name,
+    hasDescription: !!profile.company_description,
+    hasSpecialties: !!(profile.specialties && profile.specialties.length > 0)
+  });
+  
+  // Consider the profile valid if it has at least 2 meaningful fields
+  return meaningfulFieldCount >= 2;
+};
+
 serve(async (req: Request) => {
   // Log the request
   const requestId = crypto.randomUUID();
@@ -97,6 +125,7 @@ serve(async (req: Request) => {
     // Get the authorization header (optional for testing with verify_jwt=false)
     const authHeader = req.headers.get("Authorization");
     let userId = null;
+    let authError = null;
     
     if (authHeader && authHeader.startsWith("Bearer ")) {
       // If auth header is present, try to verify it
@@ -115,17 +144,28 @@ serve(async (req: Request) => {
       
       try {
         // Verify the JWT token and get the user
-        const { data: userData, error: authError } = await supabase.auth.getUser(jwt);
-        if (authError) {
-          logWarn("Authentication error but continuing due to --no-verify-jwt", { error: authError });
+        const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
+        
+        if (userError) {
+          authError = userError;
+          logWarn("Authentication error but continuing due to --no-verify-jwt", { error: userError });
         }
         
         if (userData?.user) {
           userId = userData.user.id;
           logInfo("Authenticated user", { userId });
+        } else {
+          logWarn("No user found from JWT", { 
+            hasUserData: !!userData,
+            jwt: jwt.substring(0, 10) + '...' 
+          });
         }
       } catch (authErr) {
-        logWarn("JWT verification error but continuing", { error: authErr.message });
+        authError = authErr;
+        logWarn("JWT verification error but continuing", { 
+          error: authErr.message,
+          stack: authErr.stack
+        });
       }
     } else {
       logWarn("No authorization header, proceeding in test mode");
@@ -272,6 +312,8 @@ serve(async (req: Request) => {
 
     // 3. Get user's business profile for context
     let businessProfile = null;
+    let profileFetchStartTime = Date.now();
+    let hasProfileData = false;
     
     if (userId) {
       logDebug("Fetching user business profile", { userId });
@@ -296,27 +338,52 @@ serve(async (req: Request) => {
         .eq("id", userId)
         .maybeSingle();
 
+      const profileFetchTime = Date.now() - profileFetchStartTime;
+      
       if (profileError) {
-        logWarn("Error fetching user profile", { error: profileError });
-      } else if (mergedProfileData) {
-        // Combine the data from both tables for a complete business profile
-        businessProfile = {
-          id: mergedProfileData.id,
-          full_name: mergedProfileData.full_name,
-          // Prioritize compass_user_profiles business name if available
-          business_name: mergedProfileData.compass_user_profiles?.business_name || mergedProfileData.company_name,
-          company_description: mergedProfileData.company_description,
-          business_address: mergedProfileData.business_address,
-          website: mergedProfileData.website,
-          crew_size: mergedProfileData.compass_user_profiles?.crew_size,
-          specialties: mergedProfileData.compass_user_profiles?.specialties,
-          workload: mergedProfileData.compass_user_profiles?.workload
-        };
-        
-        logDebug("User business profile fetched", { businessProfile });
+        logWarn("Error fetching user profile", { 
+          error: profileError,
+          fetchTimeMs: profileFetchTime
+        });
       } else {
-        logInfo("No user profile found", { userId });
+        logDebug("Raw profile data", { 
+          mergedProfileData,
+          fetchTimeMs: profileFetchTime
+        });
+        
+        if (mergedProfileData) {
+          // Combine the data from both tables for a complete business profile
+          businessProfile = {
+            id: mergedProfileData.id,
+            full_name: mergedProfileData.full_name,
+            // Prioritize compass_user_profiles business name if available
+            business_name: mergedProfileData.compass_user_profiles?.business_name || mergedProfileData.company_name,
+            company_description: mergedProfileData.company_description,
+            business_address: mergedProfileData.business_address,
+            website: mergedProfileData.website,
+            crew_size: mergedProfileData.compass_user_profiles?.crew_size,
+            specialties: mergedProfileData.compass_user_profiles?.specialties,
+            workload: mergedProfileData.compass_user_profiles?.workload
+          };
+          
+          // Validate if we have enough meaningful data
+          hasProfileData = validateBusinessProfile(businessProfile);
+          
+          logDebug("User business profile processed", { 
+            businessProfile,
+            isValid: hasProfileData
+          });
+        } else {
+          logInfo("No user profile found", { 
+            userId,
+            fetchTimeMs: profileFetchTime
+          });
+        }
       }
+    } else {
+      logWarn("No user ID available to fetch business profile", {
+        authError: authError ? authError.message : null
+      });
     }
 
     // 4. Assemble the prompt
@@ -338,7 +405,7 @@ serve(async (req: Request) => {
     }
 
     // Add enhanced business context if available
-    if (businessProfile) {
+    if (hasProfileData && businessProfile) {
       basePrompt += "\n\n### Business Context:\n";
 
       if (businessProfile.business_name) {
@@ -370,6 +437,11 @@ serve(async (req: Request) => {
       }
     } else {
       basePrompt += "\n\n### Business Context:\nNo business profile information available. Please create generic content.";
+      logWarn("No valid business profile data available", {
+        userId,
+        hasProfileObject: !!businessProfile,
+        validationPassed: hasProfileData
+      });
     }
 
     // Store the full assembled prompt for logging
@@ -380,7 +452,11 @@ serve(async (req: Request) => {
       ? basePrompt.substring(0, 200) + "..." 
       : basePrompt;
     
-    logDebug("Assembled prompt", { truncatedPrompt });
+    logDebug("Assembled prompt", { 
+      truncatedPrompt,
+      fullLength: basePrompt.length,
+      hasBusinessContext: hasProfileData
+    });
 
     // 5. Check if OpenAI API key is configured
     const apiKey = Deno.env.get("OPENAI_API_KEY");
@@ -507,7 +583,8 @@ serve(async (req: Request) => {
               full_prompt: fullAssembledPrompt,
               system_prompt: settings.systemPrompt,
               model: settings.model,
-              business_profile_used: !!businessProfile
+              business_profile_used: hasProfileData,
+              business_context_included: hasProfileData
             }
           });
 
@@ -526,7 +603,8 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ 
           generatedContent: generatedContent,
-          generationId: generationData?.id || null 
+          generationId: generationData?.id || null,
+          businessContextIncluded: hasProfileData
         }),
         { status: 200, headers: corsHeaders }
       );
