@@ -7,13 +7,50 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Improved logging function with levels
+const LOG_LEVELS = {
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3
+};
+
+// Set current log level
+const CURRENT_LOG_LEVEL = LOG_LEVELS.INFO;
+
+// Logging function with severity levels
+const logEvent = (level, message, data = {}) => {
+  if (level >= CURRENT_LOG_LEVEL) {
+    const prefix = level === LOG_LEVELS.ERROR ? "❌ ERROR" :
+                  level === LOG_LEVELS.WARN ? "⚠️ WARNING" :
+                  level === LOG_LEVELS.INFO ? "ℹ️ INFO" : "🔍 DEBUG";
+    
+    console.log(`[${prefix}][pg-coach-logger] ${message}`, data);
+  }
+};
+
+// Log debug information
+const logDebug = (message, data = {}) => logEvent(LOG_LEVELS.DEBUG, message, data);
+// Log information
+const logInfo = (message, data = {}) => logEvent(LOG_LEVELS.INFO, message, data);
+// Log warnings
+const logWarn = (message, data = {}) => logEvent(LOG_LEVELS.WARN, message, data);
+// Log errors
+const logError = (message, data = {}) => logEvent(LOG_LEVELS.ERROR, message, data);
+
 serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  const requestTime = new Date().toISOString();
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    logDebug(`[${requestId}] Handling CORS preflight request`);
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    logInfo(`[${requestId}] Received activity logging request`, { time: requestTime });
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -23,13 +60,22 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const { user_id, action_type, action_details, conversation_id } = await req.json();
+    // Parse request body and log it for debugging
+    const requestBody = await req.json();
+    logDebug(`[${requestId}] Request body`, requestBody);
+    
+    const { user_id, action_type, action_details, conversation_id } = requestBody;
     
     if (!user_id || !action_type) {
-      throw new Error('Missing required parameters: user_id and action_type are required');
+      const errorMsg = 'Missing required parameters: user_id and action_type are required';
+      logError(`[${requestId}] ${errorMsg}`, { receivedParams: requestBody });
+      throw new Error(errorMsg);
     }
     
-    console.log(`[pg-coach-logger] Logging activity: ${action_type} for user ${user_id}`);
+    logInfo(`[${requestId}] Logging activity: ${action_type} for user ${user_id}`, { 
+      conversation_id: conversation_id || 'none',
+      hasDetails: !!action_details
+    });
     
     // Log the activity
     const { data, error } = await supabase
@@ -43,9 +89,14 @@ serve(async (req) => {
       .select('id');
       
     if (error) {
-      console.error('[pg-coach-logger] Error logging activity:', error);
+      logError(`[${requestId}] Error logging activity:`, error);
       throw error;
     }
+    
+    logInfo(`[${requestId}] Activity logged successfully`, { 
+      log_id: data?.[0]?.id,
+      processingTime: `${(new Date().getTime() - new Date(requestTime).getTime())}ms` 
+    });
     
     return new Response(
       JSON.stringify({ 
@@ -62,12 +113,13 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('[pg-coach-logger] Error:', error);
+    logError(`[${requestId}] Error:`, error);
     
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'An unknown error occurred'
+        error: error.message || 'An unknown error occurred',
+        request_id: requestId
       }),
       { 
         status: 500,
