@@ -2,7 +2,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.1";
 import { logError, logInfo, logWarn, logDebug } from "./logger.ts";
 import { validateBusinessProfile } from "./validators.ts";
-import { fetchCustomPromptData, fetchAISettings, fetchBusinessProfile } from "./data-fetchers.ts";
 import { callOpenAI } from "./ai-service.ts";
 import { errorResponse } from "./response-utils.ts";
 
@@ -39,26 +38,13 @@ export async function handleRequest(req: Request) {
       });
     }
 
-    // Log headers for debugging (masking sensitive data)
-    const headers = {};
-    req.headers.forEach((value, key) => {
-      headers[key] = key.toLowerCase().includes('auth') || 
-                    key.toLowerCase().includes('key') || 
-                    key.toLowerCase().includes('token') 
-                    ? '[REDACTED]' : value;
-    });
-    
-    logDebug("Request headers", headers);
-    
-    // Get the authorization header (optional for testing with verify_jwt=false)
+    // Get the authorization header
     const authHeader = req.headers.get("Authorization");
     let userId = null;
-    let authError = null;
     
     if (authHeader && authHeader.startsWith("Bearer ")) {
-      // If auth header is present, try to verify it
+      // If auth header is present, verify it
       const jwt = authHeader.substring(7);
-      logDebug("JWT token present, length: " + jwt.length);
       
       // Create Supabase client with the service role key
       const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -75,42 +61,26 @@ export async function handleRequest(req: Request) {
         const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
         
         if (userError) {
-          authError = userError;
-          logWarn("Authentication error but continuing due to --no-verify-jwt", { error: userError });
+          return errorResponse(401, "Authentication error", userError.message);
         }
         
         if (userData?.user) {
           userId = userData.user.id;
           logInfo("Authenticated user", { userId });
         } else {
-          logWarn("No user found from JWT", { 
-            hasUserData: !!userData,
-            jwt: jwt.substring(0, 10) + '...' 
-          });
+          return errorResponse(401, "Invalid user token", "No user found from provided token");
         }
       } catch (authErr) {
-        authError = authErr;
-        logWarn("JWT verification error but continuing", { 
-          error: authErr.message,
-          stack: authErr.stack
-        });
+        return errorResponse(401, "JWT verification error", authErr.message);
       }
     } else {
-      logWarn("No authorization header, proceeding in test mode");
+      return errorResponse(401, "Authentication required", "No authorization header provided");
     }
     
     // Get the request data
     let requestData: RequestData;
     try {
-      const bodyText = await req.text();
-      logDebug("Request body", { body: bodyText });
-      
-      try {
-        requestData = JSON.parse(bodyText);
-      } catch (parseError) {
-        return errorResponse(400, "Invalid JSON in request body", 
-          "Request body must be valid JSON: " + parseError.message);
-      }
+      requestData = await req.json();
     } catch (bodyError) {
       return errorResponse(400, "Error reading request body", bodyError.message);
     }
@@ -133,24 +103,146 @@ export async function handleRequest(req: Request) {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Fetch the custom prompt, including the base prompt and tweaks
-    const { customPromptData, customPromptError } = await fetchCustomPromptData(supabase, requestData.customPromptId);
-    
+    // Fetch the custom prompt with all related data in one query
+    const { data: customPromptData, error: customPromptError } = await supabase
+      .from("custom_prompts")
+      .select(`
+        id,
+        base_prompt_id,
+        created_by,
+        prompts:base_prompt_id (
+          id, 
+          title,
+          description,
+          prompt
+        ),
+        prompt_customizations (
+          parameter_tweak_id,
+          parameter_tweaks:parameter_tweak_id (
+            id,
+            name,
+            sub_prompt,
+            parameter_id
+          )
+        ),
+        prompt_additional_context (
+          id,
+          context_text
+        )
+      `)
+      .eq("id", requestData.customPromptId)
+      .single();
+
     if (customPromptError) {
-      return errorResponse(404, "Failed to fetch custom prompt", 
-        customPromptError.message || "The requested prompt could not be found");
+      return errorResponse(404, "Failed to fetch custom prompt", customPromptError.message);
     }
 
-    // 2. Get AI settings
-    const { settings, aiSettingsError } = await fetchAISettings(supabase);
+    if (!customPromptData || !customPromptData.prompts) {
+      return errorResponse(404, "Custom prompt not found or is invalid", 
+        "The requested prompt could not be found or has invalid configuration");
+    }
+
+    // Get AI settings
+    const { data: aiSettings, error: aiSettingsError } = await supabase
+      .from("ai_settings")
+      .select("name, value")
+      .in("name", [
+        "content_generator_system_prompt",
+        "content_generator_temperature",
+        "content_generator_max_tokens",
+        "content_generator_model"
+      ]);
+
     if (aiSettingsError) {
       logWarn("Error fetching AI settings, using defaults", { error: aiSettingsError });
     }
 
-    // 3. Get user's business profile data 
-    const { businessProfile, hasProfileData } = await fetchBusinessProfile(supabase, userId);
+    // Parse AI settings with defaults
+    const settings = {
+      systemPrompt: "You are an expert content writer for painting professionals. Create high-quality content.",
+      temperature: 0.7,
+      maxTokens: 2000,
+      model: "gpt-4o-mini", // Using the latest model
+    };
 
-    // 4. Assemble the prompt
+    if (aiSettings) {
+      aiSettings.forEach((setting: any) => {
+        try {
+          const value = JSON.parse(setting.value);
+          switch (setting.name) {
+            case "content_generator_system_prompt":
+              settings.systemPrompt = value;
+              break;
+            case "content_generator_temperature":
+              settings.temperature = parseFloat(value);
+              break;
+            case "content_generator_max_tokens":
+              settings.maxTokens = parseInt(value);
+              break;
+            case "content_generator_model":
+              settings.model = value;
+              break;
+          }
+        } catch (e) {
+          logWarn(`Error parsing setting ${setting.name}:`, e);
+        }
+      });
+    }
+
+    // Get user's business profile data
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select(`
+        id, 
+        full_name, 
+        company_name, 
+        company_description,
+        business_address,
+        website
+      `)
+      .eq("id", userId)
+      .single();
+
+    if (profileError) {
+      logWarn("Error fetching basic profile", { error: profileError });
+    }
+
+    // Also get the compass user profile data which has additional business details
+    const { data: compassProfile, error: compassProfileError } = await supabase
+      .from("compass_user_profiles")
+      .select(`
+        id,
+        business_name,
+        crew_size,
+        specialties,
+        workload
+      `)
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (compassProfileError) {
+      logWarn("Error fetching compass profile", { error: compassProfileError });
+    }
+
+    // Combine the profiles into a comprehensive business profile
+    const businessProfile = {
+      id: userId,
+      full_name: profile?.full_name || '',
+      business_name: compassProfile?.business_name || profile?.company_name || '',
+      company_name: profile?.company_name || '',
+      company_description: profile?.company_description || '',
+      business_address: profile?.business_address || '',
+      website: profile?.website || '',
+      crew_size: compassProfile?.crew_size || '',
+      specialties: compassProfile?.specialties || [],
+      workload: compassProfile?.workload || ''
+    };
+
+    // Validate if we have enough meaningful business profile data
+    const validation = validateBusinessProfile(businessProfile);
+    const hasProfileData = validation.isValid;
+
+    // Assemble the prompt
     let basePrompt = customPromptData.prompts?.prompt || "";
     
     // Add sub-prompts from tweaks
@@ -169,7 +261,7 @@ export async function handleRequest(req: Request) {
     }
 
     // Add enhanced business context if available
-    if (hasProfileData && businessProfile) {
+    if (hasProfileData) {
       basePrompt += "\n\n### Business Context:\n";
 
       if (businessProfile.business_name) {
@@ -199,66 +291,28 @@ export async function handleRequest(req: Request) {
       if (businessProfile.workload) {
         basePrompt += `Current Workload: ${businessProfile.workload}\n`;
       }
-      
-      logInfo("Added business context to prompt", {
-        businessName: businessProfile.business_name || businessProfile.company_name,
-        contextLength: basePrompt.length
-      });
     } else {
       basePrompt += "\n\n### Business Context:\nNo business profile information available. Please create generic content.";
-      logWarn("No valid business profile data available", {
-        userId,
-        hasProfileObject: !!businessProfile,
-        validationPassed: hasProfileData,
-        businessProfileKeys: businessProfile ? Object.keys(businessProfile) : []
-      });
     }
 
-    // Log the assembled prompt (truncated for logs)
-    const truncatedPrompt = basePrompt.length > 200 
-      ? basePrompt.substring(0, 200) + "..." 
-      : basePrompt;
-    
-    logDebug("Assembled prompt", { 
-      truncatedPrompt,
-      fullLength: basePrompt.length,
-      hasBusinessContext: hasProfileData
-    });
-
-    // 5. Check if OpenAI API key is configured
+    // Check if OpenAI API key is configured
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) {
-      logError("OpenAI API key not configured");
       return errorResponse(500, "OpenAI API key not configured", 
         "Please ask your administrator to configure the OPENAI_API_KEY in Supabase Edge Function Secrets");
     }
 
-    // 6. Make a request to the OpenAI API
+    // Make a request to the OpenAI API
     try {
       const { generatedContent, openaiRequestTime, aiData } = await callOpenAI(apiKey, settings, basePrompt);
       
-      const contentPreview = generatedContent.length > 200 
-        ? generatedContent.substring(0, 200) + "..." 
-        : generatedContent;
-      
-      logInfo("Content generated successfully", { 
-        contentLength: generatedContent.length,
-        contentPreview 
-      });
-
-      // 7. Save the generation to the database
-      logDebug("Saving generation to database", { 
-        customPromptId: requestData.customPromptId,
-        contentLength: generatedContent.length,
-        userId: userId || "Anonymous"
-      });
-      
+      // Save the generation to the database
       const { data: generationData, error: generationError } = await supabase
         .from("prompt_generations")
         .insert({
           custom_prompt_id: requestData.customPromptId,
           generated_content: generatedContent,
-          created_by: userId || null // Allow anonymous generations for testing
+          created_by: userId
         })
         .select("id")
         .single();
@@ -266,74 +320,39 @@ export async function handleRequest(req: Request) {
       if (generationError) {
         logError("Error saving generation", { error: generationError });
         // Continue anyway to return the content to the user
-      } else {
-        logInfo("Generation saved to database", { generationId: generationData?.id });
       }
 
-      // 8. Log the activity if user is authenticated
-      if (userId) {
-        logDebug("Logging user activity");
-        
-        try {
-          // Log to dedicated pg-coach-logger function
-          const loggerResponse = await fetch(`${supabaseUrl}/functions/v1/pg-coach-logger`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${supabaseKey}`
-            },
-            body: JSON.stringify({
-              user_id: userId,
-              action_type: "content_generation_prompt",
-              action_details: {
-                prompt_id: customPromptData.prompts?.id,
-                prompt_title: customPromptData.prompts?.title,
-                generation_id: generationData?.id,
-                business_profile_used: hasProfileData,
-                business_context_included: hasProfileData,
-                profile_validation_result: hasProfileData,
-                business_profile_keys: businessProfile ? Object.keys(businessProfile).filter(k => !!businessProfile[k]) : []
-              }
-            })
-          });
-          
-          if (!loggerResponse.ok) {
-            const errorText = await loggerResponse.text();
-            logWarn("Error calling activity logger function", { 
-              status: loggerResponse.status,
-              error: errorText
-            });
-          } else {
-            logDebug("Activity logged successfully");
+      // Log the activity
+      try {
+        await supabase.rpc('log_user_activity', {
+          p_action_type: 'content_generation',
+          p_action_details: {
+            prompt_id: customPromptData.prompts?.id,
+            prompt_title: customPromptData.prompts?.title,
+            generation_id: generationData?.id,
+            business_profile_used: hasProfileData
           }
-        } catch (logError) {
-          logWarn("Error calling activity logger", { error: logError });
-        }
+        });
+      } catch (logError) {
+        logWarn("Error logging activity", { error: logError });
       }
 
-      // 9. Return the generated content
+      // Return the generated content
       const responseTime = Date.now() - requestStartTime;
-      logInfo(`Request completed successfully [${requestId}]`, { 
-        responseTime,
-        generationId: generationData?.id
-      });
+      logInfo(`Request completed successfully [${requestId}]`, { responseTime });
       
       return new Response(
         JSON.stringify({ 
-          generatedContent: generatedContent,
+          generatedContent,
           generationId: generationData?.id || null,
           businessContextIncluded: hasProfileData
         }),
         { status: 200, headers: corsHeaders }
       );
     } catch (error) {
-      logError("Error calling OpenAI API", { error: error.message, stack: error.stack });
-      return errorResponse(500, "Error communicating with AI service", 
-        error.message || "An unexpected error occurred while trying to generate content");
+      return errorResponse(500, "Error communicating with AI service", error.message);
     }
   } catch (error) {
-    logError("Unhandled error", { error: error.message, stack: error.stack });
-    return errorResponse(500, "Internal server error", 
-      error.message || "An unexpected error occurred in the edge function");
+    return errorResponse(500, "Internal server error", error.message);
   }
 }
