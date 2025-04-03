@@ -1,133 +1,85 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.1';
 
+// CORS headers for browser requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Improved logging function with levels
-const LOG_LEVELS = {
-  DEBUG: 0,
-  INFO: 1,
-  WARN: 2,
-  ERROR: 3
-};
-
-// Set current log level
-const CURRENT_LOG_LEVEL = LOG_LEVELS.INFO;
-
-// Logging function with severity levels
-const logEvent = (level, message, data = {}) => {
-  if (level >= CURRENT_LOG_LEVEL) {
-    const prefix = level === LOG_LEVELS.ERROR ? "❌ ERROR" :
-                  level === LOG_LEVELS.WARN ? "⚠️ WARNING" :
-                  level === LOG_LEVELS.INFO ? "ℹ️ INFO" : "🔍 DEBUG";
-    
-    console.log(`[${prefix}][pg-coach-logger] ${message}`, data);
-  }
-};
-
-// Log debug information
-const logDebug = (message, data = {}) => logEvent(LOG_LEVELS.DEBUG, message, data);
-// Log information
-const logInfo = (message, data = {}) => logEvent(LOG_LEVELS.INFO, message, data);
-// Log warnings
-const logWarn = (message, data = {}) => logEvent(LOG_LEVELS.WARN, message, data);
-// Log errors
-const logError = (message, data = {}) => logEvent(LOG_LEVELS.ERROR, message, data);
-
 serve(async (req) => {
-  const requestId = crypto.randomUUID();
-  const requestTime = new Date().toISOString();
-  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    logDebug(`[${requestId}] Handling CORS preflight request`);
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    logInfo(`[${requestId}] Received activity logging request`, { time: requestTime });
-    
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing environment variables for Supabase');
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase environment variables');
     }
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Create Supabase client with the service key for admin access
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      supabaseServiceKey
+    );
     
-    // Parse request body and log it for debugging
-    const requestBody = await req.json();
-    logDebug(`[${requestId}] Request body`, requestBody);
+    // Extract user ID and data from request
+    const { action_type, action_details, conversation_id, user_id } = await req.json();
     
-    const { user_id, action_type, action_details, conversation_id } = requestBody;
-    
-    if (!user_id || !action_type) {
-      const errorMsg = 'Missing required parameters: user_id and action_type are required';
-      logError(`[${requestId}] ${errorMsg}`, { receivedParams: requestBody });
-      throw new Error(errorMsg);
+    // Validate required fields
+    if (!action_type) {
+      return new Response(
+        JSON.stringify({ error: 'action_type is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!user_id) {
+      return new Response(
+        JSON.stringify({ error: 'user_id is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[pg-coach-logger] Recording activity: ${action_type}`);
+    if (action_details) {
+      console.log(`[pg-coach-logger] Details: ${JSON.stringify(action_details).substring(0, 100)}${JSON.stringify(action_details).length > 100 ? '...' : ''}`);
     }
     
-    logInfo(`[${requestId}] Logging activity: ${action_type} for user ${user_id}`, { 
-      conversation_id: conversation_id || 'none',
-      hasDetails: !!action_details
-    });
-    
-    // Log the activity
-    const { data, error } = await supabase
+    // Insert into pg_activity_logs table
+    const { data, error } = await supabaseAdmin
       .from('pg_activity_logs')
       .insert({
         user_id,
         action_type,
         action_details: action_details || {},
-        conversation_id
+        conversation_id: conversation_id || null
       })
-      .select('id');
+      .select('id')
+      .single();
       
     if (error) {
-      logError(`[${requestId}] Error logging activity:`, error);
+      console.error('[pg-coach-logger] Error logging activity:', error);
       throw error;
     }
     
-    logInfo(`[${requestId}] Activity logged successfully`, { 
-      log_id: data?.[0]?.id,
-      processingTime: `${(new Date().getTime() - new Date(requestTime).getTime())}ms` 
-    });
+    console.log(`[pg-coach-logger] Successfully logged activity with ID: ${data.id}`);
     
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Activity logged successfully',
-        id: data?.[0]?.id
-      }),
-      { 
-        status: 200,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
+      JSON.stringify({ success: true, log_id: data.id }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    logError(`[${requestId}] Error:`, error);
+    console.error('[pg-coach-logger] Error:', error);
     
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'An unknown error occurred',
-        request_id: requestId
-      }),
-      { 
-        status: 500,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
+      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

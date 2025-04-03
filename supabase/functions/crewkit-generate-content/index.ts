@@ -62,51 +62,6 @@ const errorResponse = (status, message, details = null) => {
   );
 };
 
-// Helper function to validate business profile
-const validateBusinessProfile = (profile) => {
-  // Track what fields were found and missing
-  const fieldsStatus = {
-    found: [],
-    missing: []
-  };
-  
-  // Check core fields from profiles table
-  ['id', 'full_name', 'company_name', 'company_description', 'business_address', 'website'].forEach(field => {
-    if (profile && profile[field] !== undefined && profile[field] !== null && profile[field] !== '') {
-      fieldsStatus.found.push(field);
-    } else {
-      fieldsStatus.missing.push(field);
-    }
-  });
-  
-  // Check compass_user_profiles related fields
-  if (profile && profile.compass_user_profiles) {
-    ['business_name', 'crew_size', 'specialties', 'workload'].forEach(field => {
-      if (profile.compass_user_profiles[field] !== undefined && profile.compass_user_profiles[field] !== null) {
-        if (field === 'specialties' && Array.isArray(profile.compass_user_profiles[field]) && profile.compass_user_profiles[field].length === 0) {
-          fieldsStatus.missing.push(`compass_user_profiles.${field}`);
-        } else {
-          fieldsStatus.found.push(`compass_user_profiles.${field}`);
-        }
-      } else {
-        fieldsStatus.missing.push(`compass_user_profiles.${field}`);
-      }
-    });
-  } else {
-    fieldsStatus.missing.push('compass_user_profiles');
-  }
-  
-  // Calculate how complete the profile is
-  const totalFields = fieldsStatus.found.length + fieldsStatus.missing.length;
-  const completeness = totalFields > 0 ? Math.round((fieldsStatus.found.length / totalFields) * 100) : 0;
-  
-  return {
-    isValid: fieldsStatus.found.length > 0,
-    completeness,
-    fieldsStatus
-  };
-};
-
 serve(async (req: Request) => {
   // Log the request
   const requestId = crypto.randomUUID();
@@ -142,7 +97,6 @@ serve(async (req: Request) => {
     // Get the authorization header (optional for testing with verify_jwt=false)
     const authHeader = req.headers.get("Authorization");
     let userId = null;
-    let authData = null;
     
     if (authHeader && authHeader.startsWith("Bearer ")) {
       // If auth header is present, try to verify it
@@ -162,15 +116,6 @@ serve(async (req: Request) => {
       try {
         // Verify the JWT token and get the user
         const { data: userData, error: authError } = await supabase.auth.getUser(jwt);
-        authData = { userData, authError };
-        
-        logDebug("Auth verification results", { 
-          hasUserData: !!userData, 
-          hasUser: !!(userData?.user),
-          hasError: !!authError,
-          errorMessage: authError?.message
-        });
-        
         if (authError) {
           logWarn("Authentication error but continuing due to --no-verify-jwt", { error: authError });
         }
@@ -327,17 +272,12 @@ serve(async (req: Request) => {
 
     // 3. Get user's business profile for context
     let businessProfile = null;
-    let profileValidationResults = null;
-    let rawProfileData = null;
     
     if (userId) {
       logDebug("Fetching user business profile", { userId });
       
-      // Log detailed profile retrieval attempt
-      const profileStartTime = Date.now();
-      
       // Updated query to fetch data from both profiles and compass_user_profiles tables
-      const profileQueryResult = await supabase
+      const { data: mergedProfileData, error: profileError } = await supabase
         .from("profiles")
         .select(`
           id, 
@@ -356,78 +296,9 @@ serve(async (req: Request) => {
         .eq("id", userId)
         .maybeSingle();
 
-      const profileQueryTime = Date.now() - profileStartTime;
-      
-      // Log the raw query results for debugging
-      logDebug("Raw profile query results", {
-        queryTime: profileQueryTime + "ms",
-        data: profileQueryResult.data,
-        error: profileQueryResult.error,
-        status: profileQueryResult.status,
-        statusText: profileQueryResult.statusText
-      });
-      
-      // Log detailed field analysis if data exists
-      if (profileQueryResult.data) {
-        const fieldAnalysis = {};
-        for (const [key, value] of Object.entries(profileQueryResult.data)) {
-          if (key === 'compass_user_profiles') {
-            fieldAnalysis[key] = {
-              type: value === null ? 'null' : typeof value,
-              isEmpty: value === null,
-              hasProperties: value !== null && Object.keys(value).length > 0,
-              propertyCount: value !== null ? Object.keys(value).length : 0
-            };
-            
-            if (value !== null) {
-              const subFieldAnalysis = {};
-              for (const [subKey, subValue] of Object.entries(value)) {
-                if (subKey === 'specialties') {
-                  subFieldAnalysis[subKey] = {
-                    type: subValue === null ? 'null' : typeof subValue,
-                    isArray: Array.isArray(subValue),
-                    length: Array.isArray(subValue) ? subValue.length : 'not an array',
-                    isEmpty: subValue === null || (Array.isArray(subValue) && subValue.length === 0),
-                    value: subValue
-                  };
-                } else {
-                  subFieldAnalysis[subKey] = {
-                    type: subValue === null ? 'null' : typeof subValue,
-                    isEmpty: subValue === null || subValue === '',
-                    value: subValue
-                  };
-                }
-              }
-              fieldAnalysis['compass_user_profiles_fields'] = subFieldAnalysis;
-            }
-          } else {
-            fieldAnalysis[key] = {
-              type: value === null ? 'null' : typeof value,
-              isEmpty: value === null || value === '',
-              value: value
-            };
-          }
-        }
-        
-        logDebug("Profile field analysis", fieldAnalysis);
-      }
-      
-      const { data: mergedProfileData, error: profileError } = profileQueryResult;
-      rawProfileData = mergedProfileData; // Store the raw data for logging
-      
       if (profileError) {
-        logWarn("Error fetching user profile", { 
-          error: profileError,
-          errorCode: profileError.code,
-          errorDetails: profileError.details,
-          errorHint: profileError.hint,
-          errorMessage: profileError.message
-        });
+        logWarn("Error fetching user profile", { error: profileError });
       } else if (mergedProfileData) {
-        // Validate the retrieved profile data
-        profileValidationResults = validateBusinessProfile(mergedProfileData);
-        logDebug("Business profile validation results", profileValidationResults);
-        
         // Combine the data from both tables for a complete business profile
         businessProfile = {
           id: mergedProfileData.id,
@@ -442,17 +313,10 @@ serve(async (req: Request) => {
           workload: mergedProfileData.compass_user_profiles?.workload
         };
         
-        logDebug("User business profile created", { 
-          businessProfile,
-          profileCompleteness: profileValidationResults.completeness + "%",
-          fieldsFound: profileValidationResults.fieldsStatus.found,
-          fieldsMissing: profileValidationResults.fieldsStatus.missing
-        });
+        logDebug("User business profile fetched", { businessProfile });
       } else {
         logInfo("No user profile found", { userId });
       }
-    } else {
-      logDebug("No user ID available, skipping profile fetch", { authData });
     }
 
     // 4. Assemble the prompt
@@ -474,91 +338,39 @@ serve(async (req: Request) => {
     }
 
     // Add enhanced business context if available
-    const businessContextStartTime = Date.now();
-    
-    // Track which fields were included in business context
-    const includedFields = [];
-    
-    if (businessProfile && profileValidationResults && profileValidationResults.isValid) {
+    if (businessProfile) {
       basePrompt += "\n\n### Business Context:\n";
-      
+
       if (businessProfile.business_name) {
         basePrompt += `Business Name: ${businessProfile.business_name}\n`;
-        includedFields.push('business_name');
       }
       
       if (businessProfile.company_description) {
         basePrompt += `Business Description: ${businessProfile.company_description}\n`;
-        includedFields.push('company_description');
       }
       
       if (businessProfile.business_address) {
         basePrompt += `Business Address: ${businessProfile.business_address}\n`;
-        includedFields.push('business_address');
       }
       
       if (businessProfile.website) {
         basePrompt += `Website: ${businessProfile.website}\n`;
-        includedFields.push('website');
       }
       
       if (businessProfile.crew_size) {
         basePrompt += `Crew Size: ${businessProfile.crew_size}\n`;
-        includedFields.push('crew_size');
       }
       
-      if (businessProfile.specialties && Array.isArray(businessProfile.specialties) && businessProfile.specialties.length > 0) {
+      if (businessProfile.specialties && businessProfile.specialties.length > 0) {
         basePrompt += `Specialties: ${businessProfile.specialties.join(', ')}\n`;
-        includedFields.push('specialties');
       }
       
       if (businessProfile.workload) {
         basePrompt += `Current Workload: ${businessProfile.workload}\n`;
-        includedFields.push('workload');
       }
-      
-      logDebug("Added business context to prompt", { 
-        includedFields,
-        profileCompleteness: profileValidationResults.completeness + "%"
-      });
     } else {
-      basePrompt += "\n\n### Business Context:\n";
-      
-      if (userId) {
-        // Provide detailed reason why business profile wasn't used
-        if (!rawProfileData) {
-          basePrompt += "No business profile information available. Please create generic content.\n";
-          logDebug("No business profile data found for user", { 
-            userId,
-            rawProfileQueryResult: rawProfileData
-          });
-        } else if (!profileValidationResults || !profileValidationResults.isValid) {
-          basePrompt += "Limited business profile information available. Please create mostly generic content.\n";
-          logDebug("Business profile validation failed", {
-            validationResults: profileValidationResults,
-            rawProfile: rawProfileData
-          });
-        }
-      } else {
-        basePrompt += "No business profile information available. Please create generic content.";
-        logDebug("No user ID available for business profile", { 
-          authHeader: !!authHeader,
-          authData
-        });
-      }
+      basePrompt += "\n\n### Business Context:\nNo business profile information available. Please create generic content.";
     }
-    
-    logDebug("Business context assembly", {
-      processingTime: (Date.now() - businessContextStartTime) + "ms",
-      hasBusinessProfile: !!businessProfile,
-      businessProfileFields: businessProfile ? Object.keys(businessProfile).filter(k => 
-        businessProfile[k] !== null && 
-        businessProfile[k] !== undefined && 
-        (typeof businessProfile[k] !== 'string' || businessProfile[k] !== '') &&
-        (!Array.isArray(businessProfile[k]) || businessProfile[k].length > 0)
-      ) : [],
-      includedFields
-    });
 
     // Store the full assembled prompt for logging
     const fullAssembledPrompt = basePrompt;
@@ -695,9 +507,7 @@ serve(async (req: Request) => {
               full_prompt: fullAssembledPrompt,
               system_prompt: settings.systemPrompt,
               model: settings.model,
-              business_profile_used: !!businessProfile && profileValidationResults?.isValid,
-              business_profile_completeness: profileValidationResults?.completeness || 0,
-              business_fields_used: includedFields
+              business_profile_used: !!businessProfile
             }
           });
 

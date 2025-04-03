@@ -26,19 +26,6 @@ interface AISettings {
   followUpPrompt: string;
 }
 
-// User business profile interface
-interface BusinessProfile {
-  id: string;
-  full_name: string | null;
-  business_name: string | null;
-  company_description: string | null;
-  business_address: string | null;
-  website: string | null;
-  crew_size: string | null;
-  specialties: string[] | null;
-  workload: string | null;
-}
-
 // Default AI settings if database values aren't available
 const defaultSettings: AISettings = {
   systemPrompt: `You are the PainterGrowth Coach, an AI assistant specialized in helping painting professionals grow their businesses. 
@@ -257,131 +244,6 @@ async function logActivity(supabaseAdmin: any, userId: string, actionType: strin
   }
 }
 
-// Retrieve and validate business profile data
-async function getBusinessProfile(supabaseAdmin: any, userId: string): Promise<BusinessProfile | null> {
-  if (!userId) {
-    console.log("[pg-coach] No user ID provided for profile lookup");
-    return null;
-  }
-  
-  try {
-    console.log("[pg-coach] Fetching business profile data for user:", userId);
-    
-    // Get general profile data
-    const { data: profileData, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-    
-    if (profileError) {
-      console.error("[pg-coach] Error fetching profile:", profileError);
-    }
-    
-    // Get compass-specific profile data
-    const { data: compassData, error: compassError } = await supabaseAdmin
-      .from("compass_user_profiles")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-    
-    if (compassError) {
-      console.error("[pg-coach] Error fetching compass profile:", compassError);
-    }
-    
-    // Log what we found
-    console.log("[pg-coach] Profile data retrieved:", {
-      hasProfileData: !!profileData,
-      hasCompassData: !!compassData,
-      profileFields: profileData ? Object.keys(profileData) : [],
-      compassFields: compassData ? Object.keys(compassData) : []
-    });
-    
-    // Combine the data into a consolidated business profile
-    if (profileData || compassData) {
-      const businessProfile: BusinessProfile = {
-        id: userId,
-        full_name: profileData?.full_name || null,
-        business_name: compassData?.business_name || profileData?.company_name || null,
-        company_description: profileData?.company_description || null,
-        business_address: profileData?.business_address || null,
-        website: profileData?.website || null,
-        crew_size: compassData?.crew_size || null,
-        specialties: compassData?.specialties || null,
-        workload: compassData?.workload || null
-      };
-      
-      // Log the consolidated profile for debugging
-      console.log("[pg-coach] Consolidated business profile:", {
-        hasFullName: !!businessProfile.full_name,
-        hasBusinessName: !!businessProfile.business_name,
-        hasDescription: !!businessProfile.company_description,
-        hasAddress: !!businessProfile.business_address,
-        hasWebsite: !!businessProfile.website,
-        hasCrewSize: !!businessProfile.crew_size,
-        hasSpecialties: Array.isArray(businessProfile.specialties) && businessProfile.specialties.length > 0,
-        hasWorkload: !!businessProfile.workload
-      });
-      
-      // Check if we have meaningful data (at least business name or full name)
-      if (businessProfile.business_name || businessProfile.full_name) {
-        return businessProfile;
-      } else {
-        console.log("[pg-coach] Business profile exists but has no meaningful data");
-      }
-    }
-    
-    console.log("[pg-coach] No business profile data found");
-    return null;
-  } catch (err) {
-    console.error("[pg-coach] Unexpected error fetching business profile:", err);
-    return null;
-  }
-}
-
-// Format business profile into a context string
-function formatBusinessContext(profile: BusinessProfile): string {
-  // Start with an empty context
-  let businessContext = "\n\n### Business Context:\n";
-  let hasContent = false;
-  
-  // Helper to add a field if it exists
-  const addField = (label: string, value: string | string[] | null) => {
-    if (!value) return false;
-    
-    // Handle array values (specialties)
-    if (Array.isArray(value) && value.length > 0) {
-      businessContext += `${label}: ${value.join(', ')}\n`;
-      return true;
-    }
-    
-    // Handle string values
-    if (typeof value === 'string' && value.trim()) {
-      businessContext += `${label}: ${value}\n`;
-      return true;
-    }
-    
-    return false;
-  };
-  
-  // Add each field if it has content
-  if (addField("Business Name", profile.business_name)) hasContent = true;
-  if (addField("Business Owner", profile.full_name)) hasContent = true;
-  if (addField("Business Description", profile.company_description)) hasContent = true;
-  if (addField("Business Address", profile.business_address)) hasContent = true;
-  if (addField("Website", profile.website)) hasContent = true;
-  if (addField("Crew Size", profile.crew_size)) hasContent = true;
-  if (addField("Specialties", profile.specialties)) hasContent = true;
-  if (addField("Current Workload", profile.workload)) hasContent = true;
-  
-  // If we didn't add any fields, return a generic message
-  if (!hasContent) {
-    return "\n\n### Business Context:\nNo detailed business profile information available. Please provide generic advice.";
-  }
-  
-  return businessContext;
-}
-
 serve(async (req) => {
   console.log("[pg-coach] Function invoked:", {
     method: req.method,
@@ -552,8 +414,71 @@ serve(async (req) => {
       };
     }
     
-    // Get user's business profile for context
-    const businessProfile = await getBusinessProfile(supabaseAdmin, userId);
+    // Get user's business profile for context - FIXED IMPLEMENTATION
+    let businessProfile = null;
+    
+    try {
+      if (userId) {
+        console.log("[pg-coach] Fetching user business profile data...", { userId });
+        
+        // First, get the basic profile data
+        const { data: profileData, error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle();
+        
+        if (profileError) {
+          console.error("[pg-coach] Error fetching profile data:", profileError);
+        } else {
+          console.log("[pg-coach] Profile data retrieved:", profileData ? 
+            "Successfully retrieved profile" : "No profile found");
+        }
+        
+        // Then, get compass-specific profile data
+        const { data: compassData, error: compassError } = await supabaseAdmin
+          .from("compass_user_profiles")
+          .select("*")
+          .eq("id", userId)
+          .maybeSingle();
+        
+        if (compassError) {
+          console.error("[pg-coach] Error fetching compass profile data:", compassError);
+        } else {
+          console.log("[pg-coach] Compass profile data retrieved:", compassData ? 
+            "Successfully retrieved compass profile" : "No compass profile found");
+        }
+        
+        // Combine the data from both tables into a business profile
+        if (profileData || compassData) {
+          businessProfile = {
+            id: userId,
+            full_name: profileData?.full_name || "",
+            business_name: compassData?.business_name || profileData?.company_name || "",
+            company_description: profileData?.company_description || "",
+            business_address: profileData?.business_address || "",
+            website: profileData?.website || "",
+            crew_size: compassData?.crew_size || "",
+            specialties: compassData?.specialties || [],
+            workload: compassData?.workload || ""
+          };
+          
+          console.log("[pg-coach] Business profile assembled:", {
+            hasBusinessName: !!businessProfile.business_name,
+            hasDescription: !!businessProfile.company_description,
+            hasAddress: !!businessProfile.business_address,
+            hasWebsite: !!businessProfile.website,
+            hasCrewSize: !!businessProfile.crew_size,
+            specialtiesCount: businessProfile.specialties.length,
+            hasWorkload: !!businessProfile.workload
+          });
+        } else {
+          console.log("[pg-coach] No business profile data found for user", { userId });
+        }
+      }
+    } catch (profileError) {
+      console.error("[pg-coach] Unexpected error fetching business profile:", profileError);
+    }
     
     console.log("[pg-coach] Calling OpenAI API:", {
       model,
@@ -563,18 +488,45 @@ serve(async (req) => {
       hasBusinessProfile: !!businessProfile
     });
     
-    // Add enhanced business context if available
+    // Add enhanced business context if available - properly formatted
     if (businessProfile) {
-      // Format the business profile into a context string
-      const businessContext = formatBusinessContext(businessProfile);
+      // Construct a clear business context string
+      let businessContext = "\n\n### Business Context:\n";
+      
+      if (businessProfile.business_name) {
+        businessContext += `Business Name: ${businessProfile.business_name}\n`;
+      }
+      
+      if (businessProfile.company_description) {
+        businessContext += `Business Description: ${businessProfile.company_description}\n`;
+      }
+      
+      if (businessProfile.business_address) {
+        businessContext += `Business Address: ${businessProfile.business_address}\n`;
+      }
+      
+      if (businessProfile.website) {
+        businessContext += `Website: ${businessProfile.website}\n`;
+      }
+      
+      if (businessProfile.crew_size) {
+        businessContext += `Crew Size: ${businessProfile.crew_size}\n`;
+      }
+      
+      if (businessProfile.specialties && businessProfile.specialties.length > 0) {
+        businessContext += `Specialties: ${businessProfile.specialties.join(', ')}\n`;
+      }
+      
+      if (businessProfile.workload) {
+        businessContext += `Current Workload: ${businessProfile.workload}\n`;
+      }
       
       // Add business context to the system prompt
       messages[0].content += businessContext;
       
       console.log("[pg-coach] Added business context to prompt:", {
         contextLength: businessContext.length,
-        systemPromptTotalLength: messages[0].content.length,
-        businessContext
+        systemPromptLength: messages[0].content.length
       });
     } else {
       // Inform the system that no business profile is available
@@ -598,11 +550,10 @@ serve(async (req) => {
       model: openAIRequestBody.model,
       messagesCount: openAIRequestBody.messages.length,
       temperature: isThinkMode ? "N/A" : openAIRequestBody.temperature,
-      max_completion_tokens: openAIRequestBody.max_completion_tokens,
-      systemPromptPreview: messages[0].content.substring(0, 100) + "..." // Log a preview of system prompt
+      max_completion_tokens: openAIRequestBody.max_completion_tokens
     });
 
-    // Log user message to activity logs
+    // Log user message to activity logs - updated to pass userId
     await logActivity(
       supabaseAdmin,
       userId, 
@@ -612,13 +563,7 @@ serve(async (req) => {
         conversation_id: conversationId,
         is_think_mode: isThinkMode,
         has_image: !!imageUrl,
-        business_profile_used: !!businessProfile,
-        business_profile_data: businessProfile ? {
-          has_business_name: !!businessProfile.business_name,
-          has_description: !!businessProfile.company_description,
-          has_specialties: Array.isArray(businessProfile.specialties) && businessProfile.specialties.length > 0,
-          specialties_count: Array.isArray(businessProfile.specialties) ? businessProfile.specialties.length : 0
-        } : null
+        business_profile_used: !!businessProfile
       }, 
       'conversation', 
       conversationId
@@ -717,10 +662,7 @@ serve(async (req) => {
         conversation_id: actualConversationId,
         role: 'assistant',
         content: aiResponse,
-        metadata: { 
-          suggestedFollowUps,
-          usedBusinessProfile: !!businessProfile 
-        },
+        metadata: { suggestedFollowUps },
       });
     
     if (aiMsgError) {
@@ -733,7 +675,7 @@ serve(async (req) => {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', actualConversationId);
 
-    // Log AI response to activity logs
+    // Log AI response to activity logs - updated to pass userId and include system prompt
     await logActivity(
       supabaseAdmin,
       userId, 
@@ -741,17 +683,11 @@ serve(async (req) => {
       {
         prompt: message,
         response: aiResponse,
-        system_prompt_length: messages[0].content.length,
+        system_prompt: systemPrompt,
         conversation_id: actualConversationId,
         is_think_mode: isThinkMode,
         has_image: !!imageUrl,
-        business_profile_used: !!businessProfile,
-        business_profile_summary: businessProfile ? {
-          has_business_name: !!businessProfile.business_name,
-          has_description: !!businessProfile.company_description,
-          has_crew_size: !!businessProfile.crew_size,
-          has_specialties: Array.isArray(businessProfile.specialties) && businessProfile.specialties.length > 0
-        } : null
+        business_profile_used: !!businessProfile
       }, 
       'conversation', 
       actualConversationId
@@ -765,7 +701,6 @@ serve(async (req) => {
         response: aiResponse,
         suggestedFollowUps,
         conversationId: actualConversationId,
-        usedBusinessProfile: !!businessProfile
       }),
       { 
         headers: { 

@@ -34,7 +34,6 @@ export const usePgChatState = ({
     isLoadingHistory,
     error,
     isThinkMode,
-    businessProfileUsed, // Include business profile used flag
     handleSendMessage: apiSendMessage,
     handleRetry,
     handleToggleThinkMode,
@@ -121,7 +120,6 @@ export const usePgChatState = ({
     isLoadingHistory,
     error,
     isThinkMode,
-    businessProfileUsed, // Pass business profile used flag through
     showScrollButton,
     messagesEndRef,
     messagesContainerRef,
