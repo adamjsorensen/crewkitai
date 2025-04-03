@@ -1,0 +1,7 @@
+
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env --allow-read index.ts",
+    "deploy": "deployctl deploy --project=crewkit-generate-content --prod index.ts"
+  }
+}
