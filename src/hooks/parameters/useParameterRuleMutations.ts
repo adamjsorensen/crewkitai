@@ -2,14 +2,24 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { PromptParameterRule, CreateParameterRuleInput, UpdateParameterRuleInput } from './types';
+import { 
+  PromptParameterRule, 
+  CreateParameterRuleInput, 
+  UpdateParameterRuleInput,
+  MutationContext
+} from './types';
 
 export function useParameterRuleMutations() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Create parameter rule
-  const createParameterRule = useMutation({
+  const createParameterRule = useMutation<
+    PromptParameterRule, 
+    Error, 
+    CreateParameterRuleInput, 
+    MutationContext
+  >({
     mutationFn: async (rule: CreateParameterRuleInput) => {
       const { data, error } = await supabase
         .from('prompt_parameter_rules')
@@ -47,7 +57,12 @@ export function useParameterRuleMutations() {
   });
 
   // Update parameter rule
-  const updateParameterRule = useMutation({
+  const updateParameterRule = useMutation<
+    PromptParameterRule, 
+    Error, 
+    UpdateParameterRuleInput, 
+    MutationContext
+  >({
     mutationFn: async ({ id, ...updates }: UpdateParameterRuleInput) => {
       const { data, error } = await supabase
         .from('prompt_parameter_rules')
@@ -86,7 +101,12 @@ export function useParameterRuleMutations() {
   });
 
   // Delete parameter rule
-  const deleteParameterRule = useMutation({
+  const deleteParameterRule = useMutation<
+    string, 
+    Error, 
+    string, 
+    MutationContext
+  >({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('prompt_parameter_rules')

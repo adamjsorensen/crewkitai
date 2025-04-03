@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
@@ -211,8 +210,7 @@ const EditPromptDialog = ({
               is_required: param.isRequired,
               order: param.order,
             }, { 
-              // Use silent mode for individual operations
-              context: { silent: true } 
+              meta: { silent: true } 
             });
             
             // Increment counter
@@ -235,8 +233,7 @@ const EditPromptDialog = ({
               is_required: param.isRequired,
               order: param.order,
             }, {
-              // Use silent mode for individual operations 
-              context: { silent: true }
+              meta: { silent: true }
             });
             
             // Increment counter
@@ -252,8 +249,7 @@ const EditPromptDialog = ({
         for (const ruleId of existingRuleIds) {
           console.log("EditPromptDialog: Deleting rule:", ruleId);
           await deleteParameterRule.mutateAsync(ruleId, {
-            // Use silent mode for individual operations
-            context: { silent: true }
+            meta: { silent: true }
           });
           
           // Increment counter

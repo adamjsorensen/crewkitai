@@ -2,14 +2,24 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ParameterTweak, CreateTweakInput, UpdateTweakInput } from './types';
+import { 
+  ParameterTweak, 
+  CreateTweakInput, 
+  UpdateTweakInput,
+  MutationContext 
+} from './types';
 
 export function useTweakMutations() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Create parameter tweak
-  const createParameterTweak = useMutation({
+  const createParameterTweak = useMutation<
+    ParameterTweak, 
+    Error, 
+    CreateTweakInput, 
+    MutationContext
+  >({
     mutationFn: async (tweak: CreateTweakInput) => {
       const { data, error } = await supabase
         .from('parameter_tweaks')
@@ -51,7 +61,12 @@ export function useTweakMutations() {
   });
 
   // Update parameter tweak
-  const updateParameterTweak = useMutation({
+  const updateParameterTweak = useMutation<
+    ParameterTweak, 
+    Error, 
+    UpdateTweakInput, 
+    MutationContext
+  >({
     mutationFn: async ({ id, ...updates }: UpdateTweakInput) => {
       const { data, error } = await supabase
         .from('parameter_tweaks')
@@ -94,7 +109,12 @@ export function useTweakMutations() {
   });
 
   // Delete parameter tweak
-  const deleteParameterTweak = useMutation({
+  const deleteParameterTweak = useMutation<
+    { id: string; parameterId: string | null }, 
+    Error, 
+    string, 
+    MutationContext
+  >({
     mutationFn: async (id: string) => {
       // First get the parameter_id for cache invalidation
       const { data: tweakData, error: getTweakError } = await supabase

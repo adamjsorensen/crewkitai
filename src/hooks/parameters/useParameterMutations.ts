@@ -2,7 +2,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { PromptParameter, CreateParameterInput, UpdateParameterInput } from './types';
+import { 
+  PromptParameter, 
+  CreateParameterInput, 
+  UpdateParameterInput,
+  MutationContext
+} from './types';
 
 // Optimized batch operations for related entities
 const deleteRelatedEntities = async (parameterId: string) => {
@@ -20,10 +25,29 @@ const deleteRelatedEntities = async (parameterId: string) => {
     const affectedPromptIds = promptRules ? promptRules.map(rule => rule.prompt_id) : [];
     console.log(`Found ${affectedPromptIds.length} affected prompts`);
     
-    // Execute batch delete operation for all related entities in one transaction
-    const { error: batchError } = await supabase.rpc('delete_parameter_cascade', { param_id: parameterId });
+    // Delete related tweaks
+    const { error: tweaksError } = await supabase
+      .from('parameter_tweaks')
+      .delete()
+      .eq('parameter_id', parameterId);
+      
+    if (tweaksError) throw new Error(`Failed to delete related tweaks: ${tweaksError.message}`);
     
-    if (batchError) throw new Error(`Batch deletion failed: ${batchError.message}`);
+    // Delete related rules
+    const { error: rulesError } = await supabase
+      .from('prompt_parameter_rules')
+      .delete()
+      .eq('parameter_id', parameterId);
+      
+    if (rulesError) throw new Error(`Failed to delete related rules: ${rulesError.message}`);
+    
+    // Finally delete the parameter itself
+    const { error: paramError } = await supabase
+      .from('prompt_parameters')
+      .delete()
+      .eq('id', parameterId);
+      
+    if (paramError) throw new Error(`Failed to delete parameter: ${paramError.message}`);
     
     console.log(`Successfully deleted parameter ID: ${parameterId} and all related entities`);
     return { id: parameterId, affectedPromptIds };
@@ -38,7 +62,12 @@ export function useParameterMutations() {
   const queryClient = useQueryClient();
 
   // Create parameter with optimistic updates
-  const createParameter = useMutation({
+  const createParameter = useMutation<
+    PromptParameter, 
+    Error, 
+    CreateParameterInput, 
+    MutationContext
+  >({
     mutationFn: async (parameter: CreateParameterInput) => {
       const { data, error } = await supabase
         .from('prompt_parameters')
@@ -101,7 +130,12 @@ export function useParameterMutations() {
   });
 
   // Update parameter with optimistic updates
-  const updateParameter = useMutation({
+  const updateParameter = useMutation<
+    PromptParameter, 
+    Error, 
+    UpdateParameterInput, 
+    MutationContext
+  >({
     mutationFn: async ({ id, ...updates }: UpdateParameterInput) => {
       const { data, error } = await supabase
         .from('prompt_parameters')
@@ -166,7 +200,12 @@ export function useParameterMutations() {
   });
 
   // Delete parameter with optimized cascade deletion
-  const deleteParameter = useMutation({
+  const deleteParameter = useMutation<
+    { id: string; affectedPromptIds: string[] }, 
+    Error, 
+    string, 
+    MutationContext
+  >({
     mutationFn: async (id: string) => {
       console.log(`Deleting parameter with ID: ${id}`);
       
@@ -182,7 +221,9 @@ export function useParameterMutations() {
       console.log(`Invalidating caches for parameter deletion...`);
       
       // Force all caches to refresh - cached version control
-      globalCacheVersion++;
+      if (typeof globalCacheVersion !== 'undefined') {
+        globalCacheVersion++;
+      }
       
       // Use more targeted cache invalidation
       queryClient.invalidateQueries({ queryKey: ['prompt-parameters'] });

@@ -13,3 +13,9 @@ export type UpdateTweakInput = Partial<Omit<ParameterTweak, 'id' | 'created_at' 
 
 export type CreateParameterRuleInput = Omit<PromptParameterRule, 'id' | 'created_at' | 'updated_at'>;
 export type UpdateParameterRuleInput = Partial<Omit<PromptParameterRule, 'id' | 'created_at' | 'updated_at'>> & { id: string };
+
+// Define a common context interface for mutation hooks
+export interface MutationContext {
+  silent?: boolean;
+  previousParameters?: unknown;
+}
