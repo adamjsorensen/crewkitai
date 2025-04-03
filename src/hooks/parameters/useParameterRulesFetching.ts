@@ -2,9 +2,11 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ParameterWithTweaks } from './types';
+import { useVersionedCache } from './useOptimizedCaching';
 
 export function useParameterRulesFetching() {
   const [error, setError] = useState<string | null>(null);
+  const { getCache } = useVersionedCache();
 
   /**
    * Fetches parameters with their associated tweaks and rules for a specific prompt
@@ -12,6 +14,19 @@ export function useParameterRulesFetching() {
   const getParametersForPrompt = async (promptId: string): Promise<ParameterWithTweaks[]> => {
     try {
       console.log(`Fetching parameter rules for prompt: ${promptId}`);
+      
+      // Create a more specific cache key using the global version
+      const cacheKey = `prompt_${promptId}_parameters_v${globalCacheVersion}`;
+      const cache = getCache();
+      
+      // Check if we have a valid cached result
+      if (cache) {
+        const cachedResult = cache.get(cacheKey);
+        if (cachedResult) {
+          console.log(`Using cached parameters for prompt ${promptId}`);
+          return cachedResult;
+        }
+      }
       
       // First check if the prompt exists
       const { data: promptData, error: promptError } = await supabase
@@ -48,6 +63,7 @@ export function useParameterRulesFetching() {
       
       if (!rules || rules.length === 0) {
         console.log(`No parameter rules found for prompt ${promptId}`);
+        if (cache) cache.set(cacheKey, []);
         return [];
       }
       
@@ -71,10 +87,19 @@ export function useParameterRulesFetching() {
       
       if (!parameters || parameters.length === 0) {
         console.log(`No active parameters found for prompt ${promptId}`);
+        if (cache) cache.set(cacheKey, []);
         return [];
       }
       
       console.log(`Found ${parameters.length} parameters for prompt ${promptId}`);
+      
+      // Verify that we have all parameters for each rule
+      for (const rule of rules) {
+        const param = parameters.find(p => p.id === rule.parameter_id);
+        if (!param) {
+          console.warn(`Rule references parameter ID that doesn't exist: ${rule.parameter_id}`);
+        }
+      }
       
       // Get the tweaks for these parameters
       const { data: tweaks, error: tweaksError } = await supabase
@@ -113,6 +138,11 @@ export function useParameterRulesFetching() {
       });
       
       console.log('Returning parameters with tweaks:', parametersWithTweaks);
+      
+      // Cache the result
+      if (cache) {
+        cache.set(cacheKey, parametersWithTweaks);
+      }
       
       return parametersWithTweaks;
     } catch (error: any) {

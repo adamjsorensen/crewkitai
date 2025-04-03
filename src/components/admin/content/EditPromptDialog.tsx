@@ -44,6 +44,12 @@ const EditPromptDialog = ({
   const [internalOpen, setInternalOpen] = useState(open);
   const [parametersLoaded, setParametersLoaded] = useState(false);
   const [loadAttempted, setLoadAttempted] = useState(false);
+  // Add counters for operation tracking
+  const [operationCounts, setOperationCounts] = useState({
+    created: 0,
+    updated: 0,
+    deleted: 0
+  });
 
   // Define validation schema based on whether we're editing a category or prompt
   const formSchema = z.object({
@@ -72,6 +78,12 @@ const EditPromptDialog = ({
     if (!open) {
       setLoadAttempted(false);
       setParametersLoaded(false);
+      // Reset operation counters when dialog closes
+      setOperationCounts({
+        created: 0,
+        updated: 0,
+        deleted: 0
+      });
     }
   }, [open]);
 
@@ -155,6 +167,13 @@ const EditPromptDialog = ({
       console.log("EditPromptDialog: Submitting form with values:", values);
       setIsLoading(true);
       
+      // Reset operation counters
+      setOperationCounts({
+        created: 0,
+        updated: 0,
+        deleted: 0
+      });
+      
       // Convert hubArea string to the appropriate type (or null if empty)
       const hubArea: HubAreaType = values.hubArea ? values.hubArea as HubAreaType : null;
       
@@ -191,7 +210,16 @@ const EditPromptDialog = ({
               id: param.ruleId,
               is_required: param.isRequired,
               order: param.order,
+            }, { 
+              // Use silent mode for individual operations
+              context: { silent: true } 
             });
+            
+            // Increment counter
+            setOperationCounts(prev => ({
+              ...prev,
+              updated: prev.updated + 1
+            }));
             
             // Remove from existingRuleIds to track what needs to be deleted
             if (existingRuleIds.has(param.ruleId)) {
@@ -206,7 +234,16 @@ const EditPromptDialog = ({
               is_active: true,
               is_required: param.isRequired,
               order: param.order,
+            }, {
+              // Use silent mode for individual operations 
+              context: { silent: true }
             });
+            
+            // Increment counter
+            setOperationCounts(prev => ({
+              ...prev,
+              created: prev.created + 1
+            }));
           }
         }
         
@@ -214,13 +251,32 @@ const EditPromptDialog = ({
         console.log("EditPromptDialog: Rules to delete:", [...existingRuleIds]);
         for (const ruleId of existingRuleIds) {
           console.log("EditPromptDialog: Deleting rule:", ruleId);
-          await deleteParameterRule.mutateAsync(ruleId);
+          await deleteParameterRule.mutateAsync(ruleId, {
+            // Use silent mode for individual operations
+            context: { silent: true }
+          });
+          
+          // Increment counter
+          setOperationCounts(prev => ({
+            ...prev,
+            deleted: prev.deleted + 1
+          }));
         }
       }
       
+      // Generate a comprehensive toast message
+      const changes = [];
+      if (operationCounts.created > 0) changes.push(`${operationCounts.created} parameters added`);
+      if (operationCounts.updated > 0) changes.push(`${operationCounts.updated} parameters updated`);
+      if (operationCounts.deleted > 0) changes.push(`${operationCounts.deleted} parameters removed`);
+      
+      const description = changes.length > 0 
+        ? `Base prompt updated and ${changes.join(', ')}.`
+        : "The prompt was updated successfully.";
+      
       toast({
         title: "Prompt updated",
-        description: "The prompt was updated successfully.",
+        description,
       });
       
       handleDialogClose(false);
@@ -234,7 +290,7 @@ const EditPromptDialog = ({
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, promptId, updatePrompt, selectedParameters, createParameterRule, updateParameterRule, deleteParameterRule, toast]);
+  }, [prompt, promptId, updatePrompt, selectedParameters, createParameterRule, updateParameterRule, deleteParameterRule, toast, operationCounts]);
 
   const handleDialogClose = useCallback((open: boolean) => {
     console.log("EditPromptDialog: handleDialogClose called with open:", open);
@@ -248,6 +304,12 @@ const EditPromptDialog = ({
       setParametersLoaded(false);
       setLoadAttempted(false);
       setInternalOpen(false);
+      // Reset operation counters
+      setOperationCounts({
+        created: 0,
+        updated: 0,
+        deleted: 0
+      });
       onOpenChange(false);
     } else {
       setInternalOpen(open);

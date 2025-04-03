@@ -24,19 +24,25 @@ export function useParameterRuleMutations() {
       
       return data as PromptParameterRule;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables, context) => {
       queryClient.invalidateQueries({ queryKey: ['prompt-parameter-rules'] });
-      toast({
-        title: 'Parameter rule created',
-        description: 'The parameter rule was created successfully',
-      });
+      
+      // Only show toast if silent mode is not enabled
+      if (!context?.silent) {
+        toast({
+          title: 'Parameter rule created',
+          description: 'The parameter rule was created successfully',
+        });
+      }
     },
-    onError: (error) => {
-      toast({
-        title: 'Error creating parameter rule',
-        description: error.message,
-        variant: 'destructive',
-      });
+    onError: (error, _, context) => {
+      if (!context?.silent) {
+        toast({
+          title: 'Error creating parameter rule',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -57,19 +63,25 @@ export function useParameterRuleMutations() {
       
       return data as PromptParameterRule;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables, context) => {
       queryClient.invalidateQueries({ queryKey: ['prompt-parameter-rules'] });
-      toast({
-        title: 'Parameter rule updated',
-        description: 'The parameter rule was updated successfully',
-      });
+      
+      // Only show toast if silent mode is not enabled
+      if (!context?.silent) {
+        toast({
+          title: 'Parameter rule updated',
+          description: 'The parameter rule was updated successfully',
+        });
+      }
     },
-    onError: (error) => {
-      toast({
-        title: 'Error updating parameter rule',
-        description: error.message,
-        variant: 'destructive',
-      });
+    onError: (error, _, context) => {
+      if (!context?.silent) {
+        toast({
+          title: 'Error updating parameter rule',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -88,19 +100,25 @@ export function useParameterRuleMutations() {
       
       return id;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables, context) => {
       queryClient.invalidateQueries({ queryKey: ['prompt-parameter-rules'] });
-      toast({
-        title: 'Parameter rule deleted',
-        description: 'The parameter rule was deleted successfully',
-      });
+      
+      // Only show toast if silent mode is not enabled
+      if (!context?.silent) {
+        toast({
+          title: 'Parameter rule deleted',
+          description: 'The parameter rule was deleted successfully',
+        });
+      }
     },
-    onError: (error) => {
-      toast({
-        title: 'Error deleting parameter rule',
-        description: error.message,
-        variant: 'destructive',
-      });
+    onError: (error, _, context) => {
+      if (!context?.silent) {
+        toast({
+          title: 'Error deleting parameter rule',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 

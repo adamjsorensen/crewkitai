@@ -24,19 +24,29 @@ export function useTweakMutations() {
       
       return data as ParameterTweak;
     },
-    onSuccess: () => {
+    onSuccess: (data, _, context) => {
+      // Invalidate and update both the general tweaks query and the parameter-specific query
       queryClient.invalidateQueries({ queryKey: ['parameter-tweaks'] });
-      toast({
-        title: 'Parameter tweak created',
-        description: 'The parameter tweak was created successfully',
-      });
+      if (data.parameter_id) {
+        queryClient.invalidateQueries({ queryKey: ['parameter', data.parameter_id, 'tweaks'] });
+      }
+      
+      // Only show toast if silent mode is not enabled
+      if (!context?.silent) {
+        toast({
+          title: 'Parameter tweak created',
+          description: 'The parameter tweak was created successfully',
+        });
+      }
     },
-    onError: (error) => {
-      toast({
-        title: 'Error creating parameter tweak',
-        description: error.message,
-        variant: 'destructive',
-      });
+    onError: (error, _, context) => {
+      if (!context?.silent) {
+        toast({
+          title: 'Error creating parameter tweak',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -57,50 +67,85 @@ export function useTweakMutations() {
       
       return data as ParameterTweak;
     },
-    onSuccess: () => {
+    onSuccess: (data, _, context) => {
+      // Invalidate and update both the general tweaks query and the parameter-specific query
       queryClient.invalidateQueries({ queryKey: ['parameter-tweaks'] });
-      toast({
-        title: 'Parameter tweak updated',
-        description: 'The parameter tweak was updated successfully',
-      });
+      if (data.parameter_id) {
+        queryClient.invalidateQueries({ queryKey: ['parameter', data.parameter_id, 'tweaks'] });
+      }
+      
+      // Only show toast if silent mode is not enabled
+      if (!context?.silent) {
+        toast({
+          title: 'Parameter tweak updated',
+          description: 'The parameter tweak was updated successfully',
+        });
+      }
     },
-    onError: (error) => {
-      toast({
-        title: 'Error updating parameter tweak',
-        description: error.message,
-        variant: 'destructive',
-      });
+    onError: (error, _, context) => {
+      if (!context?.silent) {
+        toast({
+          title: 'Error updating parameter tweak',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
   // Delete parameter tweak
   const deleteParameterTweak = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      // First get the parameter_id for cache invalidation
+      const { data: tweakData, error: getTweakError } = await supabase
+        .from('parameter_tweaks')
+        .select('parameter_id')
+        .eq('id', id)
+        .single();
+      
+      if (getTweakError) {
+        console.error('Error getting parameter tweak:', getTweakError);
+        throw new Error(`Failed to get parameter tweak: ${getTweakError.message}`);
+      }
+      
+      const parameterId = tweakData?.parameter_id;
+      
+      // Now delete the tweak
+      const { error: deleteError } = await supabase
         .from('parameter_tweaks')
         .delete()
         .eq('id', id);
       
-      if (error) {
-        console.error('Error deleting parameter tweak:', error);
-        throw new Error(`Failed to delete parameter tweak: ${error.message}`);
+      if (deleteError) {
+        console.error('Error deleting parameter tweak:', deleteError);
+        throw new Error(`Failed to delete parameter tweak: ${deleteError.message}`);
       }
       
-      return id;
+      return { id, parameterId };
     },
-    onSuccess: () => {
+    onSuccess: ({ id, parameterId }, _, context) => {
+      // Invalidate and update both the general tweaks query and the parameter-specific query
       queryClient.invalidateQueries({ queryKey: ['parameter-tweaks'] });
-      toast({
-        title: 'Parameter tweak deleted',
-        description: 'The parameter tweak was deleted successfully',
-      });
+      if (parameterId) {
+        queryClient.invalidateQueries({ queryKey: ['parameter', parameterId, 'tweaks'] });
+      }
+      
+      // Only show toast if silent mode is not enabled
+      if (!context?.silent) {
+        toast({
+          title: 'Parameter tweak deleted',
+          description: 'The parameter tweak was deleted successfully',
+        });
+      }
     },
-    onError: (error) => {
-      toast({
-        title: 'Error deleting parameter tweak',
-        description: error.message,
-        variant: 'destructive',
-      });
+    onError: (error, _, context) => {
+      if (!context?.silent) {
+        toast({
+          title: 'Error deleting parameter tweak',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 

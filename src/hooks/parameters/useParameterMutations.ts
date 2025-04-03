@@ -73,12 +73,16 @@ export function useParameterMutations() {
       
       return { previousParameters };
     },
-    onSuccess: () => {
+    onSuccess: (_, __, context) => {
       queryClient.invalidateQueries({ queryKey: ['prompt-parameters'] });
-      toast({
-        title: 'Parameter created',
-        description: 'The parameter was created successfully',
-      });
+      
+      // Only show toast if silent mode is not enabled
+      if (!context?.silent) {
+        toast({
+          title: 'Parameter created',
+          description: 'The parameter was created successfully',
+        });
+      }
     },
     onError: (error, _, context) => {
       // Restore previous data if available
@@ -86,11 +90,13 @@ export function useParameterMutations() {
         queryClient.setQueryData(['prompt-parameters'], context.previousParameters);
       }
       
-      toast({
-        title: 'Error creating parameter',
-        description: error.message,
-        variant: 'destructive',
-      });
+      if (!context?.silent) {
+        toast({
+          title: 'Error creating parameter',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -130,15 +136,18 @@ export function useParameterMutations() {
       
       return { previousParameters };
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (_, variables, context) => {
       // More granular cache invalidation
       queryClient.invalidateQueries({ queryKey: ['prompt-parameters'] });
       queryClient.invalidateQueries({ queryKey: ['parameter', variables.id] });
       
-      toast({
-        title: 'Parameter updated',
-        description: 'The parameter was updated successfully',
-      });
+      // Only show toast if silent mode is not enabled
+      if (!context?.silent) {
+        toast({
+          title: 'Parameter updated',
+          description: 'The parameter was updated successfully',
+        });
+      }
     },
     onError: (error, _, context) => {
       // Restore previous data if available
@@ -146,11 +155,13 @@ export function useParameterMutations() {
         queryClient.setQueryData(['prompt-parameters'], context.previousParameters);
       }
       
-      toast({
-        title: 'Error updating parameter',
-        description: error.message,
-        variant: 'destructive',
-      });
+      if (!context?.silent) {
+        toast({
+          title: 'Error updating parameter',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -167,7 +178,7 @@ export function useParameterMutations() {
         throw error;
       }
     },
-    onSuccess: ({ id, affectedPromptIds }) => {
+    onSuccess: ({ id, affectedPromptIds }, _, context) => {
       console.log(`Invalidating caches for parameter deletion...`);
       
       // Force all caches to refresh - cached version control
@@ -186,23 +197,22 @@ export function useParameterMutations() {
         });
       }
       
-      toast({
-        title: 'Parameter deleted',
-        description: 'The parameter and all related data were deleted successfully',
-      });
-      
-      // Force a page reload after a short delay
-      // This ensures all components will re-fetch with the latest data
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Only show toast if silent mode is not enabled
+      if (!context?.silent) {
+        toast({
+          title: 'Parameter deleted',
+          description: 'The parameter and all related data were deleted successfully',
+        });
+      }
     },
-    onError: (error) => {
-      toast({
-        title: 'Error deleting parameter',
-        description: error.message,
-        variant: 'destructive',
-      });
+    onError: (error, _, context) => {
+      if (!context?.silent) {
+        toast({
+          title: 'Error deleting parameter',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     },
   });
 
