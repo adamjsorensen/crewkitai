@@ -62,32 +62,88 @@ const errorResponse = (status, message, details = null) => {
   );
 };
 
-// Validate business profile data
+// Enhanced validation for business profile data
 const validateBusinessProfile = (profile) => {
-  if (!profile) return false;
+  if (!profile) {
+    logWarn("Profile is null or undefined");
+    return false;
+  }
   
-  // Check if we have at least some meaningful data
-  // Count the number of meaningful fields
-  let meaningfulFieldCount = 0;
-  
-  if (profile.business_name || profile.company_name) meaningfulFieldCount++;
-  if (profile.company_description) meaningfulFieldCount++;
-  if (profile.business_address) meaningfulFieldCount++;
-  if (profile.website) meaningfulFieldCount++;
-  if (profile.crew_size) meaningfulFieldCount++;
-  if (profile.specialties && profile.specialties.length > 0) meaningfulFieldCount++;
-  if (profile.workload) meaningfulFieldCount++;
-  
-  logDebug("Business profile validation", { 
-    meaningfulFieldCount,
-    hasBusinessName: !!profile.business_name,
-    hasCompanyName: !!profile.company_name,
-    hasDescription: !!profile.company_description,
-    hasSpecialties: !!(profile.specialties && profile.specialties.length > 0)
+  // Log the entire profile for debugging
+  logDebug("Validating business profile", { 
+    profileData: JSON.stringify(profile, null, 2) 
   });
   
-  // Consider the profile valid if it has at least 2 meaningful fields
-  return meaningfulFieldCount >= 2;
+  // Required fields for meaningful business context
+  const requiredFields = [
+    { key: 'business_name', fallback: 'company_name' },
+    { key: 'company_description', required: false },
+    { key: 'crew_size', required: false },
+    { key: 'specialties', required: false, isArray: true }
+  ];
+  
+  // Count the number of meaningful fields
+  let meaningfulFieldCount = 0;
+  const validationDetails = {};
+  
+  // Check each required field
+  for (const field of requiredFields) {
+    const fieldValue = profile[field.key];
+    let fallbackValue = null;
+    
+    if (field.fallback && !fieldValue) {
+      fallbackValue = profile[field.fallback];
+    }
+    
+    const value = fieldValue || fallbackValue;
+    const isValid = field.isArray ? (Array.isArray(value) && value.length > 0) : !!value;
+    
+    validationDetails[field.key] = {
+      present: isValid,
+      value: field.isArray ? (value ? `Array with ${value?.length || 0} items` : 'empty/missing') 
+                         : (value || 'missing')
+    };
+    
+    if (isValid) {
+      meaningfulFieldCount++;
+    } else if (field.required) {
+      logWarn(`Required field ${field.key} is missing or invalid`, { value });
+    }
+  }
+  
+  // Additional check for any presence of workload field
+  if (profile.workload) {
+    meaningfulFieldCount++;
+    validationDetails.workload = { present: true, value: profile.workload };
+  } else {
+    validationDetails.workload = { present: false, value: 'missing' };
+  }
+  
+  // Additional check for website
+  if (profile.website) {
+    meaningfulFieldCount++;
+    validationDetails.website = { present: true, value: profile.website };
+  } else {
+    validationDetails.website = { present: false, value: 'missing' };
+  }
+  
+  // Additional check for business_address
+  if (profile.business_address) {
+    meaningfulFieldCount++;
+    validationDetails.business_address = { present: true, value: profile.business_address };
+  } else {
+    validationDetails.business_address = { present: false, value: 'missing' };
+  }
+  
+  const isValid = meaningfulFieldCount >= 2;
+  
+  logInfo(`Business profile validation result: ${isValid ? 'VALID' : 'INVALID'}`, { 
+    meaningfulFieldCount,
+    validationDetails,
+    profileId: profile.id
+  });
+  
+  return isValid;
 };
 
 serve(async (req: Request) => {
@@ -345,40 +401,34 @@ serve(async (req: Request) => {
           error: profileError,
           fetchTimeMs: profileFetchTime
         });
+      } else if (!mergedProfileData) {
+        logWarn("No user profile found in database", { 
+          userId,
+          fetchTimeMs: profileFetchTime
+        });
       } else {
-        logDebug("Raw profile data", { 
+        logDebug("Raw profile data fetched successfully", { 
           mergedProfileData,
           fetchTimeMs: profileFetchTime
         });
         
-        if (mergedProfileData) {
-          // Combine the data from both tables for a complete business profile
-          businessProfile = {
-            id: mergedProfileData.id,
-            full_name: mergedProfileData.full_name,
-            // Prioritize compass_user_profiles business name if available
-            business_name: mergedProfileData.compass_user_profiles?.business_name || mergedProfileData.company_name,
-            company_description: mergedProfileData.company_description,
-            business_address: mergedProfileData.business_address,
-            website: mergedProfileData.website,
-            crew_size: mergedProfileData.compass_user_profiles?.crew_size,
-            specialties: mergedProfileData.compass_user_profiles?.specialties,
-            workload: mergedProfileData.compass_user_profiles?.workload
-          };
-          
-          // Validate if we have enough meaningful data
-          hasProfileData = validateBusinessProfile(businessProfile);
-          
-          logDebug("User business profile processed", { 
-            businessProfile,
-            isValid: hasProfileData
-          });
-        } else {
-          logInfo("No user profile found", { 
-            userId,
-            fetchTimeMs: profileFetchTime
-          });
-        }
+        // Combine the data from both tables for a complete business profile
+        businessProfile = {
+          id: mergedProfileData.id,
+          full_name: mergedProfileData.full_name,
+          // Prioritize compass_user_profiles business name if available
+          business_name: mergedProfileData.compass_user_profiles?.business_name || mergedProfileData.company_name,
+          company_name: mergedProfileData.company_name,
+          company_description: mergedProfileData.company_description,
+          business_address: mergedProfileData.business_address,
+          website: mergedProfileData.website,
+          crew_size: mergedProfileData.compass_user_profiles?.crew_size,
+          specialties: mergedProfileData.compass_user_profiles?.specialties,
+          workload: mergedProfileData.compass_user_profiles?.workload
+        };
+        
+        // Validate if we have enough meaningful data
+        hasProfileData = validateBusinessProfile(businessProfile);
       }
     } else {
       logWarn("No user ID available to fetch business profile", {
@@ -435,12 +485,18 @@ serve(async (req: Request) => {
       if (businessProfile.workload) {
         basePrompt += `Current Workload: ${businessProfile.workload}\n`;
       }
+      
+      logInfo("Added business context to prompt", {
+        businessName: businessProfile.business_name || businessProfile.company_name,
+        contextLength: basePrompt.length
+      });
     } else {
       basePrompt += "\n\n### Business Context:\nNo business profile information available. Please create generic content.";
       logWarn("No valid business profile data available", {
         userId,
         hasProfileObject: !!businessProfile,
-        validationPassed: hasProfileData
+        validationPassed: hasProfileData,
+        businessProfileKeys: businessProfile ? Object.keys(businessProfile) : []
       });
     }
 
@@ -571,25 +627,40 @@ serve(async (req: Request) => {
       if (userId) {
         logDebug("Logging user activity");
         
-        const { error: logError } = await supabase
-          .from("user_activity_logs")
-          .insert({
-            user_id: userId,
-            action_type: "content_generation_prompt",
-            action_details: {
-              prompt_id: customPromptData.prompts?.id,
-              prompt_title: customPromptData.prompts?.title,
-              generation_id: generationData?.id,
-              full_prompt: fullAssembledPrompt,
-              system_prompt: settings.systemPrompt,
-              model: settings.model,
-              business_profile_used: hasProfileData,
-              business_context_included: hasProfileData
-            }
+        try {
+          // Log to dedicated pg-coach-logger function
+          const loggerResponse = await fetch(`${supabaseUrl}/functions/v1/pg-coach-logger`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseKey}`
+            },
+            body: JSON.stringify({
+              user_id: userId,
+              action_type: "content_generation_prompt",
+              action_details: {
+                prompt_id: customPromptData.prompts?.id,
+                prompt_title: customPromptData.prompts?.title,
+                generation_id: generationData?.id,
+                business_profile_used: hasProfileData,
+                business_context_included: hasProfileData,
+                profile_validation_result: hasProfileData,
+                business_profile_keys: businessProfile ? Object.keys(businessProfile).filter(k => !!businessProfile[k]) : []
+              }
+            })
           });
-
-        if (logError) {
-          logWarn("Error logging activity", { error: logError });
+          
+          if (!loggerResponse.ok) {
+            const errorText = await loggerResponse.text();
+            logWarn("Error calling activity logger function", { 
+              status: loggerResponse.status,
+              error: errorText
+            });
+          } else {
+            logDebug("Activity logged successfully");
+          }
+        } catch (logError) {
+          logWarn("Error calling activity logger", { error: logError });
         }
       }
 

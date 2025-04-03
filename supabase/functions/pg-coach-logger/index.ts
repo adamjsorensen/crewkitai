@@ -17,6 +17,28 @@ const logEvent = (level, message, data = {}) => {
   console.log(`[${prefix}][pg-coach-logger] ${message}`, data);
 };
 
+// Helper function to log profile validation details
+const logProfileValidation = (profile, validationResult, validationDetails) => {
+  if (!profile) {
+    logEvent('WARN', 'Profile validation attempted on null profile');
+    return;
+  }
+  
+  const profileSummary = {
+    id: profile.id,
+    hasBusinessName: !!profile.business_name,
+    hasCompanyName: !!profile.company_name,
+    hasDescription: !!profile.company_description,
+    hasSpecialties: !!(profile.specialties && profile.specialties.length > 0),
+    hasWebsite: !!profile.website,
+    hasBusinessAddress: !!profile.business_address,
+    validationResult,
+    validationDetails
+  };
+  
+  logEvent('INFO', `Profile validation: ${validationResult ? 'PASSED' : 'FAILED'}`, profileSummary);
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -79,6 +101,14 @@ serve(async (req) => {
     }
 
     logEvent('INFO', `Recording activity: ${action_type}`, { userId: user_id });
+    
+    // Special handling for profile validation logging
+    if (action_type === 'content_generation_prompt' && action_details) {
+      logEvent('DEBUG', `Content generation with business profile: ${action_details.business_profile_used}`, {
+        profileValidation: action_details.profile_validation_result,
+        businessKeys: action_details.business_profile_keys || []
+      });
+    }
     
     if (action_details) {
       // Safely log details without exposing sensitive information
