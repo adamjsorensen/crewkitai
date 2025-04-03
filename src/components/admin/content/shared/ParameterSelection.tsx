@@ -59,11 +59,11 @@ const ParameterSelection: React.FC<ParameterSelectionProps> = ({
         </Select>
       </div>
 
-      {/* Selected parameters display */}
+      {/* Selected parameters display with ScrollArea for scrollability */}
       {selectedParameters.length > 0 && (
         <div className="border rounded-md p-3">
-          <ScrollArea className="max-h-[200px]">
-            <div className="space-y-2">
+          <ScrollArea className="h-[200px]">
+            <div className="space-y-2 pr-4">
               {selectedParameters.map((param, index) => (
                 <div key={param.id} className="flex items-center gap-2 p-2 bg-secondary/50 rounded-md">
                   <div className="flex-none text-muted-foreground">
