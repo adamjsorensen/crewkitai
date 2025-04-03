@@ -70,6 +70,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       .from('custom_prompts')
       .select(`
         id,
+        created_by,
         prompts:base_prompt_id(id, title, prompt)
       `)
       .eq('id', body.customPromptId)
@@ -206,14 +207,13 @@ export async function handleRequest(req: Request): Promise<Response> {
       }, fullPrompt);
 
       // 7. Save the generated content
+      // MODIFIED: Ensure we're using the correct schema fields and including created_by
       const { data: generationData, error: generationError } = await supabase
         .from('prompt_generations')
         .insert({
           custom_prompt_id: body.customPromptId,
           generated_content: generatedContent,
-          model_used: aiData.model,
-          tokens_used: aiData.usage?.total_tokens || 0,
-          generation_time_ms: Date.now() - executionStart
+          created_by: customPrompt.created_by  // Use the custom_prompt's created_by value
         })
         .select('id')
         .single();
