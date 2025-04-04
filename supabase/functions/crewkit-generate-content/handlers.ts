@@ -1,7 +1,7 @@
 
 import { supabaseClient } from "./supabase-client.ts";
 import { callOpenAI } from "./ai-service.ts";
-import { logDebug, logError } from "./logger.ts";
+import { logDebug, logError, logInfo } from "./logger.ts";
 
 export async function handleRequest(req: Request): Promise<Response> {
   try {
@@ -178,14 +178,34 @@ export async function handleRequest(req: Request): Promise<Response> {
       fullPrompt += additionalContext.context_text + "\n\n";
     }
 
-    logDebug("Full prompt assembled:", {
+    logInfo("Full prompt assembled:", fullPrompt);
+    logDebug("Prompt assembly details:", {
       basePromptLength: basePrompt.length,
       customizationsCount: customizations?.length || 0,
       hasAdditionalContext: !!additionalContext?.context_text,
       totalLength: fullPrompt.length
     });
 
-    // 6. Call OpenAI API
+    // 6. Log the prompt generation event to track all prompts
+    try {
+      await supabase.from('user_activity_logs').insert({
+        user_id: customPrompt.created_by,
+        action_type: 'content_generation_prompt',
+        action_details: {
+          full_prompt: fullPrompt,
+          prompt_title: customPrompt.prompts?.title || 'Untitled Prompt',
+          model: settings.model,
+          temperature: settings.temperature,
+          system_prompt: settings.systemPrompt
+        }
+      });
+      logInfo("Successfully logged content generation prompt");
+    } catch (logError) {
+      console.error("Failed to log content generation prompt:", logError);
+      // Continue with generation even if logging fails
+    }
+
+    // 7. Call OpenAI API
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ 
@@ -206,8 +226,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         systemPrompt: settings.systemPrompt
       }, fullPrompt);
 
-      // 7. Save the generated content
-      // MODIFIED: Ensure we're using the correct schema fields and including created_by
+      // 8. Save the generated content
       const { data: generationData, error: generationError } = await supabase
         .from('prompt_generations')
         .insert({
@@ -229,7 +248,27 @@ export async function handleRequest(req: Request): Promise<Response> {
         });
       }
 
-      // 8. Return the generated content and metadata
+      // 9. Log the content generated event with details
+      try {
+        await supabase.from('user_activity_logs').insert({
+          user_id: customPrompt.created_by,
+          action_type: 'content_generated',
+          action_details: {
+            content_type: customPrompt.prompts?.title || 'Content',
+            generated_content: generatedContent.substring(0, 500) + (generatedContent.length > 500 ? '...' : ''),
+            prompt_id: customPrompt.prompts?.id,
+            generation_id: generationData.id,
+            model: settings.model,
+            tokens_used: aiData.usage?.total_tokens || 0
+          }
+        });
+        logInfo("Successfully logged content generation result");
+      } catch (logError) {
+        console.error("Failed to log content generation result:", logError);
+        // Continue even if logging fails
+      }
+
+      // 10. Return the generated content and metadata
       return new Response(JSON.stringify({
         generatedContent,
         generationId: generationData.id,
